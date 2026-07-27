@@ -1,0 +1,11 @@
+{
+  "buildCommand": "npm run vercel-build",
+  "framework": "nextjs",
+  "regions": ["yul1"],
+  "crons": [
+    {
+      "path": "/api/cron/autopilot",
+      "schedule": "0 12 * * 1"
+    }
+  ]
+}
