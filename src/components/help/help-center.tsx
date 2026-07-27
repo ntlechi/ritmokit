@@ -40,12 +40,12 @@ import { UserAvatar } from "@/components/ui/user-avatar";
 import { cn } from "@/lib/utils";
 
 /** Suggestions du hero : de vrais titres de fiches, donc toujours cliquables vers un résultat. */
-const POPULAR_EMPLOYEE: HelpTopicKey[] = ["punch", "schedule", "availability", "tips", "training"];
+const POPULAR_EMPLOYEE: HelpTopicKey[] = ["punch", "schedule", "availability", "messages", "training"];
 const POPULAR_MANAGER: HelpTopicKey[] = [
   "managerSchedule",
   "weekTemplates",
   "punch",
-  "managerTips",
+  "managerSops",
   "schedule",
 ];
 

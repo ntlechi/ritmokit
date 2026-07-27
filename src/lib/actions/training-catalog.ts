@@ -418,7 +418,19 @@ export async function reorderTrainingModulesAction(
 const assignmentSchema = z.object({
   moduleId: z.string().uuid(),
   everyone: z.boolean().default(false),
-  roles: z.array(z.enum(["EMPLOYEE", "MANAGER", "OWNER", "ADMIN"])).default([]),
+  roles: z
+    .array(
+      z.enum([
+        "EMPLOYEE",
+        "MANAGER",
+        "OWNER",
+        "ADMIN",
+        "INSTRUCTOR",
+        "FRONT_DESK",
+        "STUDENT",
+      ]),
+    )
+    .default([]),
   stationIds: z.array(z.string().uuid()).default([]),
   userIds: z.array(z.string().uuid()).default([]),
   /** ISO date (yyyy-mm-dd) ou `null` — appliquée à toutes les règles du module. */
@@ -458,7 +470,14 @@ export async function setModuleAssignmentsAction(
 
     const rules: {
       audience: FormationAudience;
-      role?: "EMPLOYEE" | "MANAGER" | "OWNER" | "ADMIN";
+      role?:
+        | "EMPLOYEE"
+        | "MANAGER"
+        | "OWNER"
+        | "ADMIN"
+        | "INSTRUCTOR"
+        | "FRONT_DESK"
+        | "STUDENT";
       stationId?: string;
       userId?: string;
     }[] = everyone

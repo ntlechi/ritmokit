@@ -4,13 +4,11 @@ import type { Role } from "@/generated/prisma/enums";
 export const HELP_TOPIC_KEYS = [
   "schedule",
   "punch",
-  "tips",
   "training",
   "messages",
   "availability",
   "managerSchedule",
   "weekTemplates",
-  "managerTips",
   "managerSops",
 ] as const;
 
@@ -20,7 +18,6 @@ export type HelpTopicKey = (typeof HELP_TOPIC_KEYS)[number];
 export const HELP_CATEGORY_KEYS = [
   "clock",
   "schedule",
-  "money",
   "learning",
   "team",
   "manage",
@@ -57,12 +54,6 @@ export const HELP_TOPICS: HelpTopicMeta[] = [
     category: "schedule",
   },
   {
-    key: "tips",
-    href: (lang) => `/${lang}/calendar/mobile`,
-    roles: "all",
-    category: "money",
-  },
-  {
     key: "training",
     href: (lang) => `/${lang}/sops`,
     roles: "all",
@@ -84,13 +75,6 @@ export const HELP_TOPICS: HelpTopicMeta[] = [
   {
     key: "weekTemplates",
     href: (lang) => `/${lang}/calendar/manager/schedule`,
-    roles: ["MANAGER", "OWNER", "ADMIN"],
-    category: "manage",
-    managerOnly: true,
-  },
-  {
-    key: "managerTips",
-    href: (lang) => `/${lang}/settings/manager/tips`,
     roles: ["MANAGER", "OWNER", "ADMIN"],
     category: "manage",
     managerOnly: true,
@@ -121,12 +105,12 @@ export const HELP_FAQ_CATEGORIES: HelpCategoryKey[] = [
 ];
 
 /** Les gestes du quotidien mis en avant en haut du centre d'aide. */
-const QUICK_START_EMPLOYEE: HelpTopicKey[] = ["punch", "schedule", "availability", "tips"];
+const QUICK_START_EMPLOYEE: HelpTopicKey[] = ["punch", "schedule", "availability", "messages"];
 const QUICK_START_MANAGER: HelpTopicKey[] = [
   "managerSchedule",
   "weekTemplates",
   "punch",
-  "managerTips",
+  "managerSops",
 ];
 
 export function isHelpTopicKey(value: string): value is HelpTopicKey {

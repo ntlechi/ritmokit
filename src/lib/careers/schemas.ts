@@ -17,6 +17,7 @@ export const jobApplySchema = z
     availableShifts: z.array(jobShiftWindowSchema).min(1),
     commuteMinutes: z.number().int().nonnegative().max(240),
     yearsExperience: z.number().nonnegative().max(50).default(0),
+    /** Deprecated QSR field — accepted for wire compat, ignored by RitmoKit UX. */
     hasFoodPermit: z.boolean().default(false),
     speaksFrench: z.boolean().default(true),
     notes: z.string().max(2000).optional(),

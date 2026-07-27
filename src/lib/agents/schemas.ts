@@ -5,7 +5,13 @@ import { z } from "zod";
  * autonome qui tourne en arrière-plan (voir supabase/migrations pour les
  * triggers qui les réveillent).
  */
-export const AGENT_CHANNELS = ["agent:crisis", "agent:swap", "agent:cnesst", "agent:chat"] as const;
+export const AGENT_CHANNELS = [
+  "agent:crisis",
+  "agent:swap",
+  "agent:cnesst",
+  "agent:chat",
+  "agent:dance",
+] as const;
 export type AgentChannel = (typeof AGENT_CHANNELS)[number];
 
 export const AGENT_EVENT_TYPES = [
@@ -14,6 +20,11 @@ export const AGENT_EVENT_TYPES = [
   "shift.overtime_detected",
   "shift.rest_violation_detected",
   "chat.message_posted",
+  "session.created",
+  "session.season_published",
+  "enrollment.parity_alert",
+  "instructor.payroll_calculated",
+  "churn.risk_detected",
 ] as const;
 export type AgentEventType = (typeof AGENT_EVENT_TYPES)[number];
 

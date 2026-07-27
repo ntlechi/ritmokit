@@ -3,11 +3,13 @@ import { kpiFr } from "../kpi-dictionaries";
 
 const dictionary: Dictionary = {
   brand: {
-    name: "Mirok",
-    tagline: "RH & horaires, natif agentique",
+    name: "RitmoKit",
+    tagline: "Le kit d'opérations pour écoles de danse.",
   },
   nav: {
     calendar: "Calendrier",
+    sessions: "Sessions",
+    rooms: "Salles",
     sops: "SOP",
     team: "Équipe",
     messages: "Messages",
@@ -15,13 +17,13 @@ const dictionary: Dictionary = {
     myShifts: "Mes quarts",
     punch: "Pointeuse",
     help: "Aide",
-    cockpit: "Cockpit",
-    franchiseSection: "Gestion Franchise",
+    cockpit: "Ops studio",
+    franchiseSection: "Ops studio",
   },
   opsDashboard: {
     title: "Cockpit du jour",
     subtitle:
-      "Coût de main-d'œuvre, plancher live et signaux culture — pour piloter Bati en un coup d'œil.",
+      "Couverture instructeurs, salles et signaux culture — pour piloter le studio en un coup d'œil.",
     live: "Live",
     laborCost: "Coût de main-d'œuvre",
     laborCostHint: "Vs ventes du jour",
@@ -128,7 +130,7 @@ const dictionary: Dictionary = {
     crisisRunning: "Recherche d'un remplacement en arrière-plan…",
     crisisResolved: "Un remplacement a été trouvé.",
     lateArrivalBadge: "Retard signalé",
-    agentAuthorLabel: "Agent Mirok",
+    agentAuthorLabel: "Agent RitmoKit",
   },
   settings: {
     title: "Réglages",
@@ -160,7 +162,7 @@ const dictionary: Dictionary = {
     billing: "Facturation",
     comingSoon: "Bientôt disponible",
     availability: "Disponibilités",
-    help: "Aide Mirok",
+    help: "Aide RitmoKit",
     helpDesc: "Guides simples pour le plancher, la pointeuse, les pourboires et les formations.",
   },
   messages: {
@@ -210,6 +212,9 @@ const dictionary: Dictionary = {
     MANAGER: "Gestionnaire",
     OWNER: "Propriétaire",
     ADMIN: "Administrateur",
+    INSTRUCTOR: "Instructeur",
+    FRONT_DESK: "Réception",
+    STUDENT: "Élève",
   },
   common: {
     loading: "Chargement…",
@@ -225,7 +230,7 @@ const dictionary: Dictionary = {
     resizeSidebar: "Redimensionner le menu",
   },
   auth: {
-    signInTitle: "Mirok",
+    signInTitle: "RitmoKit",
     signInSubtitle: "Connectez-vous pour accéder à votre espace.",
     email: "Adresse courriel",
     password: "Mot de passe",
@@ -695,7 +700,7 @@ const dictionary: Dictionary = {
       secretRotatedHint: "Copiez ce secret maintenant — il ne sera plus affiché en clair après rechargement.",
       newSecretLabel: "Nouveau secret",
       ingestionTitle: "Journal des flux",
-      ingestionSubtitle: "Les 5 dernières factures reçues par la passerelle Mirok.",
+      ingestionSubtitle: "Les 5 dernières factures reçues par la passerelle RitmoKit.",
       ingestionEmpty: "Aucun événement enregistré — en attente du premier webhook Cluster.",
       colOrder: "Facture",
       colNet: "Ventes nettes",
@@ -715,7 +720,7 @@ const dictionary: Dictionary = {
         "Le game changer financier — saisissez votre COGS hebdo pour débloquer le Prime Cost en direct sur le cockpit.",
       formTitle: "Food Cost % (COGS)",
       formSubtitle:
-        "Prime Cost = Food Cost + Labor Cost. Cible d'élite : < 60 % des ventes. Mirok croise ce chiffre avec le labor cost live du POS Cluster.",
+        "Prime Cost = Food Cost + Labor Cost. Cible d'élite : < 60 % des ventes. RitmoKit croise ce chiffre avec le labor cost live du POS Cluster.",
       foodCostLabel: "Food cost hebdomadaire",
       foodCostPlaceholder: "ex. 28.5",
       foodCostHint: "Tirez ce chiffre de Restock, Kompul ou votre inventaire — mise à jour chaque lundi.",
@@ -727,7 +732,7 @@ const dictionary: Dictionary = {
       saving: "Enregistrement…",
       saved: "Food cost enregistré — Prime Cost mis à jour sur le cockpit.",
       integrationsTitle: "Passerelles données",
-      integrationsSubtitle: "Mirok est conçu pour se brancher sans saisie manuelle à terme.",
+      integrationsSubtitle: "RitmoKit est conçu pour se brancher sans saisie manuelle à terme.",
       clusterTitle: "Cluster POS",
       clusterConnected: "Connecté · {provider} — ventes, SPLH et labor cost alimentés en direct.",
       clusterPending: "Non configuré — voir Paramètres → POS Cluster pour le webhook.",
@@ -918,13 +923,13 @@ const dictionary: Dictionary = {
     },
     arsi: {
       title: "Hub Arsi",
-      subtitle: "Synchronisez le contenu corporatif (SOPs, recettes, manuels) vers Mirok.",
+      subtitle: "Synchronisez le contenu corporatif (SOPs, recettes, manuels) vers RitmoKit.",
       organizationLabel: "Organisation cible",
       pasteLabel: "Coller le JSON Arsi",
       pasteHint: "Payload exporté depuis Arsi — format JSON standardisé avec organizationId et sops[].",
       uploadLabel: "Ou importer un fichier .json",
       uploadHint: "Glissez un export Arsi ou sélectionnez un fichier .json local.",
-      importButton: "Synchroniser vers Mirok",
+      importButton: "Synchroniser vers RitmoKit",
       importing: "Synchronisation en cours…",
       resultTitle: "Synchronisation réussie",
       resultCreated: "{count} module(s) créé(s)",
@@ -1347,13 +1352,13 @@ const dictionary: Dictionary = {
       rosterSigned: "Signé",
       rosterPending: "À signer",
       disciplineHint:
-        "Mirok calcule automatiquement l'étape (coaching → avertissement → suspension) selon l'historique des 12 derniers mois.",
+        "RitmoKit calcule automatiquement l'étape (coaching → avertissement → suspension) selon l'historique des 12 derniers mois.",
       employeeLabel: "Employé",
       infractionLabel: "Type d'infraction",
       grossTag: "faute grave",
       grossWarning: "Faute grave possible — pas d'échelle progressive. Documentez les faits avec précision.",
       factsLabel: "Faits observés (obligatoire)",
-      factsPlaceholder: "Ex. : Retard de 12 min sans avis Mirok le 10 juillet, shift midi comptoir…",
+      factsPlaceholder: "Ex. : Retard de 12 min sans avis RitmoKit le 10 juillet, shift midi comptoir…",
       notesLabel: "Notes gérant (optionnel)",
       logCta: "Enregistrer le dossier",
       logging: "Enregistrement…",
@@ -1746,7 +1751,7 @@ const dictionary: Dictionary = {
       },
     },
     autopilot: {
-      badge: "Mirok Autopilot",
+      badge: "RitmoKit Autopilot",
       title: "Boucles d'optimisation",
       subtitle:
         "Mesure → analyse → proposition hebdomadaire. Labor cost, prime Code Rouge et Pulse culture.",
@@ -1900,7 +1905,7 @@ const dictionary: Dictionary = {
     },
   },
   help: {
-    title: "Aide Mirok",
+    title: "Aide RitmoKit",
     subtitle: "Tout ce que tu dois savoir — en mots simples.",
     backToHub: "Retour à l'aide",
     whatIs: "C'est quoi ?",
@@ -1953,7 +1958,7 @@ const dictionary: Dictionary = {
     supportError: "Impossible d'ouvrir la conversation.",
     recentTitle: "Consultés récemment",
     recentEmpty: "Les guides que vous ouvrez apparaîtront ici.",
-    changelogTitle: "Nouveau dans Mirok",
+    changelogTitle: "Nouveau dans RitmoKit",
     changelogNew: "Nouveau",
     topics: {
       schedule: {
@@ -2022,7 +2027,7 @@ const dictionary: Dictionary = {
           "Pour un groupe : clique l'icône groupe, donne un nom, sélectionne les membres, puis crée.",
           "Écris un message court et envoie — les conversations privées et groupes sont sécurisées (membres seulement).",
         ],
-        tip: "Les messages avec une icône robot viennent des agents Mirok (retard, pause, Code Rouge…) — ce n'est pas une personne.",
+        tip: "Les messages avec une icône robot viennent des agents RitmoKit (retard, pause, Code Rouge…) — ce n'est pas une personne.",
         ctaLabel: "Ouvrir les messages",
       },
       availability: {
@@ -2065,7 +2070,7 @@ const dictionary: Dictionary = {
           "Ouvre Calendrier → Planning et descends jusqu'à la section Modèles de semaine.",
           "Clique Enregistrer comme modèle, donne un nom clair (ex. « Rush vendredi », « Semaine type été »).",
           "Pour une autre semaine : navigue vers cette semaine dans le calendrier, puis clique Appliquer sur le modèle voulu.",
-          "Mirok crée des quarts en brouillon — certains employés peuvent apparaître comme orphelins s'ils ne sont plus dans l'équipe.",
+          "RitmoKit crée des quarts en brouillon — certains employés peuvent apparaître comme orphelins s'ils ne sont plus dans l'équipe.",
           "Ajuste les orphelins par glisser-déposer, puis publie l'horaire.",
         ],
         tip: "Appliquer un modèle remplace les brouillons auto-générés de la semaine, pas tes ajustements manuels déjà faits. Enregistre un nouveau modèle après chaque grosse amélioration.",
@@ -2132,6 +2137,19 @@ const dictionary: Dictionary = {
         a: "Une urgence de staffing (~2h). Le gérant déclenche l'alerte ; si tu es qualifié, une carte apparaît dans Mes quarts pour réclamer le quart.",
       },
     ],
+  },
+  dance: {
+    lead: "Cavalier",
+    follow: "Cavalière",
+    parity: "Parité Hommes/Femmes",
+    instructorPayroll: "Paie des instructeurs",
+    dropIn: "Cours à l'unité",
+    sessionSeason: "Session (trimestre)",
+    trialClass: "Cours d'essai",
+    waitlistLead: "Liste d'attente Cavaliers — 1 Cavalière requise pour débloquer",
+    waitlistFollow: "Liste d'attente Cavalières — 1 Cavalier requis pour débloquer",
+    sessionsIntro: "Gérez les sessions, les cours et la parité cavalier/cavalière.",
+    roomsIntro: "Salles du studio avec capacité et superficie pour l'analytique d'occupation.",
   },
 };
 

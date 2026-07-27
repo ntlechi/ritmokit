@@ -2,7 +2,7 @@
  * One-shot: re-encrypt legacy plaintext bank columns on EmployeeHrProfile.
  * Usage: npx tsx scripts/reencrypt-bank-fields.ts
  *
- * Requires MIROK_FIELD_ENCRYPTION_KEY (or uses the local-dev key when NODE_ENV≠production).
+ * Requires RITMOKIT_FIELD_ENCRYPTION_KEY (or uses the local-dev key when NODE_ENV≠production).
  */
 import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";

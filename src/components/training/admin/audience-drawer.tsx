@@ -17,7 +17,15 @@ import type { Locale } from "@/lib/i18n/config";
 import { stationLabel, type StationRecord } from "@/lib/stations/display";
 import { cn } from "@/lib/utils";
 
-const ROLE_OPTIONS: Role[] = ["EMPLOYEE", "MANAGER", "OWNER", "ADMIN"];
+const ROLE_OPTIONS: Role[] = [
+  "EMPLOYEE",
+  "MANAGER",
+  "OWNER",
+  "ADMIN",
+  "INSTRUCTOR",
+  "FRONT_DESK",
+  "STUDENT",
+];
 
 type Selection = {
   everyone: boolean;

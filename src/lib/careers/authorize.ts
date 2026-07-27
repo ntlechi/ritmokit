@@ -7,6 +7,7 @@ import type { NextRequest } from "next/server";
  */
 export function authorizeCareersRequest(request: NextRequest): boolean {
   const secret =
+    process.env.RITMOKIT_CAREERS_SECRET?.trim() ||
     process.env.MIROK_CAREERS_SECRET?.trim() ||
     process.env.ARSIMATRIX_BRIDGE_SECRET?.trim();
 

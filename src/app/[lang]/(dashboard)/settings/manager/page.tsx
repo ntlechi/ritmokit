@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { Users, Scale, ClipboardList, Coins, BookOpen, Radio, Sparkles, FileSpreadsheet, ShieldCheck, Library, UserPlus, Award, ClipboardCheck, Gift, Activity, Shield, FileText, Tablet, Palette, UtensilsCrossed, Clock } from "lucide-react";
+import { Users, Scale, ClipboardList, BookOpen, FileSpreadsheet, ShieldCheck, Library, UserPlus, Award, ClipboardCheck, Gift, Activity, Shield, FileText, Tablet, Palette, Clock, Music2, DoorOpen } from "lucide-react";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { isLocale } from "@/lib/i18n/config";
 import { canAccessManagerSettings, getSessionUser } from "@/lib/auth/session";
@@ -160,14 +160,21 @@ export default async function ManagerSettingsPage({
           </Link>
 
           <Link
-            href={`/${lang}/demo/franchise`}
+            href={`/${lang}/sessions`}
             className="premium-card card-lift p-5 transition-colors hover:border-accent/30"
           >
-            <Sparkles className="h-5 w-5 text-accent" aria-hidden />
-            <h2 className="mt-3 text-base font-semibold">Mode démo franchise</h2>
-            <p className="mt-1 text-sm text-foreground-muted">
-              Pitch investisseur · scrubber J1–J5
-            </p>
+            <Music2 className="h-5 w-5 text-accent" aria-hidden />
+            <h2 className="mt-3 text-base font-semibold">{dict.nav.sessions}</h2>
+            <p className="mt-1 text-sm text-foreground-muted">{dict.dance.sessionsIntro}</p>
+          </Link>
+
+          <Link
+            href={`/${lang}/rooms`}
+            className="premium-card card-lift p-5 transition-colors hover:border-accent/30"
+          >
+            <DoorOpen className="h-5 w-5 text-accent" aria-hidden />
+            <h2 className="mt-3 text-base font-semibold">{dict.nav.rooms}</h2>
+            <p className="mt-1 text-sm text-foreground-muted">{dict.dance.roomsIntro}</p>
           </Link>
 
           <Link
@@ -189,48 +196,12 @@ export default async function ManagerSettingsPage({
           </Link>
 
           <Link
-            href={`/${lang}/settings/manager/tips`}
-            className="premium-card card-lift p-5 transition-colors hover:border-accent/30"
-          >
-            <Coins className="h-5 w-5 text-accent" aria-hidden />
-            <h2 className="mt-3 text-base font-semibold">{dict.manager.tips.title}</h2>
-            <p className="mt-1 text-sm text-foreground-muted">{dict.manager.tips.subtitle}</p>
-          </Link>
-
-          <Link
             href={`/${lang}/sops`}
             className="premium-card card-lift p-5 transition-colors hover:border-accent/30"
           >
             <BookOpen className="h-5 w-5 text-accent" aria-hidden />
             <h2 className="mt-3 text-base font-semibold">{dict.manager.sops.title}</h2>
             <p className="mt-1 text-sm text-foreground-muted">{dict.manager.sops.subtitle}</p>
-          </Link>
-
-          <Link
-            href={`/${lang}/settings/manager/food-cost`}
-            className="premium-card card-lift p-5 transition-colors hover:border-accent/30"
-          >
-            <UtensilsCrossed className="h-5 w-5 text-accent" aria-hidden />
-            <h2 className="mt-3 text-base font-semibold">{dict.manager.foodCost.title}</h2>
-            <p className="mt-1 text-sm text-foreground-muted">{dict.manager.foodCost.subtitle}</p>
-          </Link>
-
-          <Link
-            href={`/${lang}/settings/manager/pos`}
-            className="premium-card card-lift p-5 transition-colors hover:border-accent/30"
-          >
-            <Radio className="h-5 w-5 text-accent" aria-hidden />
-            <h2 className="mt-3 text-base font-semibold">{dict.manager.pos.title}</h2>
-            <p className="mt-1 text-sm text-foreground-muted">{dict.manager.pos.subtitle}</p>
-          </Link>
-
-          <Link
-            href={`/${lang}/settings/manager/staffing`}
-            className="premium-card card-lift p-5 transition-colors hover:border-accent/30"
-          >
-            <Sparkles className="h-5 w-5 text-accent" aria-hidden />
-            <h2 className="mt-3 text-base font-semibold">{dict.manager.staffing.title}</h2>
-            <p className="mt-1 text-sm text-foreground-muted">{dict.manager.staffing.subtitle}</p>
           </Link>
 
           <Link

@@ -2,10 +2,10 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Mirok — Gestion RH & Horaires",
-    short_name: "Mirok",
+    name: "RitmoKit — Opérations pour écoles de danse",
+    short_name: "RitmoKit",
     description:
-      "Gestion RH et d'horaires nouvelle génération, conforme CNESST, pensée pour l'ère agentique.",
+      "Le kit d'opérations pour écoles de danse : sessions, parité, salles, RH et agents IA.",
     start_url: "/",
     display: "standalone",
     orientation: "portrait",

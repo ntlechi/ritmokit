@@ -12,15 +12,15 @@ import { usePathname } from "next/navigation";
 import {
   Calendar,
   Users,
-  BookOpen,
   Settings,
   Sparkles,
   MessagesSquare,
-  Timer,
   LifeBuoy,
   LayoutDashboard,
   PanelLeftClose,
   PanelLeftOpen,
+  Music2,
+  DoorOpen,
 } from "lucide-react";
 import type { Locale } from "@/lib/i18n/config";
 import type { ShellCopy } from "@/lib/i18n/shell-copy";
@@ -28,8 +28,8 @@ import type { Role } from "@/generated/prisma/enums";
 import { canAccessAdminSettings, canAccessManagerSettings } from "@/lib/auth/session-client";
 import { cn } from "@/lib/utils";
 
-const STORAGE_COLLAPSED = "mirok-sidebar-collapsed";
-const STORAGE_WIDTH = "mirok-sidebar-width";
+const STORAGE_COLLAPSED = "ritmokit-sidebar-collapsed";
+const STORAGE_WIDTH = "ritmokit-sidebar-width";
 
 const COLLAPSED_WIDTH = 72;
 const MIN_WIDTH = 200;
@@ -38,9 +38,9 @@ const DEFAULT_WIDTH = 240;
 
 const navItems = [
   { key: "calendar" as const, href: "/calendar/week", icon: Calendar },
-  { key: "punch" as const, href: "/pointeuse", icon: Timer },
+  { key: "sessions" as const, href: "/sessions", icon: Music2 },
+  { key: "rooms" as const, href: "/rooms", icon: DoorOpen },
   { key: "messages" as const, href: "/messages", icon: MessagesSquare },
-  { key: "sops" as const, href: "/sops", icon: BookOpen },
   { key: "team" as const, href: "/team", icon: Users },
   { key: "settings" as const, href: "/settings", icon: Settings },
 ] as const;

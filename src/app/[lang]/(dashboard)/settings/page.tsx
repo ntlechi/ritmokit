@@ -14,7 +14,6 @@ import {
   ArrowRight,
   FileText,
   Clock,
-  Coins,
   BookOpen,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
@@ -239,15 +238,6 @@ export default async function SettingsPage({
                   >
                     <Clock className="h-4 w-4 text-accent" aria-hidden />
                     <p className="text-sm font-medium">{dict.manager.punches.title}</p>
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href={`/${lang}/settings/manager/tips`}
-                    className="flex items-center gap-3 rounded-xl border border-border-subtle bg-surface/80 px-4 py-3 hover:border-accent/30"
-                  >
-                    <Coins className="h-4 w-4 text-accent" aria-hidden />
-                    <p className="text-sm font-medium">{dict.manager.tips.title}</p>
                   </Link>
                 </li>
                 <li>

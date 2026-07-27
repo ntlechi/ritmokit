@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { claimAgentTask, completeAgentTask, failAgentTask } from "@/lib/agents/bus";
 import { runCrisisAgent } from "@/lib/agents/handlers/crisis";
+import { runDanceAgent } from "@/lib/agents/handlers/dance";
 import { runLateArrivalAgent } from "@/lib/agents/handlers/late-arrival";
 import { supabaseWebhookSchema, type AgentLogRow } from "@/lib/agents/schemas";
 
@@ -15,7 +16,7 @@ export const runtime = "nodejs";
  *
  * Configure in Supabase: Database > Webhooks > New webhook
  *   - Table: agent_logs, Event: Insert
- *   - URL: https://mirok.ca/api/agents/webhook
+ *   - URL: https://app.ritmokit.com/api/agents/webhook
  *   - HTTP header: Authorization: Bearer <AGENT_WEBHOOK_SECRET>
  */
 export async function POST(request: NextRequest) {
@@ -75,6 +76,12 @@ async function dispatch(log: AgentLogRow): Promise<Record<string, unknown>> {
       // chat pipeline. Add further intent branches here (e.g. shift swap
       // requested by chat) as the router's vocabulary grows.
       return runLateArrivalAgent(log);
+    case "session.created":
+    case "session.season_published":
+    case "enrollment.parity_alert":
+    case "instructor.payroll_calculated":
+    case "churn.risk_detected":
+      return runDanceAgent(log);
     default:
       return { acknowledged: true, note: "unhandled_event_type" };
   }

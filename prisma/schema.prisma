@@ -1,4 +1,4 @@
-// Mirok — schéma de données blindé CNESST + Ère Agentique
+// RitmoKit — dance studio ops on Mirok engine (CNESST HR + agentic bus)
 // Prisma ORM v7 — client Rust-free, généré via l'adaptateur `pg`.
 
 generator client {
@@ -19,6 +19,40 @@ enum Role {
   MANAGER
   OWNER
   ADMIN
+  /// Dance studio roles (extend Mirok RBAC — do not rewrite auth).
+  INSTRUCTOR
+  FRONT_DESK
+  STUDENT
+}
+
+enum DanceRole {
+  LEAD
+  FOLLOW
+  SOLO
+}
+
+enum CourseLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum SessionSeasonStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum InstructorPayType {
+  HOURLY
+  FLAT_PER_CLASS
+  COMMISSION
+}
+
+enum InstructorPayrollStatus {
+  DRAFT
+  APPROVED
+  PAID
 }
 
 enum Locale {
@@ -276,6 +310,7 @@ model Organization {
   pulseQuestions   PulseQuestion[]
   cultureValues    OrganizationValue[]
   productExperiments ProductExperiment[]
+  courses            Course[]
 
   @@map("organizations")
 }
@@ -337,6 +372,7 @@ model Location {
   punchAttempts          PunchAttempt[]
   operationalGoals       OperationalGoal[]
   jobApplications        JobApplication[]
+  sessionSeasons         SessionSeason[]
 
   @@unique([organizationId, slug])
   @@map("locations")
@@ -389,9 +425,13 @@ model Station {
   /// Slug stable pour canaux (#services) — unique par succursale quand défini.
   slug      String?
   sortOrder Int     @default(0) @map("sort_order")
-  /// Poids pourboires (heures × points) — remplace les colonnes fixes cuisine/comptoir/emballage.
+  /// Poids pourboires (heures × points) — deprecated QSR; kept for schema compat.
   tipPoints Decimal @default(1.0) @map("tip_points") @db.Decimal(3, 2)
   isActive  Boolean @default(true) @map("is_active")
+  /// Dance room capacity (students).
+  capacity    Int?
+  /// Floor area m² — class profitability $/m².
+  surfaceSqm  Float?  @map("surface_sqm")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -409,6 +449,7 @@ model Station {
   pulseResponses   PulseResponse[]
   payrollLineItems PayrollLineItem[]
   templateShifts   ScheduleTemplateShift[]
+  classSessions    ClassSession[]
 
   @@unique([locationId, nameFr])
   @@unique([locationId, slug])
@@ -690,6 +731,14 @@ model User {
   role      Role     @default(EMPLOYEE)
   /// Photo de profil (data URL WebP/JPEG compressée) — trombinoscope équipe.
   profilePictureUrl String? @map("profile_picture_url") @db.Text
+  phone     String?
+  locale    Locale   @default(FR)
+  /// Instructor pay model (dance domain).
+  instructorPayType InstructorPayType? @map("instructor_pay_type")
+  instructorPayRate Decimal?           @map("instructor_pay_rate") @db.Decimal(10, 2)
+  bio       String?  @db.Text
+  specialties String[] @default([])
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -742,6 +791,9 @@ model User {
   punchAttemptsMatched          PunchAttempt[]       @relation("PunchAttemptMatchedUser")
   operationalGoalsOwned         OperationalGoal[]    @relation("OperationalGoalOwner")
   staffDepartures               StaffDeparture[]
+  taughtClassSessions           ClassSession[]       @relation("PrimaryInstructor")
+  enrollments                   Enrollment[]
+  instructorPayrollLogs         InstructorPayrollLog[]
 
   @@map("users")
 }
@@ -2217,4 +2269,113 @@ model DisciplinaryRecord {
   @@index([locationId, employeeId, infractionCode, occurredAt])
   @@index([employeeId, occurredAt])
   @@map("disciplinary_records")
+}
+
+// ---------------------------------------------------------------------------
+// RitmoKit dance domain — sessions, parity enrollments, instructor payroll
+// Organization → Location (studio branch) → Station (room)
+// ---------------------------------------------------------------------------
+
+model SessionSeason {
+  id          String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  locationId  String              @map("location_id") @db.Uuid
+  location    Location            @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  name        String
+  status      SessionSeasonStatus @default(DRAFT)
+  bookingOpen Boolean             @default(false) @map("booking_open")
+  publishOn   DateTime?           @map("publish_on") @db.Date
+  startsOn    DateTime            @map("starts_on") @db.Date
+  endsOn      DateTime            @map("ends_on") @db.Date
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt @map("updated_at")
+
+  classes ClassSession[]
+
+  @@index([locationId, status])
+  @@map("session_seasons")
+}
+
+model Course {
+  id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String      @map("organization_id") @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  title          String
+  level          CourseLevel @default(BEGINNER)
+  style          String
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  sessions ClassSession[]
+
+  @@index([organizationId, style, level])
+  @@map("courses")
+}
+
+/// Weekly (or dated) class slot — distinct from Mirok `Shift` (staff hours).
+model ClassSession {
+  id           String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  seasonId     String?        @map("season_id") @db.Uuid
+  season       SessionSeason? @relation(fields: [seasonId], references: [id], onDelete: SetNull)
+  courseId     String         @map("course_id") @db.Uuid
+  course       Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  roomId       String         @map("room_id") @db.Uuid
+  room         Station        @relation(fields: [roomId], references: [id], onDelete: Restrict)
+  instructorId String         @map("instructor_id") @db.Uuid
+  instructor   User           @relation("PrimaryInstructor", fields: [instructorId], references: [id], onDelete: Restrict)
+
+  /// 0=Sun … 6=Sat for recurring grid; null = one-off dated class.
+  dayOfWeek    Int?      @map("day_of_week")
+  startTime    DateTime  @map("start_time")
+  endTime      DateTime  @map("end_time")
+  maxLeads     Int       @default(12) @map("max_leads")
+  maxFollows   Int       @default(12) @map("max_follows")
+  priceRegular Decimal   @map("price_regular") @db.Decimal(10, 2)
+  priceCouple  Decimal?  @map("price_couple") @db.Decimal(10, 2)
+  priceStudent Decimal?  @map("price_student") @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  enrollments Enrollment[]
+
+  @@index([seasonId, dayOfWeek, startTime])
+  @@index([roomId, startTime, endTime])
+  @@index([instructorId, startTime])
+  @@map("class_sessions")
+}
+
+model Enrollment {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId String    @map("session_id") @db.Uuid
+  session   ClassSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  studentId String    @map("student_id") @db.Uuid
+  student   User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  danceRole DanceRole @map("dance_role")
+  paid      Boolean   @default(false)
+  paymentRef String?  @map("payment_ref")
+  attended  Boolean   @default(false)
+  waitlisted Boolean  @default(false)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@unique([sessionId, studentId])
+  @@index([sessionId, danceRole, waitlisted])
+  @@map("enrollments")
+}
+
+model InstructorPayrollLog {
+  id           String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  instructorId String                   @map("instructor_id") @db.Uuid
+  instructor   User                     @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+  periodStart  DateTime                 @map("period_start") @db.Date
+  periodEnd    DateTime                 @map("period_end") @db.Date
+  totalClasses Int                      @default(0) @map("total_classes")
+  totalHours   Float                    @default(0) @map("total_hours")
+  grossPay     Decimal                  @map("gross_pay") @db.Decimal(12, 2)
+  status       InstructorPayrollStatus  @default(DRAFT)
+  createdAt    DateTime                 @default(now()) @map("created_at")
+  updatedAt    DateTime                 @updatedAt @map("updated_at")
+
+  @@index([instructorId, periodStart, periodEnd])
+  @@map("instructor_payroll_logs")
 }

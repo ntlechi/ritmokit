@@ -3,11 +3,13 @@ import { kpiEs } from "../kpi-dictionaries";
 
 const dictionary: Dictionary = {
   brand: {
-    name: "Mirok",
-    tagline: "RRHH y horarios, nativo agentico",
+    name: "RitmoKit",
+    tagline: "El kit operativo completo para escuelas de danza.",
   },
   nav: {
     calendar: "Calendario",
+    sessions: "Temporadas",
+    rooms: "Salas",
     sops: "POE",
     team: "Equipo",
     messages: "Mensajes",
@@ -15,12 +17,12 @@ const dictionary: Dictionary = {
     myShifts: "Mis turnos",
     punch: "Reloj de ponchado",
     help: "Ayuda",
-    cockpit: "Cockpit",
-    franchiseSection: "Gestión Franquicia",
+    cockpit: "Ops estudio",
+    franchiseSection: "Ops estudio",
   },
   opsDashboard: {
     title: "Cockpit del día",
-    subtitle: "Costo laboral, piso en vivo y señales de cultura — opera el restaurante de un vistazo.",
+    subtitle: "Cobertura de profesores, salas y señales de cultura — opera el estudio de un vistazo.",
     live: "En vivo",
     laborCost: "Costo laboral",
     laborCostHint: "Vs ventas del día",
@@ -127,7 +129,7 @@ const dictionary: Dictionary = {
     crisisRunning: "Buscando un reemplazo en segundo plano…",
     crisisResolved: "Se ha encontrado un reemplazo.",
     lateArrivalBadge: "Retraso informado",
-    agentAuthorLabel: "Agente Mirok",
+    agentAuthorLabel: "Agente RitmoKit",
   },
   settings: {
     title: "Ajustes",
@@ -159,7 +161,7 @@ const dictionary: Dictionary = {
     billing: "Facturación",
     comingSoon: "Próximamente",
     availability: "Disponibilidad",
-    help: "Ayuda Mirok",
+    help: "Ayuda RitmoKit",
     helpDesc: "Guías simples para turnos, reloj, propinas y formación.",
   },
   messages: {
@@ -209,6 +211,9 @@ const dictionary: Dictionary = {
     MANAGER: "Gerente",
     OWNER: "Propietario",
     ADMIN: "Administrador",
+    INSTRUCTOR: "Profesor",
+    FRONT_DESK: "Recepción",
+    STUDENT: "Alumno",
   },
   common: {
     loading: "Cargando…",
@@ -224,7 +229,7 @@ const dictionary: Dictionary = {
     resizeSidebar: "Redimensionar menú",
   },
   auth: {
-    signInTitle: "Mirok",
+    signInTitle: "RitmoKit",
     signInSubtitle: "Inicia sesión para acceder a tu espacio.",
     email: "Correo electrónico",
     password: "Contraseña",
@@ -694,7 +699,7 @@ const dictionary: Dictionary = {
       secretRotatedHint: "Copie este secreto ahora — no se mostrará en texto claro después de recargar.",
       newSecretLabel: "Nuevo secreto",
       ingestionTitle: "Registro de flujos",
-      ingestionSubtitle: "Las 5 últimas facturas recibidas por la pasarela Mirok.",
+      ingestionSubtitle: "Las 5 últimas facturas recibidas por la pasarela RitmoKit.",
       ingestionEmpty: "Sin eventos registrados — esperando el primer webhook de Cluster.",
       colOrder: "Factura",
       colNet: "Ventas netas",
@@ -726,7 +731,7 @@ const dictionary: Dictionary = {
       saving: "Guardando…",
       saved: "Food cost guardado — Prime Cost actualizado en el cockpit.",
       integrationsTitle: "Pasarelas de datos",
-      integrationsSubtitle: "Mirok está diseñado para conectarse sin entrada manual.",
+      integrationsSubtitle: "RitmoKit está diseñado para conectarse sin entrada manual.",
       clusterTitle: "Cluster POS",
       clusterConnected: "Conectado · {provider} — ventas, SPLH y labor cost en vivo.",
       clusterPending: "No configurado — ver Ajustes → POS Cluster.",
@@ -917,13 +922,13 @@ const dictionary: Dictionary = {
     },
     arsi: {
       title: "Hub Arsi",
-      subtitle: "Sincronice el contenido corporativo (SOPs, recetas, manuales) hacia Mirok.",
+      subtitle: "Sincronice el contenido corporativo (SOPs, recetas, manuales) hacia RitmoKit.",
       organizationLabel: "Organización objetivo",
       pasteLabel: "Pegar JSON de Arsi",
       pasteHint: "Payload exportado desde Arsi — JSON estandarizado con organizationId y sops[].",
       uploadLabel: "O importar un archivo .json",
       uploadHint: "Arrastre una exportación de Arsi o seleccione un archivo .json local.",
-      importButton: "Sincronizar con Mirok",
+      importButton: "Sincronizar con RitmoKit",
       importing: "Sincronizando…",
       resultTitle: "Sincronización exitosa",
       resultCreated: "{count} módulo(s) creado(s)",
@@ -1346,13 +1351,13 @@ const dictionary: Dictionary = {
       rosterSigned: "Firmado",
       rosterPending: "Por firmar",
       disciplineHint:
-        "Mirok calcula automáticamente el paso (coaching → advertencia → suspensión) según los últimos 12 meses.",
+        "RitmoKit calcula automáticamente el paso (coaching → advertencia → suspensión) según los últimos 12 meses.",
       employeeLabel: "Empleado",
       infractionLabel: "Tipo de infracción",
       grossTag: "falta grave",
       grossWarning: "Posible falta grave — sin escala progresiva. Documenta los hechos con precisión.",
       factsLabel: "Hechos observados (obligatorio)",
-      factsPlaceholder: "Ej.: Retraso de 12 min sin aviso Mirok el 10 de julio, turno mediodía mostrador…",
+      factsPlaceholder: "Ej.: Retraso de 12 min sin aviso RitmoKit el 10 de julio, turno mediodía mostrador…",
       notesLabel: "Notas del gerente (opcional)",
       logCta: "Guardar expediente",
       logging: "Guardando…",
@@ -1744,7 +1749,7 @@ const dictionary: Dictionary = {
       },
     },
     autopilot: {
-      badge: "Mirok Autopilot",
+      badge: "RitmoKit Autopilot",
       title: "Bucles de optimización",
       subtitle:
         "Medir → analizar → propuesta semanal. Costo laboral, prima Code Rouge y cultura Pulse.",
@@ -1898,7 +1903,7 @@ const dictionary: Dictionary = {
     },
   },
   help: {
-    title: "Ayuda Mirok",
+    title: "Ayuda RitmoKit",
     subtitle: "Todo lo que necesitas saber — con palabras simples.",
     backToHub: "Volver a la ayuda",
     whatIs: "¿Qué es?",
@@ -1951,7 +1956,7 @@ const dictionary: Dictionary = {
     supportError: "No se pudo abrir la conversación.",
     recentTitle: "Vistos recientemente",
     recentEmpty: "Las guías que abras aparecerán aquí.",
-    changelogTitle: "Nuevo en Mirok",
+    changelogTitle: "Nuevo en RitmoKit",
     changelogNew: "Nuevo",
     topics: {
       schedule: {
@@ -2020,7 +2025,7 @@ const dictionary: Dictionary = {
           "Para un grupo: toca el ícono de grupo, pon un nombre, selecciona miembros y crea.",
           "Escribe un mensaje corto y envía — los chats privados y de grupo son seguros (solo miembros).",
         ],
-        tip: "Los mensajes con ícono de robot vienen de los agentes Mirok (retraso, pausa, Código Rojo…) — no es una persona.",
+        tip: "Los mensajes con ícono de robot vienen de los agentes RitmoKit (retraso, pausa, Código Rojo…) — no es una persona.",
         ctaLabel: "Abrir mensajes",
       },
       availability: {
@@ -2063,7 +2068,7 @@ const dictionary: Dictionary = {
           "Abre Calendario → Planificación y baja hasta la sección Plantillas de semana.",
           "Toca Guardar como plantilla y pon un nombre claro (ej. «Rush viernes», «Semana verano»).",
           "Para otra semana: navega a esa semana en el calendario, luego toca Aplicar en la plantilla.",
-          "Mirok crea turnos en borrador — algunos empleados pueden quedar huérfanos si ya no están en el equipo.",
+          "RitmoKit crea turnos en borrador — algunos empleados pueden quedar huérfanos si ya no están en el equipo.",
           "Ajusta los huérfanos arrastrando, luego publica el horario.",
         ],
         tip: "Aplicar una plantilla reemplaza los borradores auto-generados de esa semana, no tus ajustes manuales ya hechos. Guarda una nueva plantilla después de cada mejora importante.",
@@ -2130,6 +2135,19 @@ const dictionary: Dictionary = {
         a: "Una urgencia de personal (~2h). El gerente activa la alerta; si estás calificado, aparece una tarjeta en Mis turnos para reclamar el turno.",
       },
     ],
+  },
+  dance: {
+    lead: "Leader (Guía)",
+    follow: "Follower (Seguidor)",
+    parity: "Balance de Parejas",
+    instructorPayroll: "Nómina de profesores",
+    dropIn: "Clase suelta",
+    sessionSeason: "Temporada",
+    trialClass: "Clase de prueba",
+    waitlistLead: "Lista de espera Leaders — se necesita un Follower para desbloquear",
+    waitlistFollow: "Lista de espera Followers — se necesita un Leader para desbloquear",
+    sessionsIntro: "Gestiona temporadas, clases y el balance leader/follower.",
+    roomsIntro: "Salas del estudio con capacidad y superficie para analítica de ocupación.",
   },
 };
 

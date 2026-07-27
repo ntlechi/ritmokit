@@ -17,11 +17,11 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const APP_NAME = "Mirok";
-const APP_DEFAULT_TITLE = "Mirok — Gestion RH & Horaires";
-const APP_TITLE_TEMPLATE = "%s · Mirok";
+const APP_NAME = "RitmoKit";
+const APP_DEFAULT_TITLE = "RitmoKit — Opérations pour écoles de danse";
+const APP_TITLE_TEMPLATE = "%s · RitmoKit";
 const APP_DESCRIPTION =
-  "Gestion RH et d'horaires nouvelle génération, conforme CNESST, pensée pour l'ère agentique.";
+  "Le kit d'opérations pour écoles de danse : sessions, parité, salles, RH et agents IA.";
 
 export const metadata: Metadata = {
   applicationName: APP_NAME,

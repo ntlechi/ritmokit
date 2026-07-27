@@ -6,7 +6,7 @@ export type SimpleActionResult = { ok: true } | { ok: false; error: string };
 
 export function logActionError(scope: string, error: unknown): void {
   const message = error instanceof Error ? error.message : String(error);
-  console.error(`[mirok:action:${scope}]`, message, error);
+  console.error(`[ritmokit:action:${scope}]`, message, error);
 }
 
 /** Generic DB/unknown failure after logging. */

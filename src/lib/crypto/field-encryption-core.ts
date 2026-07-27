@@ -7,15 +7,17 @@ import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from "crypt
  */
 
 const PREFIX = "enc:v1:";
-const DEV_KEY_MATERIAL = "mirok-dev-field-encryption-v1";
+const DEV_KEY_MATERIAL = "ritmokit-dev-field-encryption-v1";
 
 function resolveKey(): Buffer {
-  const secret = process.env.MIROK_FIELD_ENCRYPTION_KEY?.trim();
+  const secret =
+    process.env.RITMOKIT_FIELD_ENCRYPTION_KEY?.trim() ||
+    process.env.MIROK_FIELD_ENCRYPTION_KEY?.trim();
   if (!secret) {
     if (process.env.NODE_ENV === "production") {
-      throw new Error("MIROK_FIELD_ENCRYPTION_KEY is required in production");
+      throw new Error("RITMOKIT_FIELD_ENCRYPTION_KEY is required in production");
     }
-    return scryptSync(DEV_KEY_MATERIAL, "mirok-field-salt", 32);
+    return scryptSync(DEV_KEY_MATERIAL, "ritmokit-field-salt", 32);
   }
 
   if (/^[0-9a-fA-F]{64}$/.test(secret)) {
@@ -26,7 +28,7 @@ function resolveKey(): Buffer {
   if (asB64.length === 32) return asB64;
 
   throw new Error(
-    "MIROK_FIELD_ENCRYPTION_KEY must be 32 bytes (64 hex chars or standard base64)",
+    "RITMOKIT_FIELD_ENCRYPTION_KEY must be 32 bytes (64 hex chars or standard base64)",
   );
 }
 

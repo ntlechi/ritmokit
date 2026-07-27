@@ -11,7 +11,7 @@ import { actionDatabaseError } from "@/lib/actions/result";
 export type TeamActionResult = { ok: true } | { ok: false; error: string };
 
 const OWNER_ROLES: Role[] = ["OWNER", "ADMIN"];
-const FLOOR_ROLES: Role[] = ["EMPLOYEE", "MANAGER", "OWNER"];
+const FLOOR_ROLES: Role[] = ["EMPLOYEE", "MANAGER", "OWNER", "INSTRUCTOR", "FRONT_DESK"];
 
 async function assertLocationManager(locationId: string): Promise<
   | { ok: true; userId: string; role: Role }

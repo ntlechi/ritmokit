@@ -10,6 +10,8 @@ export interface Dictionary {
   };
   nav: {
     calendar: string;
+    sessions: string;
+    rooms: string;
     sops: string;
     team: string;
     messages: string;
@@ -1948,6 +1950,20 @@ export interface Dictionary {
       managerSops: HelpTopicCopy;
     };
     faq: Array<{ q: string; a: string }>;
+  };
+  /** Dance-studio terminology — FR / EN / ES from day one. */
+  dance: {
+    lead: string;
+    follow: string;
+    parity: string;
+    instructorPayroll: string;
+    dropIn: string;
+    sessionSeason: string;
+    trialClass: string;
+    waitlistLead: string;
+    waitlistFollow: string;
+    sessionsIntro: string;
+    roomsIntro: string;
   };
 }
 

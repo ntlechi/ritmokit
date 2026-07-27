@@ -11,11 +11,9 @@ import {
   Bell,
   BookOpen,
   ClipboardList,
-  Coins,
   FileText,
   HeartPulse,
   LayoutDashboard,
-  Radio,
   ShieldCheck,
   Sparkles,
   Users,
@@ -156,11 +154,9 @@ const TOOL_LINKS = [
   { href: "/calendar/manager/schedule", icon: ClipboardList, key: "schedule" as const },
   { href: "/team", icon: Users, key: "team" as const },
   { href: "/settings/manager", icon: LayoutDashboard, key: "modules" as const },
-  { href: "/tablet", icon: LayoutDashboard, key: "tablet" as const, label: "Tablette plancher" },
-  { href: "/demo/franchise", icon: Sparkles, key: "demo" as const, label: "Mode démo franchise" },
-  { href: "/settings/manager/tips", icon: Coins, key: "tips" as const },
+  { href: "/sessions", icon: Sparkles, key: "demo" as const, label: "Sessions" },
+  { href: "/rooms", icon: LayoutDashboard, key: "tablet" as const, label: "Salles" },
   { href: "/sops", icon: BookOpen, key: "sops" as const },
-  { href: "/settings/manager/pos", icon: Radio, key: "pos" as const },
 ] as const;
 
 export function OpsDashboard({ lang, data, copy, dict }: Props) {
@@ -508,11 +504,9 @@ export function OpsDashboard({ lang, data, copy, dict }: Props) {
                       ? copy.openTeam
                       : key === "modules"
                         ? copy.openModules
-                        : key === "tips"
-                          ? copy.toolTips
-                          : key === "sops"
-                            ? copy.toolSops
-                            : copy.toolPos;
+                        : key === "sops"
+                          ? copy.toolSops
+                          : copy.openModules;
               return (
                 <Link key={key} href={`/${lang}${href}`} className="premium-link-tile">
                   <span className="premium-icon h-9 w-9">

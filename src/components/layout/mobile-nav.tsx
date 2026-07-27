@@ -4,13 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Calendar,
-  BookOpen,
   Settings,
-  Smartphone,
   MessagesSquare,
-  Timer,
   LayoutDashboard,
   Users,
+  Music2,
+  DoorOpen,
 } from "lucide-react";
 import type { Locale } from "@/lib/i18n/config";
 import type { ShellCopy } from "@/lib/i18n/shell-copy";
@@ -34,17 +33,17 @@ export function MobileNav({
     ? ([
         { key: "calendar", href: "/calendar/week", icon: Calendar, label: shell.nav.calendar },
         { key: "cockpit", href: "/dashboard", icon: LayoutDashboard, label: shell.nav.cockpit },
-        { key: "messages", href: "/messages", icon: MessagesSquare, label: shell.nav.messages },
-        { key: "sops", href: "/sops", icon: BookOpen, label: shell.nav.sops },
+        { key: "sessions", href: "/sessions", icon: Music2, label: shell.nav.sessions },
+        { key: "rooms", href: "/rooms", icon: DoorOpen, label: shell.nav.rooms },
         { key: "team", href: "/team", icon: Users, label: shell.nav.team },
         { key: "settings", href: "/settings", icon: Settings, label: shell.nav.settings },
       ] as const)
     : ([
         { key: "calendar", href: "/calendar/week", icon: Calendar, label: shell.nav.calendar },
-        { key: "punch", href: "/pointeuse", icon: Timer, label: shell.nav.punch },
+        { key: "sessions", href: "/sessions", icon: Music2, label: shell.nav.sessions },
         { key: "messages", href: "/messages", icon: MessagesSquare, label: shell.nav.messages },
-        { key: "myShifts", href: "/calendar/mobile", icon: Smartphone, label: shell.nav.myShifts },
-        { key: "sops", href: "/sops", icon: BookOpen, label: shell.nav.sops },
+        { key: "rooms", href: "/rooms", icon: DoorOpen, label: shell.nav.rooms },
+        { key: "team", href: "/team", icon: Users, label: shell.nav.team },
         { key: "settings", href: "/settings", icon: Settings, label: shell.nav.settings },
       ] as const);
 
