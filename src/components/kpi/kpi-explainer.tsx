@@ -3,7 +3,7 @@
 import { useId, useRef, useState } from "react";
 import { CircleHelp } from "lucide-react";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
-import type { KpiKey } from "@/lib/kpi/types";
+import type { DanceKpiKey } from "@/lib/kpi/types";
 import { cn } from "@/lib/utils";
 
 type ExplainerCopy = {
@@ -19,7 +19,7 @@ export function KpiExplainer({
   dict,
   className,
 }: {
-  kpiKey: KpiKey;
+  kpiKey: DanceKpiKey;
   dict: Dictionary;
   className?: string;
 }) {

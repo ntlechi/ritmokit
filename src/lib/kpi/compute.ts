@@ -1,295 +1,169 @@
 import "server-only";
 
-import type { PosSalesChannel } from "@/generated/prisma/enums";
+import { loadDanceAnalyticsForLocation } from "@/lib/dance/analytics";
 import {
-  calculateLiveLaborKpis,
-  getDayBoundsFromLocalDate,
-  type LiveLaborKpiReport,
-} from "@/lib/finance/labor-kpis";
-import {
-  KPI_LABOR_COST_GOOD_MAX,
-  KPI_LABOR_COST_WARN_MAX,
-  KPI_ORDER_ACCURACY_GOOD_MIN,
-  KPI_ORDER_ACCURACY_WARN_MIN,
-  KPI_PRIME_COST_GOOD_MAX,
-  KPI_PRIME_COST_WARN_MAX,
-  KPI_SOS_GOOD_MAX,
-  KPI_SOS_WARN_MAX,
-  KPI_SPLH_GOOD_MIN,
-  KPI_SPLH_WARN_MIN,
-  KPI_TURNOVER_GOOD_MAX,
-  KPI_TURNOVER_WARN_MAX,
+  KPI_FLOOR_UTIL_GOOD_MIN,
+  KPI_FLOOR_UTIL_WARN_MIN,
+  KPI_L1_L2_GOOD_MIN,
+  KPI_L1_L2_WARN_MIN,
+  KPI_NET_PROFIT_GOOD_MIN,
+  KPI_NET_PROFIT_WARN_MIN,
+  KPI_PARITY_DELTA_WARN_MAX,
+  KPI_PAYROLL_REV_GOOD_MAX,
+  KPI_PAYROLL_REV_WARN_MAX,
+  KPI_YIELD_SQM_GOOD_MIN,
+  KPI_YIELD_SQM_WARN_MIN,
 } from "@/lib/kpi/thresholds";
-import type { KpiChannelBreakdown, KpiHealth, KpiMetric, LocationKpiSnapshot } from "@/lib/kpi/types";
-import { prisma } from "@/lib/prisma";
+import type { KpiHealth, KpiMetric, LocationKpiSnapshot } from "@/lib/kpi/types";
 
-const TURNOVER_WINDOW_DAYS = 90;
-const SOS_WINDOW_DAYS = 7;
-const CHANNEL_WINDOW_DAYS = 7;
-
-function laborHealth(pct: number): KpiHealth {
-  if (pct <= KPI_LABOR_COST_GOOD_MAX) return "good";
-  if (pct <= KPI_LABOR_COST_WARN_MAX) return "warning";
+function utilHealth(pct: number): KpiHealth {
+  if (pct >= KPI_FLOOR_UTIL_GOOD_MIN) return "good";
+  if (pct >= KPI_FLOOR_UTIL_WARN_MIN) return "warning";
   return "critical";
 }
 
-function splhHealth(value: number): KpiHealth {
-  if (value >= KPI_SPLH_GOOD_MIN) return "good";
-  if (value >= KPI_SPLH_WARN_MIN) return "warning";
+function yieldHealth(value: number): KpiHealth {
+  if (value >= KPI_YIELD_SQM_GOOD_MIN) return "good";
+  if (value >= KPI_YIELD_SQM_WARN_MIN) return "warning";
   return "critical";
 }
 
-function turnoverHealth(rate: number): KpiHealth {
-  if (rate <= KPI_TURNOVER_GOOD_MAX) return "good";
-  if (rate <= KPI_TURNOVER_WARN_MAX) return "warning";
+function parityHealth(delta: number): KpiHealth {
+  if (delta <= 0) return "good";
+  if (delta <= KPI_PARITY_DELTA_WARN_MAX) return "warning";
   return "critical";
 }
 
-function sosHealth(seconds: number): KpiHealth {
-  if (seconds <= KPI_SOS_GOOD_MAX) return "good";
-  if (seconds <= KPI_SOS_WARN_MAX) return "warning";
+function payrollHealth(pct: number): KpiHealth {
+  if (pct <= KPI_PAYROLL_REV_GOOD_MAX) return "good";
+  if (pct <= KPI_PAYROLL_REV_WARN_MAX) return "warning";
   return "critical";
 }
 
-function orderAccuracyHealth(pct: number): KpiHealth {
-  if (pct >= KPI_ORDER_ACCURACY_GOOD_MIN) return "good";
-  if (pct >= KPI_ORDER_ACCURACY_WARN_MIN) return "warning";
+function progressionHealth(pct: number): KpiHealth {
+  if (pct >= KPI_L1_L2_GOOD_MIN) return "good";
+  if (pct >= KPI_L1_L2_WARN_MIN) return "warning";
   return "critical";
 }
 
-function primeCostHealth(pct: number): KpiHealth {
-  if (pct <= KPI_PRIME_COST_GOOD_MAX) return "good";
-  if (pct <= KPI_PRIME_COST_WARN_MAX) return "warning";
+function profitHealth(value: number): KpiHealth {
+  if (value >= KPI_NET_PROFIT_GOOD_MIN) return "good";
+  if (value >= KPI_NET_PROFIT_WARN_MIN) return "warning";
   return "critical";
 }
 
-function channelKey(channel: PosSalesChannel): KpiChannelBreakdown["channel"] {
-  return channel;
-}
-
+/**
+ * Dance-native location KPI snapshot for the studio cockpit.
+ * Replaces QSR labor/SPLH/POS metrics.
+ */
 export async function computeLocationKpiSnapshot(
   locationId: string,
   targetDate = new Date(),
-  /** Reuse an already-computed labor report to avoid a second full KPI pass. */
-  laborReport?: LiveLaborKpiReport | null,
 ): Promise<LocationKpiSnapshot> {
-  const labor =
-    laborReport !== undefined
-      ? laborReport
-      : await calculateLiveLaborKpis({ locationId, targetDate }).catch(() => null);
+  const analytics = await loadDanceAnalyticsForLocation(locationId).catch(() => null);
+  const a = analytics?.aggregates;
+  const hasLiveData = Boolean(a && a.classCount > 0);
+  const availability = hasLiveData ? "live" : "pending";
 
-  const windowStart = new Date(targetDate);
-  windowStart.setDate(windowStart.getDate() - TURNOVER_WINDOW_DAYS);
-
-  const channelWindowStart = new Date(targetDate);
-  channelWindowStart.setDate(channelWindowStart.getDate() - CHANNEL_WINDOW_DAYS);
-
-  const sosWindowStart = new Date(targetDate);
-  sosWindowStart.setDate(sosWindowStart.getDate() - SOS_WINDOW_DAYS);
-
-  const dayBounds = getDayBoundsFromLocalDate(targetDate);
-
-  const [
-    location,
-    activeHeadcount,
-    departures,
-    hiresInWindow,
-    channelRows,
-    sosRows,
-    orderErrors,
-    totalOrdersToday,
-    posIntegration,
-  ] = await Promise.all([
-    prisma.location.findUnique({
-      where: { id: locationId },
-      select: { foodCostPct: true },
-    }),
-    prisma.locationMember.count({ where: { locationId } }),
-    prisma.staffDeparture.count({
-      where: { locationId, departedAt: { gte: windowStart } },
-    }),
-    prisma.locationMember.count({
-      where: { locationId, hiredAt: { gte: windowStart } },
-    }),
-    prisma.posChannelSalesDaily.findMany({
-      where: { locationId, date: { gte: channelWindowStart } },
-    }),
-    prisma.posIngestionLog.findMany({
-      where: {
-        locationId,
-        status: "PROCESSED",
-        paidAt: { not: null },
-        readyAt: { not: null },
-        processedAt: { gte: sosWindowStart },
-      },
-      select: { paidAt: true, readyAt: true },
-    }),
-    prisma.disciplinaryRecord.count({
-      where: {
-        locationId,
-        infractionCode: "RUSH_FOCUS",
-        occurredAt: { gte: channelWindowStart },
-      },
-    }),
-    prisma.posIngestionLog.count({
-      where: {
-        locationId,
-        status: "PROCESSED",
-        processedAt: { gte: dayBounds.dayStart, lt: dayBounds.dayEnd },
-      },
-    }),
-    prisma.posIntegration.findUnique({
-      where: { locationId },
-      select: { isActive: true },
-    }),
-  ]);
-
-  const hasPosLive = Boolean(posIntegration?.isActive);
-
-  const metrics: KpiMetric[] = [];
-
-  // 1. Labor Cost %
-  const laborPct = labor?.hasSalesData ? labor.liveLaborCostPercentage : null;
-  metrics.push({
-    key: "LABOR_COST_PCT",
-    value: laborPct,
-    unit: "percent",
-    health: laborPct != null ? laborHealth(laborPct) : "neutral",
-    availability: labor?.hasPosData ? "live" : labor?.hasSalesData ? "partial" : "pending",
-    targetMin: 25,
-    targetMax: 32,
-  });
-
-  // 2. SPLH
-  const splh = labor?.dailySplh && labor.dailySplh > 0 ? labor.dailySplh : null;
-  metrics.push({
-    key: "SPLH",
-    value: splh,
-    unit: "currency",
-    health: splh != null ? splhHealth(splh) : "neutral",
-    availability: labor?.hasSalesData ? (labor.hasPosData ? "live" : "partial") : "pending",
-    targetMin: KPI_SPLH_GOOD_MIN,
-  });
-
-  // 3. Staff turnover (90-day annualized proxy)
-  const avgHeadcount = Math.max(1, activeHeadcount);
-  const turnoverRate =
-    departures > 0 ? Math.round(((departures / avgHeadcount) * (365 / TURNOVER_WINDOW_DAYS)) * 10) / 10 : 0;
-  metrics.push({
-    key: "STAFF_TURNOVER_RATE",
-    value: activeHeadcount > 0 ? turnoverRate : null,
-    unit: "percent",
-    health: turnoverRate != null ? turnoverHealth(turnoverRate) : "neutral",
-    availability: departures > 0 || hiresInWindow > 0 ? "live" : "partial",
-    targetMax: KPI_TURNOVER_GOOD_MAX,
-    sampleSize: departures,
-  });
-
-  // 4. Speed of Service
-  const sosSamples = sosRows
-    .map((row) => {
-      if (!row.paidAt || !row.readyAt) return null;
-      return (row.readyAt.getTime() - row.paidAt.getTime()) / 1000;
-    })
-    .filter((s): s is number => s != null && s > 0 && s < 3600);
-  const avgSos =
-    sosSamples.length > 0
-      ? Math.round(sosSamples.reduce((a, b) => a + b, 0) / sosSamples.length)
-      : null;
-  metrics.push({
-    key: "SPEED_OF_SERVICE",
-    value: avgSos,
-    unit: "seconds",
-    health: avgSos != null ? sosHealth(avgSos) : "neutral",
-    availability: avgSos != null ? "live" : "pending",
-    targetMax: KPI_SOS_GOOD_MAX,
-    sampleSize: sosSamples.length,
-  });
-
-  // 5. Order accuracy — partial via RUSH_FOCUS infractions vs orders (Convention proxy)
-  const channelOrderTotal = channelRows.reduce((s, r) => s + r.orderCount, 0);
-  const orderDenominator = Math.max(channelOrderTotal, totalOrdersToday);
-  const accuracyPct =
-    orderDenominator > 0
-      ? Math.round(((orderDenominator - orderErrors) / orderDenominator) * 1000) / 10
-      : null;
-  metrics.push({
-    key: "ORDER_ACCURACY_PCT",
-    value: accuracyPct,
-    unit: "percent",
-    health: accuracyPct != null ? orderAccuracyHealth(accuracyPct) : "neutral",
-    availability: orderDenominator > 0 ? "partial" : "pending",
-    targetMin: KPI_ORDER_ACCURACY_GOOD_MIN,
-    sampleSize: orderDenominator,
-  });
-
-  // 6. Prime Cost %
-  const foodCostPct = location?.foodCostPct != null ? Number(location.foodCostPct) : null;
-  const primeCostPct =
-    foodCostPct != null && laborPct != null ? Math.round((foodCostPct + laborPct) * 10) / 10 : null;
-  metrics.push({
-    key: "PRIME_COST_PCT",
-    value: primeCostPct,
-    unit: "percent",
-    health: primeCostPct != null ? primeCostHealth(primeCostPct) : "neutral",
-    availability: primeCostPct != null ? "live" : foodCostPct == null ? "pending" : "partial",
-    targetMax: KPI_PRIME_COST_GOOD_MAX,
-  });
-
-  // 7. Average ticket size (7-day, by channel)
-  const channelBreakdown: KpiChannelBreakdown[] = Array.from(
-    channelRows
-      .reduce(
-        (map, row) => {
-          const key = channelKey(row.channel);
-          const prev = map.get(key) ?? { channel: key, netSales: 0, orderCount: 0 };
-          prev.netSales += Number(row.netSales);
-          prev.orderCount += row.orderCount;
-          map.set(key, prev);
-          return map;
-        },
-        new Map<
-          KpiChannelBreakdown["channel"],
-          { channel: KpiChannelBreakdown["channel"]; netSales: number; orderCount: number }
-        >(),
-      )
-      .values(),
-  )
-    .map((row) => ({
-      channel: row.channel,
-      avgTicket: row.orderCount > 0 ? Math.round((row.netSales / row.orderCount) * 100) / 100 : 0,
-      orderCount: row.orderCount,
-    }))
-    .filter((row) => row.orderCount > 0);
-
-  const totalChannelSales = channelBreakdown.reduce((s, c) => s + c.avgTicket * c.orderCount, 0);
-  const totalChannelOrders = channelBreakdown.reduce((s, c) => s + c.orderCount, 0);
-  const avgTicket =
-    totalChannelOrders > 0 ? Math.round((totalChannelSales / totalChannelOrders) * 100) / 100 : null;
-
-  metrics.push({
-    key: "AVG_TICKET_SIZE",
-    value: avgTicket,
-    unit: "currency",
-    health: "neutral",
-    availability: totalChannelOrders > 0 ? (channelBreakdown.length > 1 ? "live" : "partial") : "pending",
-    channelBreakdown,
-    sampleSize: totalChannelOrders,
-  });
-
-  // 8. Repeat visitor rate — requires UEAT customer identity
-  metrics.push({
-    key: "REPEAT_VISITOR_RATE",
-    value: null,
-    unit: "percent",
-    health: "neutral",
-    availability: "pending",
-    targetMin: 40,
-  });
+  const metrics: KpiMetric[] = [
+    {
+      key: "FLOOR_UTILIZATION_PCT",
+      value: a?.floorUtilizationPct ?? null,
+      unit: "percent",
+      health: a?.floorUtilizationPct != null ? utilHealth(a.floorUtilizationPct) : "neutral",
+      availability,
+      targetMin: KPI_FLOOR_UTIL_GOOD_MIN,
+      sampleSize: a?.classCount,
+    },
+    {
+      key: "YIELD_PER_SQM",
+      value: a?.avgYieldPerSqm ?? null,
+      unit: "currency",
+      health: a?.avgYieldPerSqm != null ? yieldHealth(a.avgYieldPerSqm) : "neutral",
+      availability: a?.avgYieldPerSqm != null ? "live" : "pending",
+      targetMin: KPI_YIELD_SQM_GOOD_MIN,
+      sampleSize: a?.classCount,
+    },
+    {
+      key: "LEAD_FOLLOW_DELTA",
+      value: a?.avgLeadFollowDelta ?? null,
+      unit: "ratio",
+      health: a?.avgLeadFollowDelta != null ? parityHealth(a.avgLeadFollowDelta) : "neutral",
+      availability,
+      targetMax: KPI_PARITY_DELTA_WARN_MAX,
+      sampleSize: a?.classCount,
+    },
+    {
+      key: "BLOCKED_REVENUE",
+      value: a?.blockedRevenue ?? null,
+      unit: "currency",
+      health:
+        a?.blockedRevenue == null
+          ? "neutral"
+          : a.blockedRevenue <= 0
+            ? "good"
+            : a.blockedRevenue < 200
+              ? "warning"
+              : "critical",
+      availability,
+      sampleSize: a?.classCount,
+    },
+    {
+      key: "NET_PROFIT_PER_CLASS",
+      value: a?.avgNetProfitPerClass ?? null,
+      unit: "currency",
+      health:
+        a?.avgNetProfitPerClass != null ? profitHealth(a.avgNetProfitPerClass) : "neutral",
+      availability,
+      targetMin: KPI_NET_PROFIT_GOOD_MIN,
+      sampleSize: a?.classCount,
+    },
+    {
+      key: "PAYROLL_TO_REVENUE_PCT",
+      value: a?.payrollToRevenuePct ?? null,
+      unit: "percent",
+      health:
+        a?.payrollToRevenuePct != null ? payrollHealth(a.payrollToRevenuePct) : "neutral",
+      availability: a?.payrollToRevenuePct != null ? "live" : "pending",
+      targetMax: KPI_PAYROLL_REV_GOOD_MAX,
+      sampleSize: a?.paidEnrollmentCount,
+    },
+    {
+      key: "L1_TO_L2_PROGRESSION",
+      value: analytics?.progression.l1ToL2Rate ?? null,
+      unit: "percent",
+      health:
+        analytics?.progression.l1ToL2Rate != null
+          ? progressionHealth(analytics.progression.l1ToL2Rate)
+          : "neutral",
+      availability:
+        analytics?.progression.beginnerCompleters && analytics.progression.beginnerCompleters > 0
+          ? "partial"
+          : "pending",
+      targetMin: KPI_L1_L2_GOOD_MIN,
+      sampleSize: analytics?.progression.beginnerCompleters,
+    },
+    {
+      key: "CHURN_RISK_COUNT",
+      value: a?.churnRiskCount ?? null,
+      unit: "count",
+      health:
+        a?.churnRiskCount == null
+          ? "neutral"
+          : a.churnRiskCount === 0
+            ? "good"
+            : a.churnRiskCount < 5
+              ? "warning"
+              : "critical",
+      availability: hasLiveData ? "partial" : "pending",
+      sampleSize: a?.paidEnrollmentCount,
+    },
+  ];
 
   return {
     metrics,
     computedAt: targetDate.toISOString(),
-    hasPosLive,
+    hasLiveData,
+    hasPosLive: hasLiveData,
   };
 }

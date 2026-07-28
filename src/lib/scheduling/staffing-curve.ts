@@ -40,6 +40,8 @@ export const getStaffingProfilesForLocation = cache(async function getStaffingPr
     sortOrder: row.sortOrder,
     tipPoints: asPlainNumber(row.tipPoints),
     isActive: row.isActive,
+    capacity: row.capacity,
+    surfaceSqm: row.surfaceSqm,
   }));
 
   const profiles: Record<string, StaffingProfileSnapshot> = {};

@@ -47,6 +47,8 @@ function mapStation(row: NonNullable<ShiftWithEmployeeRaw["station"]>): StationR
     sortOrder: row.sortOrder,
     tipPoints: asPlainNumber(row.tipPoints),
     isActive: row.isActive,
+    capacity: row.capacity,
+    surfaceSqm: row.surfaceSqm,
   };
 }
 

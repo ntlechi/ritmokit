@@ -70,6 +70,76 @@ export interface Dictionary {
     conventionRemindAllSigned: string;
     conventionOpenManager: string;
   };
+  studioCockpit: {
+    badge: string;
+    title: string;
+    subtitle: string;
+    emptyTitle: string;
+    emptyHint: string;
+    emptyCta: string;
+    tools: {
+      sessions: string;
+      rooms: string;
+      settings: string;
+    };
+    parity: {
+      title: string;
+      subtitle: string;
+      blockedRevenue: string;
+      balanced: string;
+      warning: string;
+      blocked: string;
+      empty: string;
+      waitlisted: string;
+      leads: string;
+      follows: string;
+      blockedForClass: string;
+      openSessions: string;
+    };
+    profit: {
+      title: string;
+      subtitle: string;
+      bottomFilter: string;
+      sortProfit: string;
+      sortYield: string;
+      sortUtil: string;
+      sortRevenue: string;
+      empty: string;
+      colClass: string;
+      colInstructor: string;
+      colUtil: string;
+      colRevenue: string;
+      colProfit: string;
+      colYield: string;
+    };
+    heatmap: {
+      title: string;
+      subtitle: string;
+      empty: string;
+      days: [string, string, string, string, string, string, string];
+      legendDead: string;
+      legendLow: string;
+      legendFull: string;
+      deadSlot: string;
+      promoteSlot: string;
+    };
+    funnel: {
+      title: string;
+      subtitle: string;
+      level1: string;
+      level2: string;
+      level3: string;
+      churnTitle: string;
+      churnHint: string;
+      churnEmpty: string;
+      misses: string;
+      emailCta: string;
+      smsCta: string;
+      emailSubject: string;
+      emailBody: string;
+      smsBody: string;
+    };
+  };
   calendar: {
     title: string;
     team: string;
@@ -722,6 +792,8 @@ export interface Dictionary {
       colorHex: string;
       slug: string;
       tipPoints: string;
+      capacity: string;
+      surfaceSqm: string;
       isActive: string;
       save: string;
       saving: string;
@@ -732,6 +804,8 @@ export interface Dictionary {
         missingNames: string;
         invalidColor: string;
         invalidTipPoints: string;
+        invalidCapacity: string;
+        invalidSurface: string;
         notFound: string;
         databaseError: string;
       };
@@ -1178,24 +1252,100 @@ export interface Dictionary {
       OTHER: string;
     };
     metrics: {
-      LABOR_COST_PCT: { shortLabel: string; hint: string };
-      SPLH: { shortLabel: string; hint: string };
-      STAFF_TURNOVER_RATE: { shortLabel: string; hint: string };
-      SPEED_OF_SERVICE: { shortLabel: string; hint: string };
-      ORDER_ACCURACY_PCT: { shortLabel: string; hint: string };
-      PRIME_COST_PCT: { shortLabel: string; hint: string };
-      AVG_TICKET_SIZE: { shortLabel: string; hint: string };
-      REPEAT_VISITOR_RATE: { shortLabel: string; hint: string };
+      FLOOR_UTILIZATION_PCT: { shortLabel: string; hint: string };
+      YIELD_PER_SQM: { shortLabel: string; hint: string };
+      INSTRUCTOR_SUB_RATE: { shortLabel: string; hint: string };
+      LEAD_FOLLOW_DELTA: { shortLabel: string; hint: string };
+      BLOCKED_REVENUE: { shortLabel: string; hint: string };
+      SOLO_COUPLE_RATIO: { shortLabel: string; hint: string };
+      NET_PROFIT_PER_CLASS: { shortLabel: string; hint: string };
+      PAYROLL_TO_REVENUE_PCT: { shortLabel: string; hint: string };
+      SEASON_VS_DROPIN_MIX: { shortLabel: string; hint: string };
+      L1_TO_L2_PROGRESSION: { shortLabel: string; hint: string };
+      CHURN_RISK_COUNT: { shortLabel: string; hint: string };
+      STYLE_CROSSOVER_PCT: { shortLabel: string; hint: string };
+      SOCIAL_CONVERSION_PCT: { shortLabel: string; hint: string };
     };
     explainers: {
-      LABOR_COST_PCT: { title: string; formula: string; why: string; target: string; source: string };
-      SPLH: { title: string; formula: string; why: string; target: string; source: string };
-      STAFF_TURNOVER_RATE: { title: string; formula: string; why: string; target: string; source: string };
-      SPEED_OF_SERVICE: { title: string; formula: string; why: string; target: string; source: string };
-      ORDER_ACCURACY_PCT: { title: string; formula: string; why: string; target: string; source: string };
-      PRIME_COST_PCT: { title: string; formula: string; why: string; target: string; source: string };
-      AVG_TICKET_SIZE: { title: string; formula: string; why: string; target: string; source: string };
-      REPEAT_VISITOR_RATE: { title: string; formula: string; why: string; target: string; source: string };
+      FLOOR_UTILIZATION_PCT: {
+        title: string;
+        formula: string;
+        why: string;
+        target: string;
+        source: string;
+      };
+      YIELD_PER_SQM: { title: string; formula: string; why: string; target: string; source: string };
+      INSTRUCTOR_SUB_RATE: {
+        title: string;
+        formula: string;
+        why: string;
+        target: string;
+        source: string;
+      };
+      LEAD_FOLLOW_DELTA: {
+        title: string;
+        formula: string;
+        why: string;
+        target: string;
+        source: string;
+      };
+      BLOCKED_REVENUE: { title: string; formula: string; why: string; target: string; source: string };
+      SOLO_COUPLE_RATIO: {
+        title: string;
+        formula: string;
+        why: string;
+        target: string;
+        source: string;
+      };
+      NET_PROFIT_PER_CLASS: {
+        title: string;
+        formula: string;
+        why: string;
+        target: string;
+        source: string;
+      };
+      PAYROLL_TO_REVENUE_PCT: {
+        title: string;
+        formula: string;
+        why: string;
+        target: string;
+        source: string;
+      };
+      SEASON_VS_DROPIN_MIX: {
+        title: string;
+        formula: string;
+        why: string;
+        target: string;
+        source: string;
+      };
+      L1_TO_L2_PROGRESSION: {
+        title: string;
+        formula: string;
+        why: string;
+        target: string;
+        source: string;
+      };
+      CHURN_RISK_COUNT: {
+        title: string;
+        formula: string;
+        why: string;
+        target: string;
+        source: string;
+      };
+      STYLE_CROSSOVER_PCT: {
+        title: string;
+        formula: string;
+        why: string;
+        target: string;
+        source: string;
+      };
+      SOCIAL_CONVERSION_PCT: {
+        title: string;
+        formula: string;
+        why: string;
+        target: string;
+        source: string;
+      };
     };
   };
   punch: {
@@ -1956,6 +2106,7 @@ export interface Dictionary {
   dance: {
     lead: string;
     follow: string;
+    solo: string;
     parity: string;
     instructorPayroll: string;
     dropIn: string;
@@ -1965,6 +2116,66 @@ export interface Dictionary {
     waitlistFollow: string;
     sessionsIntro: string;
     roomsIntro: string;
+    seasonsTitle: string;
+    classesTitle: string;
+    enrollmentsTitle: string;
+    allSeasons: string;
+    createSeason: string;
+    publishSeason: string;
+    deleteSeason: string;
+    seasonNamePlaceholder: string;
+    seasonCreated: string;
+    seasonPublished: string;
+    seasonDeleted: string;
+    emptyClasses: string;
+    addClass: string;
+    createClass: string;
+    classCreated: string;
+    classDeleted: string;
+    deleteClass: string;
+    createCourse: string;
+    courseTitlePlaceholder: string;
+    courseStylePlaceholder: string;
+    maxLeads: string;
+    maxFollows: string;
+    priceRegular: string;
+    selectClass: string;
+    emptyEnrollments: string;
+    enrollStudent: string;
+    enrolled: string;
+    enrolledWaitlist: string;
+    waitlisted: string;
+    paid: string;
+    attended: string;
+    markAttended: string;
+    attendanceMarked: string;
+    attendanceCleared: string;
+    days: {
+      sun: string;
+      mon: string;
+      tue: string;
+      wed: string;
+      thu: string;
+      fri: string;
+      sat: string;
+    };
+    levels: {
+      BEGINNER: string;
+      INTERMEDIATE: string;
+      ADVANCED: string;
+    };
+    errors: {
+      generic: string;
+      unauthorized: string;
+      invalid_input: string;
+      not_found: string;
+      cannot_delete_active: string;
+      invalid_times: string;
+      session_not_found: string;
+      parity_role_full: string;
+      parity_imbalance: string;
+      parity_solo_not_supported: string;
+    };
   };
 }
 

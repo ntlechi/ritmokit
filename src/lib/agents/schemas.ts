@@ -22,6 +22,7 @@ export const AGENT_EVENT_TYPES = [
   "chat.message_posted",
   "session.created",
   "session.season_published",
+  "enrollment.created",
   "enrollment.parity_alert",
   "instructor.payroll_calculated",
   "churn.risk_detected",

@@ -194,6 +194,8 @@ export async function getEmployeeCareerPath(userId: string): Promise<EmployeeCar
           sortOrder: membership.station.sortOrder,
           tipPoints: Number(membership.station.tipPoints),
           isActive: membership.station.isActive,
+          capacity: membership.station.capacity,
+          surfaceSqm: membership.station.surfaceSqm,
         }
       : null,
     currentLevel,

@@ -1,0 +1,74 @@
+import "server-only";
+
+import { asPlainNumber } from "@/lib/data/serialize";
+import { aggregateDanceAnalytics, type RawClassForAnalytics } from "@/lib/dance/analytics/aggregates";
+import type { DanceAnalyticsBundle } from "@/lib/dance/analytics/types";
+import { prisma } from "@/lib/prisma";
+import { stationLabel } from "@/lib/stations/display";
+
+export async function loadDanceAnalyticsForLocation(
+  locationId: string,
+): Promise<DanceAnalyticsBundle> {
+  const rows = await prisma.classSession.findMany({
+    where: {
+      OR: [{ season: { locationId } }, { room: { locationId } }],
+    },
+    include: {
+      course: true,
+      room: true,
+      instructor: {
+        select: {
+          id: true,
+          fullName: true,
+          instructorPayType: true,
+          instructorPayRate: true,
+        },
+      },
+      enrollments: {
+        select: {
+          danceRole: true,
+          paid: true,
+          waitlisted: true,
+          attended: true,
+          studentId: true,
+          student: { select: { fullName: true, email: true } },
+        },
+      },
+    },
+  });
+
+  const raw: RawClassForAnalytics[] = rows.map((row) => ({
+    id: row.id,
+    dayOfWeek: row.dayOfWeek,
+    startTime: row.startTime,
+    endTime: row.endTime,
+    maxLeads: row.maxLeads,
+    maxFollows: row.maxFollows,
+    priceRegular: asPlainNumber(row.priceRegular),
+    courseTitle: row.course.title,
+    style: row.course.style,
+    level: row.course.level,
+    roomId: row.roomId,
+    roomName: stationLabel(row.room, "fr"),
+    surfaceSqm: row.room.surfaceSqm,
+    roomCapacity: row.room.capacity,
+    instructorId: row.instructorId,
+    instructorName: row.instructor.fullName,
+    payType: row.instructor.instructorPayType,
+    payRate:
+      row.instructor.instructorPayRate != null
+        ? asPlainNumber(row.instructor.instructorPayRate)
+        : null,
+    enrollments: row.enrollments.map((e) => ({
+      danceRole: e.danceRole,
+      paid: e.paid,
+      waitlisted: e.waitlisted,
+      attended: e.attended,
+      studentId: e.studentId,
+      studentName: e.student.fullName,
+      studentEmail: e.student.email,
+    })),
+  }));
+
+  return aggregateDanceAnalytics(locationId, raw);
+}

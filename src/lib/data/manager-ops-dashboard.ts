@@ -189,7 +189,7 @@ export async function getManagerOpsDashboard(
       },
     }),
     getConventionLocationStats(locationId),
-    computeLocationKpiSnapshot(locationId, now, labor),
+    computeLocationKpiSnapshot(locationId, now),
   ]);
 
   const stationMap = new Map<string, FloorStationCount>();

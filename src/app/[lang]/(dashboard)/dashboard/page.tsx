@@ -2,9 +2,9 @@ import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
 import { DbErrorBanner } from "@/components/db-error-banner";
 import { PageBodyFallback } from "@/components/errors/page-body-fallback";
-import { OpsDashboard } from "@/components/manager/ops-dashboard";
+import { StudioCockpit } from "@/components/dashboard/dance/studio-cockpit";
 import { canAccessManagerSettings, getSessionUser } from "@/lib/auth/session";
-import { getManagerOpsDashboard } from "@/lib/data/manager-ops-dashboard";
+import { getStudioCockpitData } from "@/lib/data/studio-cockpit";
 import { safeQuery } from "@/lib/data/safe";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
@@ -28,14 +28,14 @@ export default async function ManagerDashboardPage({
 
   return (
     <div className="flex flex-1 flex-col">
-      <Suspense fallback={<PageBodyFallback label={dict.opsDashboard.title} />}>
-        <OpsDashboardBody lang={lang} userId={user.id} role={user.role} dict={dict} />
+      <Suspense fallback={<PageBodyFallback label={dict.studioCockpit.title} />}>
+        <StudioCockpitBody lang={lang} userId={user.id} role={user.role} dict={dict} />
       </Suspense>
     </div>
   );
 }
 
-async function OpsDashboardBody({
+async function StudioCockpitBody({
   lang,
   userId,
   role,
@@ -46,10 +46,7 @@ async function OpsDashboardBody({
   role: Role;
   dict: Dictionary;
 }) {
-  const { data, dbError } = await safeQuery(
-    () => getManagerOpsDashboard(userId, role, lang),
-    null,
-  );
+  const { data, dbError } = await safeQuery(() => getStudioCockpitData(userId, role), null);
 
   if (!data) {
     redirect(`/${lang}/settings/manager`);
@@ -62,7 +59,7 @@ async function OpsDashboardBody({
           <DbErrorBanner label={dict.common.dbDisconnected} />
         </div>
       )}
-      <OpsDashboard lang={lang} data={data} copy={dict.opsDashboard} dict={dict} />
+      <StudioCockpit lang={lang} data={data} dict={dict} />
     </>
   );
 }

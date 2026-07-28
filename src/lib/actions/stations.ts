@@ -26,10 +26,26 @@ async function assertManagerForLocation(locationId: string) {
 }
 
 function revalidateStations(lang?: string) {
-  if (lang) revalidatePath(`/${lang}/settings/manager/stations`, "page");
+  if (lang) {
+    revalidatePath(`/${lang}/settings/manager/stations`, "page");
+    revalidatePath(`/${lang}/rooms`, "page");
+  }
   revalidatePath("/[lang]/settings/manager/stations", "page");
+  revalidatePath("/[lang]/rooms", "page");
   revalidatePath("/[lang]/team", "page");
   revalidatePath("/[lang]/calendar", "layout");
+}
+
+function parseOptionalPositiveInt(value: number | null | undefined): number | null | { error: string } {
+  if (value == null || Number.isNaN(value)) return null;
+  if (!Number.isInteger(value) || value < 1 || value > 500) return { error: "invalid_capacity" };
+  return value;
+}
+
+function parseOptionalSurface(value: number | null | undefined): number | null | { error: string } {
+  if (value == null || Number.isNaN(value)) return null;
+  if (value <= 0 || value > 10_000) return { error: "invalid_surface" };
+  return Math.round(value * 100) / 100;
 }
 
 export async function createStationAction(input: {
@@ -40,6 +56,8 @@ export async function createStationAction(input: {
   nameEs: string;
   colorHex: string;
   slug?: string;
+  capacity?: number | null;
+  surfaceSqm?: number | null;
 }): Promise<StationActionResult> {
   try {
     const auth = await assertManagerForLocation(input.locationId);
@@ -53,6 +71,11 @@ export async function createStationAction(input: {
 
     if (!nameFr || !nameEn || !nameEs) return { ok: false, error: "missing_names" };
     if (!HEX_PATTERN.test(colorHex)) return { ok: false, error: "invalid_color" };
+
+    const capacity = parseOptionalPositiveInt(input.capacity ?? null);
+    if (capacity && typeof capacity === "object") return { ok: false, error: capacity.error };
+    const surfaceSqm = parseOptionalSurface(input.surfaceSqm ?? null);
+    if (surfaceSqm && typeof surfaceSqm === "object") return { ok: false, error: surfaceSqm.error };
 
     const maxOrder = await prisma.station.aggregate({
       where: { locationId: input.locationId },
@@ -68,10 +91,13 @@ export async function createStationAction(input: {
         colorHex,
         slug,
         sortOrder: (maxOrder._max.sortOrder ?? 0) + 1,
+        capacity: capacity as number | null,
+        surfaceSqm: surfaceSqm as number | null,
       },
     });
 
     revalidateStations(input.lang);
+    revalidatePath(`/${input.lang}/rooms`, "page");
     return { ok: true, stationId: station.id };
   } catch (error) {
     return actionDatabaseError("stations", error);
@@ -88,7 +114,10 @@ export async function updateStationAction(input: {
   colorHex: string;
   slug?: string;
   isActive: boolean;
-  tipPoints: number;
+  capacity?: number | null;
+  surfaceSqm?: number | null;
+  /** @deprecated Ignored — tip points are QSR-only. */
+  tipPoints?: number;
 }): Promise<StationActionResult> {
   try {
     const auth = await assertManagerForLocation(input.locationId);
@@ -102,7 +131,11 @@ export async function updateStationAction(input: {
 
     if (!nameFr || !nameEn || !nameEs) return { ok: false, error: "missing_names" };
     if (!HEX_PATTERN.test(colorHex)) return { ok: false, error: "invalid_color" };
-    if (input.tipPoints <= 0 || input.tipPoints > 5) return { ok: false, error: "invalid_tip_points" };
+
+    const capacity = parseOptionalPositiveInt(input.capacity ?? null);
+    if (capacity && typeof capacity === "object") return { ok: false, error: capacity.error };
+    const surfaceSqm = parseOptionalSurface(input.surfaceSqm ?? null);
+    if (surfaceSqm && typeof surfaceSqm === "object") return { ok: false, error: surfaceSqm.error };
 
     const existing = await prisma.station.findFirst({
       where: { id: input.stationId, locationId: input.locationId },
@@ -118,11 +151,13 @@ export async function updateStationAction(input: {
         colorHex,
         slug,
         isActive: input.isActive,
-        tipPoints: input.tipPoints,
+        capacity: capacity as number | null,
+        surfaceSqm: surfaceSqm as number | null,
       },
     });
 
     revalidateStations(input.lang);
+    revalidatePath(`/${input.lang}/rooms`, "page");
     return { ok: true, stationId: input.stationId };
   } catch (error) {
     return actionDatabaseError("stations", error);

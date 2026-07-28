@@ -10,8 +10,13 @@ export type StationRecord = {
   colorHex: string;
   slug: string | null;
   sortOrder: number;
+  /** @deprecated QSR tip weight — kept for schema compat; unused in dance UI. */
   tipPoints: number;
   isActive: boolean;
+  /** Dance room student capacity. */
+  capacity: number | null;
+  /** Floor area m² for $/m² analytics. */
+  surfaceSqm: number | null;
 };
 
 export function stationLabel(station: Pick<StationRecord, "nameFr" | "nameEn" | "nameEs">, locale: Locale): string {

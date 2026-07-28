@@ -10,6 +10,8 @@ function formatValue(metric: KpiMetric, lang: Locale): string {
   if (metric.value == null) return "—";
   if (metric.unit === "percent") return `${metric.value.toFixed(1)}%`;
   if (metric.unit === "seconds") return `${Math.round(metric.value)}s`;
+  if (metric.unit === "count") return String(Math.round(metric.value));
+  if (metric.unit === "ratio") return metric.value.toFixed(1);
   if (metric.unit === "currency") {
     return new Intl.NumberFormat(lang === "en" ? "en-CA" : lang === "es" ? "es-ES" : "fr-CA", {
       style: "currency",
@@ -99,7 +101,7 @@ export function KpiMetricCard({
         </ul>
       )}
 
-      {metric.sampleSize != null && metric.sampleSize > 0 && metric.key !== "AVG_TICKET_SIZE" && (
+      {metric.sampleSize != null && metric.sampleSize > 0 && (
         <p className="mt-1 text-[10px] text-foreground-muted">
           {dict.kpi.sampleSize.replace("{count}", String(metric.sampleSize))}
         </p>

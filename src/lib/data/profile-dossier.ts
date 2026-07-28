@@ -77,6 +77,8 @@ function toStationRecord(row: {
   sortOrder: number;
   tipPoints: { toString(): string };
   isActive: boolean;
+  capacity: number | null;
+  surfaceSqm: number | null;
 }): StationRecord {
   return {
     id: row.id,
@@ -89,6 +91,8 @@ function toStationRecord(row: {
     sortOrder: row.sortOrder,
     tipPoints: asPlainNumber(row.tipPoints),
     isActive: row.isActive,
+    capacity: row.capacity,
+    surfaceSqm: row.surfaceSqm,
   };
 }
 

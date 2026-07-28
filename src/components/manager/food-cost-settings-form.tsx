@@ -69,7 +69,7 @@ export function FoodCostSettingsForm({
           <div>
             <div className="flex items-center gap-1">
               <h2 className="text-base font-semibold">{copy.formTitle}</h2>
-              <KpiExplainer kpiKey="PRIME_COST_PCT" dict={dict} />
+              <KpiExplainer kpiKey="PAYROLL_TO_REVENUE_PCT" dict={dict} />
             </div>
             <p className="mt-1 text-sm text-foreground-muted">{copy.formSubtitle}</p>
           </div>

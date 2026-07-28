@@ -13,7 +13,8 @@ function resolveError(dict: Dictionary, code: string): string {
     unauthorized: dict.manager.stations.errors.unauthorized,
     missing_names: dict.manager.stations.errors.missingNames,
     invalid_color: dict.manager.stations.errors.invalidColor,
-    invalid_tip_points: dict.manager.stations.errors.invalidTipPoints,
+    invalid_capacity: dict.manager.stations.errors.invalidCapacity,
+    invalid_surface: dict.manager.stations.errors.invalidSurface,
     not_found: dict.manager.stations.errors.notFound,
     database_error: dict.manager.stations.errors.databaseError,
   };
@@ -41,7 +42,8 @@ function StationEditor({
     nameEs: station?.nameEs ?? "",
     colorHex: station?.colorHex ?? "#64748b",
     slug: station?.slug ?? "",
-    tipPoints: String(station?.tipPoints ?? 1),
+    capacity: station?.capacity != null ? String(station.capacity) : "",
+    surfaceSqm: station?.surfaceSqm != null ? String(station.surfaceSqm) : "",
     isActive: station?.isActive ?? true,
   });
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +54,11 @@ function StationEditor({
     setError(null);
     setSuccess(null);
     startTransition(async () => {
+      const capacityRaw = values.capacity.trim();
+      const surfaceRaw = values.surfaceSqm.trim();
+      const capacity = capacityRaw === "" ? null : Number(capacityRaw);
+      const surfaceSqm = surfaceRaw === "" ? null : Number(surfaceRaw);
+
       const payload = {
         lang,
         locationId,
@@ -60,6 +67,8 @@ function StationEditor({
         nameEs: values.nameEs,
         colorHex: values.colorHex,
         slug: values.slug || undefined,
+        capacity,
+        surfaceSqm,
       };
 
       const result = station
@@ -67,7 +76,6 @@ function StationEditor({
             ...payload,
             stationId: station.id,
             isActive: values.isActive,
-            tipPoints: Number(values.tipPoints),
           })
         : await createStationAction(payload);
 
@@ -133,29 +141,40 @@ function StationEditor({
             className="rounded-lg border border-border bg-background px-2 py-1.5 text-sm"
           />
         </label>
+        <label className="flex flex-col gap-1 text-xs text-foreground-muted">
+          {dict.manager.stations.capacity}
+          <input
+            type="number"
+            min={1}
+            max={500}
+            value={values.capacity}
+            onChange={(e) => setValues((v) => ({ ...v, capacity: e.target.value }))}
+            placeholder="24"
+            className="rounded-lg border border-border bg-background px-2 py-1.5 text-sm"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-xs text-foreground-muted">
+          {dict.manager.stations.surfaceSqm}
+          <input
+            type="number"
+            min={1}
+            max={10000}
+            step={0.1}
+            value={values.surfaceSqm}
+            onChange={(e) => setValues((v) => ({ ...v, surfaceSqm: e.target.value }))}
+            placeholder="80"
+            className="rounded-lg border border-border bg-background px-2 py-1.5 text-sm"
+          />
+        </label>
         {station && (
-          <>
-            <label className="flex flex-col gap-1 text-xs text-foreground-muted">
-              {dict.manager.stations.tipPoints}
-              <input
-                type="number"
-                min={0.1}
-                max={5}
-                step={0.1}
-                value={values.tipPoints}
-                onChange={(e) => setValues((v) => ({ ...v, tipPoints: e.target.value }))}
-                className="rounded-lg border border-border bg-background px-2 py-1.5 text-sm"
-              />
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={values.isActive}
-                onChange={(e) => setValues((v) => ({ ...v, isActive: e.target.checked }))}
-              />
-              {dict.manager.stations.isActive}
-            </label>
-          </>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={values.isActive}
+              onChange={(e) => setValues((v) => ({ ...v, isActive: e.target.checked }))}
+            />
+            {dict.manager.stations.isActive}
+          </label>
         )}
       </div>
       <div className="flex items-center gap-2">
@@ -188,7 +207,6 @@ export function StationsDashboard({
   locale: Locale;
   lang: string;
 }) {
-  const [stations, setStations] = useState(initialStations);
   const [showCreate, setShowCreate] = useState(false);
 
   return (
@@ -218,12 +236,12 @@ export function StationsDashboard({
         />
       )}
 
-      {stations.length === 0 ? (
+      {initialStations.length === 0 ? (
         <p className="rounded-2xl border border-border bg-surface-muted px-4 py-8 text-center text-sm text-foreground-muted">
           {dict.manager.stations.empty}
         </p>
       ) : (
-        stations.map((station) => (
+        initialStations.map((station) => (
           <StationEditor
             key={station.id}
             station={station}

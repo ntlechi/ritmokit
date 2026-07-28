@@ -1,5 +1,4 @@
 import { AlertTriangle, Clock3, DollarSign, Gauge, Radio, TrendingUp } from "lucide-react";
-import { KpiExplainer } from "@/components/kpi/kpi-explainer";
 import {
   LABOR_COST_TARGET_MAX,
   LABOR_COST_TARGET_MIN,
@@ -44,7 +43,6 @@ function LaborCostGauge({ dict, report }: { dict: Dictionary; report: LiveLaborK
         <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-foreground-muted">
           <DollarSign className="h-3.5 w-3.5" aria-hidden />
           {dict.laborKpi.liveLaborCost}
-          <KpiExplainer kpiKey="LABOR_COST_PCT" dict={dict} />
         </div>
         <Badge tone={statusTone(status)}>{statusLabel(dict, status)}</Badge>
       </div>
@@ -95,7 +93,6 @@ function SplhCard({ dict, report }: { dict: Dictionary; report: LiveLaborKpiRepo
       <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-foreground-muted">
         <TrendingUp className="h-3.5 w-3.5" aria-hidden />
         {dict.laborKpi.splh}
-        <KpiExplainer kpiKey="SPLH" dict={dict} />
       </div>
       <p className="metric text-3xl font-semibold">
         {report.currentHourSplh !== null ? formatCurrency(report.currentHourSplh) : "—"}

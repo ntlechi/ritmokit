@@ -18,6 +18,15 @@ export async function runDanceAgent(log: AgentLogRow): Promise<Record<string, un
         suggestion: "notify_public_schedule_sync",
         seasonId: log.payload.seasonId ?? null,
       };
+    case "enrollment.created":
+      return {
+        acknowledged: true,
+        suggestion: "confirm_public_enrollment",
+        sessionId: log.payload.sessionId ?? null,
+        enrollmentId: log.payload.enrollmentId ?? null,
+        waitlisted: log.payload.waitlisted ?? false,
+        source: log.payload.source ?? "unknown",
+      };
     case "enrollment.parity_alert":
       return {
         acknowledged: true,
