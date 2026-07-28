@@ -99,23 +99,31 @@ async function main() {
   } as const;
 
   const owner = await prisma.user.upsert({
-    where: { email: "owner@bati.ca" },
-    update: { role: "OWNER" },
+    where: { id: "00000000-0000-0000-0000-000000000010" },
+    update: {
+      email: "owner@ritmokit.com",
+      fullName: "RitmoKit Owner",
+      role: "OWNER",
+    },
     create: {
-      id: "00000000-0000-0000-0000-000000000000",
-      email: "owner@bati.ca",
-      fullName: "Marie Propriétaire",
+      id: "00000000-0000-0000-0000-000000000010",
+      email: "owner@ritmokit.com",
+      fullName: "RitmoKit Owner",
       role: "OWNER",
     },
   });
 
   const manager = await prisma.user.upsert({
-    where: { email: "gerant@mirok.ca" },
-    update: { role: "MANAGER" },
+    where: { id: "00000000-0000-0000-0000-000000000001" },
+    update: {
+      email: "manager@ritmokit.com",
+      fullName: "Studio Manager",
+      role: "MANAGER",
+    },
     create: {
       id: "00000000-0000-0000-0000-000000000001",
-      email: "gerant@mirok.ca",
-      fullName: "Alex Gérant",
+      email: "manager@ritmokit.com",
+      fullName: "Studio Manager",
       role: "MANAGER",
     },
   });

@@ -232,6 +232,7 @@ const dictionary: Dictionary = {
     signInTitle: "RitmoKit",
     signInSubtitle: "Sign in to access your workspace.",
     email: "Email address",
+    emailPlaceholder: "owner@ritmokit.com",
     password: "Password",
     signIn: "Sign in",
     signingIn: "Signing in…",

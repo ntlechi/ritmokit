@@ -211,6 +211,7 @@ export interface Dictionary {
     signInTitle: string;
     signInSubtitle: string;
     email: string;
+    emailPlaceholder: string;
     password: string;
     signIn: string;
     signingIn: string;

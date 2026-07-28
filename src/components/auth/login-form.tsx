@@ -117,7 +117,7 @@ export function LoginForm({
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               className={inputClass}
-              placeholder="nom@bati.ca"
+              placeholder={dict.auth.emailPlaceholder}
             />
           </div>
 
@@ -174,7 +174,7 @@ export function LoginForm({
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   className={inputClass}
-                  placeholder="nom@bati.ca"
+                  placeholder={dict.auth.emailPlaceholder}
                 />
               </div>
 
