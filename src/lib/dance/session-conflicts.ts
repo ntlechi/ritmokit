@@ -2,13 +2,12 @@ import type { DanceClassRow } from "@/lib/data/dance-admin";
 
 export type SessionConflict = {
   sessionId: string;
-  kind: "instructor" | "room";
+  kind: "instructor" | "assistant" | "room";
   withSessionId: string;
 };
 
 function overlaps(a: DanceClassRow, b: DanceClassRow): boolean {
   if (a.id === b.id) return false;
-  // Same weekday (or both one-off on same calendar day)
   if (a.dayOfWeek != null && b.dayOfWeek != null && a.dayOfWeek !== b.dayOfWeek) {
     return false;
   }
@@ -24,7 +23,18 @@ function overlaps(a: DanceClassRow, b: DanceClassRow): boolean {
   return aStart < bEnd && bStart < aEnd;
 }
 
-/** Detect double-booked instructors and rooms across the class list. */
+/** All user IDs a person is staffing on a session (primary and/or assistant). */
+function staffIds(cls: DanceClassRow): string[] {
+  const ids = [cls.instructorId];
+  if (cls.assistantId) ids.push(cls.assistantId);
+  return ids;
+}
+
+/**
+ * Detect double-booked staff and rooms.
+ * Flags when the same person is primary in one room and assistant in another
+ * at the same hour (or any overlapping staff assignment).
+ */
 export function findSessionConflicts(classes: DanceClassRow[]): Map<string, SessionConflict[]> {
   const byId = new Map<string, SessionConflict[]>();
 
@@ -39,13 +49,22 @@ export function findSessionConflicts(classes: DanceClassRow[]): Map<string, Sess
       const a = classes[i]!;
       const b = classes[j]!;
       if (!overlaps(a, b)) continue;
-      if (a.instructorId === b.instructorId) {
-        push({ sessionId: a.id, kind: "instructor", withSessionId: b.id });
-        push({ sessionId: b.id, kind: "instructor", withSessionId: a.id });
-      }
+
       if (a.roomId === b.roomId) {
         push({ sessionId: a.id, kind: "room", withSessionId: b.id });
         push({ sessionId: b.id, kind: "room", withSessionId: a.id });
+      }
+
+      const aStaff = staffIds(a);
+      const bStaff = staffIds(b);
+      for (const personId of aStaff) {
+        if (!bStaff.includes(personId)) continue;
+        const aAsAssistant = a.assistantId === personId;
+        const bAsAssistant = b.assistantId === personId;
+        const kind: SessionConflict["kind"] =
+          aAsAssistant || bAsAssistant ? "assistant" : "instructor";
+        push({ sessionId: a.id, kind, withSessionId: b.id });
+        push({ sessionId: b.id, kind, withSessionId: a.id });
       }
     }
   }
@@ -58,6 +77,22 @@ export function hasInstructorConflict(
   sessionId: string,
 ): boolean {
   return Boolean(conflicts?.get(sessionId)?.some((c) => c.kind === "instructor"));
+}
+
+export function hasAssistantConflict(
+  conflicts: Map<string, SessionConflict[]> | undefined,
+  sessionId: string,
+): boolean {
+  return Boolean(conflicts?.get(sessionId)?.some((c) => c.kind === "assistant"));
+}
+
+export function hasStaffConflict(
+  conflicts: Map<string, SessionConflict[]> | undefined,
+  sessionId: string,
+): boolean {
+  return Boolean(
+    conflicts?.get(sessionId)?.some((c) => c.kind === "instructor" || c.kind === "assistant"),
+  );
 }
 
 export function hasRoomConflict(

@@ -2065,6 +2065,8 @@ const dictionary: Dictionary = {
     viewInstructorsHint: "Columns = teachers — double-booking in red.",
     teacherShort: "Teach",
     assistantShort: "Asst",
+    assistantLabel: "Assistant",
+    assistantNone: "No assistant",
     roomSpots: "spots",
     parityBalanced: "Balanced",
     parityNeedsLeads: "Need leads (+{count})",
@@ -2073,6 +2075,8 @@ const dictionary: Dictionary = {
     conflictInstructor: "Double-booked",
     conflictRoom: "Room clash",
     conflictInstructorDetail: "This teacher is already assigned to another class at this time.",
+    conflictAssistantDetail:
+      "This assistant (or teacher) is already assigned elsewhere at this time — including crossed primary/assistant roles.",
     conflictRoomDetail: "This room already has an overlapping class.",
     openAccueilRoster: "Open Accueil check-in / roster",
     classesCount: "classes",

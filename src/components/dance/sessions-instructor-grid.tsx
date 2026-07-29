@@ -6,8 +6,10 @@ import { dna } from "@/lib/design/dna";
 import type { DanceClassRow, DanceInstructorOption } from "@/lib/data/dance-admin";
 import {
   findSessionConflicts,
+  hasAssistantConflict,
   hasInstructorConflict,
   hasRoomConflict,
+  hasStaffConflict,
 } from "@/lib/dance/session-conflicts";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { cn } from "@/lib/utils";
@@ -41,12 +43,22 @@ export function SessionsInstructorGrid({
   );
 
   const activeInstructors = useMemo(() => {
-    const ids = new Set(dayClasses.map((c) => c.instructorId));
+    const ids = new Set<string>();
+    for (const cls of dayClasses) {
+      ids.add(cls.instructorId);
+      if (cls.assistantId) ids.add(cls.assistantId);
+    }
     const listed = instructors.filter((i) => ids.has(i.id));
-    // Include anyone teaching that day even if not in roster options
     for (const cls of dayClasses) {
       if (!listed.some((i) => i.id === cls.instructorId)) {
         listed.push({ id: cls.instructorId, fullName: cls.instructorName });
+      }
+      if (
+        cls.assistantId &&
+        cls.assistantName &&
+        !listed.some((i) => i.id === cls.assistantId)
+      ) {
+        listed.push({ id: cls.assistantId, fullName: cls.assistantName });
       }
     }
     return listed.sort((a, b) => a.fullName.localeCompare(b.fullName));
@@ -85,8 +97,11 @@ export function SessionsInstructorGrid({
           }}
         >
           {activeInstructors.map((instructor) => {
-            const list = dayClasses.filter((c) => c.instructorId === instructor.id);
-            const conflicted = list.some((c) => hasInstructorConflict(conflicts, c.id));
+            const list = dayClasses.filter(
+              (c) =>
+                c.instructorId === instructor.id || c.assistantId === instructor.id,
+            );
+            const conflicted = list.some((c) => hasStaffConflict(conflicts, c.id));
             return (
               <section
                 key={instructor.id}
@@ -118,6 +133,7 @@ export function SessionsInstructorGrid({
                         dict={dict}
                         compact
                         instructorConflict={hasInstructorConflict(conflicts, cls.id)}
+                        assistantConflict={hasAssistantConflict(conflicts, cls.id)}
                         roomConflict={hasRoomConflict(conflicts, cls.id)}
                       />
                     </li>

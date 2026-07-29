@@ -6,6 +6,7 @@ import { dna } from "@/lib/design/dna";
 import type { DanceClassRow, DanceRoomOption } from "@/lib/data/dance-admin";
 import {
   findSessionConflicts,
+  hasAssistantConflict,
   hasInstructorConflict,
   hasRoomConflict,
 } from "@/lib/dance/session-conflicts";
@@ -134,6 +135,7 @@ export function SessionsRoomGrid({
                           dict={dict}
                           showRoom={false}
                           instructorConflict={hasInstructorConflict(conflicts, cls.id)}
+                          assistantConflict={hasAssistantConflict(conflicts, cls.id)}
                           roomConflict={hasRoomConflict(conflicts, cls.id)}
                         />
                       </li>
@@ -160,6 +162,7 @@ export function SessionsRoomGrid({
                 onSelect={onSelect}
                 dict={dict}
                 instructorConflict={hasInstructorConflict(conflicts, cls.id)}
+                assistantConflict={hasAssistantConflict(conflicts, cls.id)}
                 roomConflict={hasRoomConflict(conflicts, cls.id)}
               />
             ))}

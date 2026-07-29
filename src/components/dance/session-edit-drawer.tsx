@@ -15,6 +15,7 @@ import { enrollStudentAction, markAttendanceAction } from "@/lib/actions/enrollm
 import type { DanceAdminBundle, DanceClassRow } from "@/lib/data/dance-admin";
 import {
   findSessionConflicts,
+  hasAssistantConflict,
   hasInstructorConflict,
   hasRoomConflict,
 } from "@/lib/dance/session-conflicts";
@@ -91,9 +92,11 @@ function SessionDrawerBody({
 
   const conflicts = useMemo(() => findSessionConflicts(data.classes), [data.classes]);
   const instructorClash = hasInstructorConflict(conflicts, cls.id);
+  const assistantClash = hasAssistantConflict(conflicts, cls.id);
   const roomClash = hasRoomConflict(conflicts, cls.id);
 
   const [instructorId, setInstructorId] = useState(cls.instructorId);
+  const [assistantId, setAssistantId] = useState(cls.assistantId ?? "");
   const [roomId, setRoomId] = useState(cls.roomId);
   const [maxLeads, setMaxLeads] = useState(String(cls.maxLeads));
   const [maxFollows, setMaxFollows] = useState(String(cls.maxFollows));
@@ -110,6 +113,7 @@ function SessionDrawerBody({
 
   useEffect(() => {
     setInstructorId(cls.instructorId);
+    setAssistantId(cls.assistantId ?? "");
     setRoomId(cls.roomId);
     setMaxLeads(String(cls.maxLeads));
     setMaxFollows(String(cls.maxFollows));
@@ -128,6 +132,7 @@ function SessionDrawerBody({
         lang,
         sessionId: cls.id,
         instructorId,
+        assistantId: assistantId.trim() === "" ? null : assistantId,
         roomId,
         maxLeads: Number(maxLeads) || 0,
         maxFollows: Number(maxFollows) || 0,
@@ -173,9 +178,10 @@ function SessionDrawerBody({
           </p>
         )}
 
-        {(instructorClash || roomClash) && (
+        {(instructorClash || assistantClash || roomClash) && (
           <div className="rounded-xl border border-margin-alert/30 bg-margin-alert/10 px-3 py-2 text-xs font-medium text-margin-alert">
             {instructorClash && <p>{d.conflictInstructorDetail}</p>}
+            {assistantClash && <p>{d.conflictAssistantDetail}</p>}
             {roomClash && <p>{d.conflictRoomDetail}</p>}
           </div>
         )}
@@ -204,6 +210,23 @@ function SessionDrawerBody({
                   {i.fullName}
                 </option>
               ))}
+            </select>
+          </label>
+          <label className="block space-y-1 text-xs font-medium text-foreground-muted">
+            {d.assistantLabel}
+            <select
+              value={assistantId}
+              onChange={(e) => setAssistantId(e.target.value)}
+              className={dna.field}
+            >
+              <option value="">{d.assistantNone}</option>
+              {data.instructors
+                .filter((i) => i.id !== instructorId)
+                .map((i) => (
+                  <option key={i.id} value={i.id}>
+                    {i.fullName}
+                  </option>
+                ))}
             </select>
           </label>
           <label className="block space-y-1 text-xs font-medium text-foreground-muted">

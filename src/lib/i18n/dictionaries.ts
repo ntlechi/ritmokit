@@ -1986,6 +1986,8 @@ export interface Dictionary {
     viewInstructorsHint: string;
     teacherShort: string;
     assistantShort: string;
+    assistantLabel: string;
+    assistantNone: string;
     roomSpots: string;
     parityBalanced: string;
     parityNeedsLeads: string;
@@ -1994,6 +1996,7 @@ export interface Dictionary {
     conflictInstructor: string;
     conflictRoom: string;
     conflictInstructorDetail: string;
+    conflictAssistantDetail: string;
     conflictRoomDetail: string;
     openAccueilRoster: string;
     classesCount: string;

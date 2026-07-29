@@ -484,6 +484,7 @@ model User {
   operationalGoalsOwned         OperationalGoal[]              @relation("OperationalGoalOwner")
   staffDepartures               StaffDeparture[]
   taughtClassSessions           ClassSession[]                 @relation("PrimaryInstructor")
+  assistedClassSessions         ClassSession[]                 @relation("AssistantInstructor")
   enrollments                   Enrollment[]
   instructorPayrollLogs         InstructorPayrollLog[]
 
@@ -1981,6 +1982,9 @@ model ClassSession {
   room         Station        @relation(fields: [roomId], references: [id], onDelete: Restrict)
   instructorId String         @map("instructor_id") @db.Uuid
   instructor   User           @relation("PrimaryInstructor", fields: [instructorId], references: [id], onDelete: Restrict)
+  /// Optional partner-dance assistant (often Follow role coach).
+  assistantId  String?        @map("assistant_id") @db.Uuid
+  assistant    User?          @relation("AssistantInstructor", fields: [assistantId], references: [id], onDelete: SetNull)
 
   /// 0=Sun … 6=Sat for recurring grid; null = one-off dated class.
   dayOfWeek    Int?     @map("day_of_week")
@@ -2000,6 +2004,7 @@ model ClassSession {
   @@index([seasonId, dayOfWeek, startTime])
   @@index([roomId, startTime, endTime])
   @@index([instructorId, startTime])
+  @@index([assistantId, startTime])
   @@map("class_sessions")
 }
 

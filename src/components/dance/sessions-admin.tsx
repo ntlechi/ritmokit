@@ -379,6 +379,7 @@ function ClassCreateForm({
   const [courseId, setCourseId] = useState(data.courses[0]?.id ?? "");
   const [roomId, setRoomId] = useState(data.rooms[0]?.id ?? "");
   const [instructorId, setInstructorId] = useState(data.instructors[0]?.id ?? "");
+  const [assistantId, setAssistantId] = useState("");
   const [dayOfWeek, setDayOfWeek] = useState("1");
   const [startLocal, setStartLocal] = useState("19:00");
   const [endLocal, setEndLocal] = useState("20:00");
@@ -480,7 +481,10 @@ function ClassCreateForm({
         </select>
         <select
           value={instructorId}
-          onChange={(e) => setInstructorId(e.target.value)}
+          onChange={(e) => {
+            setInstructorId(e.target.value);
+            if (assistantId === e.target.value) setAssistantId("");
+          }}
           className={dna.field}
         >
           {data.instructors.map((i) => (
@@ -488,6 +492,21 @@ function ClassCreateForm({
               {i.fullName}
             </option>
           ))}
+        </select>
+        <select
+          value={assistantId}
+          onChange={(e) => setAssistantId(e.target.value)}
+          className={dna.field}
+          aria-label={d.assistantLabel}
+        >
+          <option value="">{d.assistantNone}</option>
+          {data.instructors
+            .filter((i) => i.id !== instructorId)
+            .map((i) => (
+              <option key={i.id} value={i.id}>
+                {i.fullName}
+              </option>
+            ))}
         </select>
         <select
           value={dayOfWeek}
@@ -545,6 +564,7 @@ function ClassCreateForm({
               courseId,
               roomId,
               instructorId,
+              assistantId: assistantId.trim() === "" ? null : assistantId,
               dayOfWeek: Number(dayOfWeek),
               startTime: toIsoFromLocalTime(startLocal),
               endTime: toIsoFromLocalTime(endLocal),

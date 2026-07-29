@@ -12,6 +12,7 @@ const createSchema = z.object({
   courseId: z.string().uuid(),
   roomId: z.string().uuid(),
   instructorId: z.string().uuid(),
+  assistantId: z.string().uuid().nullable().optional(),
   dayOfWeek: z.number().int().min(0).max(6).nullable().optional(),
   startTime: z.string().min(1),
   endTime: z.string().min(1),
@@ -86,6 +87,7 @@ export async function createClassSessionAction(
         courseId: parsed.data.courseId,
         roomId: parsed.data.roomId,
         instructorId: parsed.data.instructorId,
+        assistantId: parsed.data.assistantId ?? null,
         dayOfWeek: parsed.data.dayOfWeek ?? null,
         startTime: start,
         endTime: end,
@@ -108,6 +110,7 @@ const updateSchema = z.object({
   sessionId: z.string().uuid(),
   roomId: z.string().uuid().optional(),
   instructorId: z.string().uuid().optional(),
+  assistantId: z.string().uuid().nullable().optional(),
   maxLeads: z.number().int().min(0).max(200).optional(),
   maxFollows: z.number().int().min(0).max(200).optional(),
   priceRegular: z.number().min(0).max(10_000).optional(),
@@ -130,6 +133,7 @@ export async function updateClassSessionAction(
   const data: Record<string, unknown> = {};
   if (patch.roomId != null) data.roomId = patch.roomId;
   if (patch.instructorId != null) data.instructorId = patch.instructorId;
+  if (patch.assistantId !== undefined) data.assistantId = patch.assistantId;
   if (patch.maxLeads != null) data.maxLeads = patch.maxLeads;
   if (patch.maxFollows != null) data.maxFollows = patch.maxFollows;
   if (patch.priceRegular != null) data.priceRegular = patch.priceRegular;

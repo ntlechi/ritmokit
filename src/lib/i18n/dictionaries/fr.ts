@@ -2068,6 +2068,8 @@ const dictionary: Dictionary = {
     viewInstructorsHint: "Colonnes = instructeurs — double booking en rouge.",
     teacherShort: "Prof",
     assistantShort: "Asst",
+    assistantLabel: "Assistant",
+    assistantNone: "Aucun assistant",
     roomSpots: "places",
     parityBalanced: "Équilibré",
     parityNeedsLeads: "Besoin leads (+{count})",
@@ -2076,6 +2078,8 @@ const dictionary: Dictionary = {
     conflictInstructor: "Double booking",
     conflictRoom: "Salle prise",
     conflictInstructorDetail: "Ce prof est déjà assigné à un autre cours au même horaire.",
+    conflictAssistantDetail:
+      "Cet assistant (ou ce prof) est déjà assigné ailleurs au même horaire — y compris en rôle croisé prof/assistant.",
     conflictRoomDetail: "Cette salle a déjà un cours qui chevauche cet horaire.",
     openAccueilRoster: "Ouvrir le pointeur / roster Accueil",
     classesCount: "cours",

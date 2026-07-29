@@ -5,6 +5,7 @@ import { SessionClassCard } from "@/components/dance/session-class-card";
 import type { DanceClassRow } from "@/lib/data/dance-admin";
 import {
   findSessionConflicts,
+  hasAssistantConflict,
   hasInstructorConflict,
   hasRoomConflict,
 } from "@/lib/dance/session-conflicts";
@@ -117,6 +118,7 @@ export function SessionsWeekGrid({
                 onSelect={onSelect}
                 dict={dict}
                 instructorConflict={hasInstructorConflict(conflicts, cls.id)}
+                assistantConflict={hasAssistantConflict(conflicts, cls.id)}
                 roomConflict={hasRoomConflict(conflicts, cls.id)}
               />
             ))}
@@ -160,6 +162,7 @@ function DayColumn({
             dict={dict}
             compact
             instructorConflict={hasInstructorConflict(conflicts, cls.id)}
+            assistantConflict={hasAssistantConflict(conflicts, cls.id)}
             roomConflict={hasRoomConflict(conflicts, cls.id)}
           />
         </li>

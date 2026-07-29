@@ -93,6 +93,7 @@ export function SessionClassCard({
   compact = false,
   showRoom = true,
   instructorConflict = false,
+  assistantConflict = false,
   roomConflict = false,
 }: {
   cls: DanceClassRow;
@@ -102,6 +103,7 @@ export function SessionClassCard({
   compact?: boolean;
   showRoom?: boolean;
   instructorConflict?: boolean;
+  assistantConflict?: boolean;
   roomConflict?: boolean;
 }) {
   const colors = styleColors(cls.courseStyle);
@@ -109,7 +111,7 @@ export function SessionClassCard({
   const chip = parityChip(dict, cls);
   const levelLabel =
     d.levels[cls.courseLevel as keyof typeof d.levels] ?? cls.courseLevel;
-  const conflict = instructorConflict || roomConflict;
+  const conflict = instructorConflict || assistantConflict || roomConflict;
 
   return (
     <button
@@ -156,10 +158,22 @@ export function SessionClassCard({
       )}
 
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
-        <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-bold text-accent">
+        <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold text-accent-foreground">
           {d.teacherShort}: {cls.instructorName}
         </span>
-        {instructorConflict && (
+        {cls.assistantName && (
+          <span
+            className={cn(
+              "rounded-full border px-2 py-0.5 text-[10px] font-semibold",
+              assistantConflict
+                ? "border-margin-alert/50 bg-margin-alert/10 text-margin-alert"
+                : "border-border bg-surface/80 text-foreground-muted",
+            )}
+          >
+            {d.assistantShort}: {cls.assistantName}
+          </span>
+        )}
+        {(instructorConflict || assistantConflict) && (
           <span className="rounded-full bg-margin-alert/15 px-2 py-0.5 text-[10px] font-bold text-margin-alert">
             {d.conflictInstructor}
           </span>

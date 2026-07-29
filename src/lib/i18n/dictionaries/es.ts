@@ -2066,6 +2066,8 @@ const dictionary: Dictionary = {
     viewInstructorsHint: "Columnas = profesores — doble reserva en rojo.",
     teacherShort: "Prof",
     assistantShort: "Asist",
+    assistantLabel: "Asistente",
+    assistantNone: "Sin asistente",
     roomSpots: "plazas",
     parityBalanced: "Equilibrado",
     parityNeedsLeads: "Faltan leads (+{count})",
@@ -2074,6 +2076,8 @@ const dictionary: Dictionary = {
     conflictInstructor: "Doble reserva",
     conflictRoom: "Sala ocupada",
     conflictInstructorDetail: "Este profe ya tiene otra clase a la misma hora.",
+    conflictAssistantDetail:
+      "Este asistente (o profe) ya está asignado en otro lado a la misma hora — incluidos roles cruzados profe/asistente.",
     conflictRoomDetail: "Esta sala ya tiene una clase que se solapa.",
     openAccueilRoster: "Abrir check-in / roster Accueil",
     classesCount: "clases",

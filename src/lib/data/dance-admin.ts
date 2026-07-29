@@ -28,6 +28,8 @@ export type DanceClassRow = {
   roomName: string;
   instructorId: string;
   instructorName: string;
+  assistantId: string | null;
+  assistantName: string | null;
   dayOfWeek: number | null;
   startTime: string;
   endTime: string;
@@ -133,6 +135,7 @@ export async function getDanceAdminBundle(
         course: true,
         room: true,
         instructor: { select: { id: true, fullName: true } },
+        assistant: { select: { id: true, fullName: true } },
         enrollments: {
           include: { student: { select: { id: true, fullName: true, email: true } } },
           orderBy: [{ waitlisted: "asc" }, { createdAt: "asc" }],
@@ -217,6 +220,8 @@ export async function getDanceAdminBundle(
       roomName: stationLabel(row.room, locale),
       instructorId: row.instructorId,
       instructorName: row.instructor.fullName,
+      assistantId: row.assistantId,
+      assistantName: row.assistant?.fullName ?? null,
       dayOfWeek: row.dayOfWeek,
       startTime: toIsoDateTime(row.startTime),
       endTime: toIsoDateTime(row.endTime),
