@@ -9,6 +9,16 @@ export function canAccessAdminSettings(role: Role) {
   return role === "ADMIN";
 }
 
+/** Front-desk tablet + Accueil check-in (Phase A). */
+export function canAccessAccueil(role: Role) {
+  return (
+    role === "OWNER" ||
+    role === "MANAGER" ||
+    role === "ADMIN" ||
+    role === "FRONT_DESK"
+  );
+}
+
 /**
  * Authoring the training catalog. Same tier as the rest of the manager
  * settings hub — a shift manager needs to update SOPs and courses on the

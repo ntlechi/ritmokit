@@ -16,6 +16,8 @@
     "provision:franchise": "tsx scripts/provision-franchise.ts",
     "provision:owner": "tsx scripts/provision-owner-auth.mjs",
     "import:horaires": "tsx scripts/import-horaires.ts",
+    "seed:dance-stations": "tsx scripts/seed-dance-stations.ts",
+    "seed:dance-demo": "tsx scripts/seed-dance-demo.ts",
     "test:parity": "node scripts/test-parity.mjs",
     "test:dance-analytics": "node scripts/test-dance-analytics.mjs",
     "test:public-api": "tsx scripts/test-public-api-unit.mjs",

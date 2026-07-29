@@ -18,10 +18,15 @@ export type ClassEconomicsRow = {
   maxFollows: number;
   imbalance: number;
   priceRegular: number;
+  /** SUM(amountCad) for paid, non-waitlisted seats. */
   revenue: number;
   instructorCost: number;
+  /** Revenue − instructor payroll (drives bottom-10% filter). */
   grossMargin: number;
+  /** Net profit / room m². */
   roomYieldPerSqm: number | null;
+  /** Expected CAD locked on the waitlist (tier-aware). */
+  waitlistBlockedRevenue: number;
   utilizationPct: number;
   hours: number;
   payType: InstructorPayType | null;

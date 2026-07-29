@@ -24,6 +24,8 @@ export const AGENT_EVENT_TYPES = [
   "session.season_published",
   "enrollment.created",
   "enrollment.parity_alert",
+  "enrollment.paid",
+  "enrollment.waitlist_promoted",
   "instructor.payroll_calculated",
   "churn.risk_detected",
 ] as const;

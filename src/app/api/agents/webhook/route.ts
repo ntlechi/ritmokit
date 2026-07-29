@@ -1,6 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { claimAgentTask, completeAgentTask, failAgentTask } from "@/lib/agents/bus";
-import { runCrisisAgent } from "@/lib/agents/handlers/crisis";
 import { runDanceAgent } from "@/lib/agents/handlers/dance";
 import { runLateArrivalAgent } from "@/lib/agents/handlers/late-arrival";
 import { supabaseWebhookSchema, type AgentLogRow } from "@/lib/agents/schemas";
@@ -61,7 +60,7 @@ export async function POST(request: NextRequest) {
 async function dispatch(log: AgentLogRow): Promise<Record<string, unknown>> {
   switch (log.event_type) {
     case "shift.crisis":
-      return runCrisisAgent(log);
+      return { acknowledged: true, note: "crisis_agent_retired" };
     case "shift.overtime_detected":
     case "shift.rest_violation_detected":
       // The flag is already persisted on the shift row by the CNESST

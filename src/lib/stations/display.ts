@@ -1,4 +1,5 @@
 import type { Locale } from "@/lib/i18n/config";
+import type { StationKindValue } from "@/lib/stations/dance-defaults";
 
 /** Poste configurable par succursale — remplace l'ancien enum Station. */
 export type StationRecord = {
@@ -10,8 +11,8 @@ export type StationRecord = {
   colorHex: string;
   slug: string | null;
   sortOrder: number;
-  /** @deprecated QSR tip weight — kept for schema compat; unused in dance UI. */
-  tipPoints: number;
+  /** ROOM = bookable dance room; DEPARTMENT = roster grouping. */
+  kind: StationKindValue;
   isActive: boolean;
   /** Dance room student capacity. */
   capacity: number | null;

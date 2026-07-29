@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { canAccessManagerSettings, getSessionUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { actionDatabaseError } from "@/lib/actions/result";
-import { parseBusinessDateInput } from "@/lib/finance/tips";
+import { parseBusinessDateInput } from "@/lib/finance/business-date";
 import { compileAuditPackage } from "@/lib/audit/compile";
 import type { AuditType } from "@/generated/prisma/enums";
 

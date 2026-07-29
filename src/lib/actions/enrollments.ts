@@ -5,8 +5,9 @@ import { z } from "zod";
 import { enqueueAgentTask } from "@/lib/agents/bus";
 import { evaluateParityEnrollment, isParityAlert, type RoleCapacity } from "@/lib/dance/parity";
 import { actionDatabaseError, type SimpleActionResult } from "@/lib/actions/result";
-import { getSessionUser } from "@/lib/auth/session";
+import { canAccessAccueil, getSessionUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { resolveEnrollmentAmountCad } from "@/lib/public-api/enrollments";
 
 const enrollSchema = z.object({
   sessionId: z.string().uuid(),
@@ -72,13 +73,34 @@ export async function enrollStudentAction(input: z.infer<typeof enrollSchema>): 
       return { ok: false, error: `parity_${decision.reason}` };
     }
 
+    const sessionPrices = await prisma.classSession.findUnique({
+      where: { id: sessionId },
+      select: { priceRegular: true, priceCouple: true, priceStudent: true },
+    });
+    if (!sessionPrices) return { ok: false, error: "session_not_found" };
+
+    const isPaid = paid ?? false;
     const enrollment = await prisma.enrollment.create({
       data: {
         sessionId,
         studentId,
         danceRole,
         waitlisted: decision.waitlisted,
-        paid: paid ?? false,
+        waitlistedAt: decision.waitlisted ? new Date() : null,
+        paid: isPaid,
+        paymentStatus: isPaid ? "PAID" : "NONE",
+        paidAt: isPaid ? new Date() : null,
+        pricingTier: "REGULAR",
+        amountCad: resolveEnrollmentAmountCad(
+          {
+            priceRegular: Number(sessionPrices.priceRegular),
+            priceCouple:
+              sessionPrices.priceCouple != null ? Number(sessionPrices.priceCouple) : null,
+            priceStudent:
+              sessionPrices.priceStudent != null ? Number(sessionPrices.priceStudent) : null,
+          },
+          "REGULAR",
+        ),
         paymentRef: paymentRef ?? null,
       },
     });
@@ -119,13 +141,22 @@ export async function markAttendanceAction(input: {
 }): Promise<SimpleActionResult> {
   const user = await getSessionUser();
   if (!user) return { ok: false, error: "unauthorized" };
+  if (!canAccessAccueil(user.role)) return { ok: false, error: "forbidden" };
 
   try {
+    const enrollment = await prisma.enrollment.findUnique({
+      where: { id: input.enrollmentId },
+      select: { id: true, waitlisted: true },
+    });
+    if (!enrollment) return { ok: false, error: "not_found" };
+    if (enrollment.waitlisted) return { ok: false, error: "waitlisted" };
+
     await prisma.enrollment.update({
       where: { id: input.enrollmentId },
       data: { attended: input.attended },
     });
     revalidatePath(`/${input.lang}/sessions`, "page");
+    revalidatePath(`/${input.lang}/accueil`, "page");
     return { ok: true };
   } catch (error) {
     return actionDatabaseError("markAttendance", error);

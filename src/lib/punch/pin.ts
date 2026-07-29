@@ -3,7 +3,7 @@ import "server-only";
 import { randomBytes, scryptSync, timingSafeEqual } from "crypto";
 
 /** Local-dev fallback only — production refuses to start without PUNCH_PIN_PEPPER. */
-const DEV_PEPPER_FALLBACK = "mirok-punch-pin-v1";
+const DEV_PEPPER_FALLBACK = "ritmokit-punch-pin-v1";
 
 function getPunchPinPepper(): string {
   const pepper = process.env.PUNCH_PIN_PEPPER?.trim();

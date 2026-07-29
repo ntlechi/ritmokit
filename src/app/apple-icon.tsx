@@ -1,9 +1,9 @@
 import { ImageResponse } from "next/og";
-import { MirokMark } from "@/lib/brand/mark";
+import { RitmoKitMark } from "@/lib/brand/mark";
 
 export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
 
 export default function AppleIcon() {
-  return new ImageResponse(<MirokMark size={180} />, size);
+  return new ImageResponse(<RitmoKitMark size={180} />, size);
 }

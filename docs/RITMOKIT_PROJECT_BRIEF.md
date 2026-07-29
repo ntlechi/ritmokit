@@ -125,7 +125,7 @@ Mirok fournit le cœur RH et planification ; RitmoKit y ajoute la couche événe
 | Locations / Branches | **Studios & Rooms** (matrice multi-salles, superficie m²) |
 | Time Off & Disponibilités | **Remplacements & disponibilités des profs** |
 | Payroll Calculator | **Paie mixte + rentabilité par cours** |
-| *(nouveau)* | **Enrollments** (équilibre Cavaliers / Cavalières) |
+| *(nouveau)* | **Enrollments** (équilibre Leads / Follows) |
 | *(nouveau)* | **Analytics & heatmap** (rétention N1→N2, churn) |
 | *(nouveau)* | **Public API** (site web, PayPal, QR check-in) |
 | *(nouveau)* | **AI Support** (assistant + help center) |
@@ -202,8 +202,8 @@ model User {
 // ==========================================
 
 enum DanceRole {
-  LEAD     // Cavalier
-  FOLLOW   // Cavalière
+  LEAD
+  FOLLOW
   SOLO
 }
 
@@ -306,7 +306,7 @@ When a student enrolls in a partner dance class (Salsa, Bachata, etc.):
 
 1. Check current `leads.filled` vs `follows.filled` against `maxLeads` / `maxFollows`
 2. Enforce max imbalance (e.g. +2 leads vs follows) — block role if quota exceeded
-3. Auto-waitlist by role: *"Liste d'attente Cavalières — 1 Cavalier requis pour débloquer"*
+3. Auto-waitlist by role: *"Liste d'attente Follows — 1 Lead requis pour débloquer"*
 4. Package courses: same course name across multiple weekdays = one payment (port from Salsa `getPackagePeers()`)
 
 **Reference implementation (UI prototype):** `C:\Users\Ntlechi\Salsa Attitude\src\sessionData.js`, `BookingModal.jsx`
@@ -413,8 +413,8 @@ app/[lang]/            # Locale routing — FR default for Quebec tenants
 
 | Concept | FR | EN | ES |
 |---------|----|----|-----|
-| Lead / Follow | Cavalier / Cavalière | Lead / Follow | Leader / Follower (Guía / Seguidor) |
-| Parity | Parité Hommes/Femmes | Lead/Follow Balance | Balance de Parejas |
+| Lead / Follow | Lead / Follow *(terme utilisé au Québec)* | Lead / Follow | Leader / Follower (Guía / Seguidor) |
+| Parity | Parité Lead/Follow | Lead/Follow Balance | Balance de Parejas |
 | Instructor payroll | Paie des instructeurs | Instructor Payroll | Nómina de profesores |
 | Drop-in class | Cours à l'unité | Drop-in Class | Clase suelta |
 | Session season | Session (trimestre) | Session / Term | Temporada |

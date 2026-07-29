@@ -201,7 +201,7 @@ export async function clockOutForUser(userId: string, shiftId: string): Promise<
   });
   if (assessment.violation) {
     await recordBreakComplianceViolation({ shift, assessment }).catch((error) => {
-      console.error("[mirok:break-compliance]", error);
+      console.error("[ritmokit:break-compliance]", error);
     });
   }
 

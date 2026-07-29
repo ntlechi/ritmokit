@@ -32,8 +32,8 @@ export function KpiCommandCenter({
         ))}
       </div>
 
-      {(snapshot.hasLiveData || snapshot.hasPosLive) && (
-        <p className="mt-3 text-[10px] text-success">{dict.kpi.posLiveNote}</p>
+      {(snapshot.hasLiveData || snapshot.hasLiveEnrollment) && (
+        <p className="mt-3 text-[10px] text-success">{dict.kpi.liveEnrollmentNote}</p>
       )}
     </section>
   );

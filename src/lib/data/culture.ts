@@ -82,7 +82,7 @@ export type CultureHealthDashboard = {
   playbookProposals: SuggestedPlaybookView[];
   /** Expériences plateforme RSI 3 (flags UX uniquement). */
   experiments: ExperimentDashboardRow[];
-  /** Dernières exécutions Mirok Autopilot (loop engineering). */
+  /** Dernières exécutions RitmoKit Autopilot (loop engineering). */
   autopilotRuns: AutopilotLoopRunView[];
   lastUpdated: string;
 };

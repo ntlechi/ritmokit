@@ -26,7 +26,7 @@ export type BenefitsManagerDashboard = {
 export type CareerGapModule = {
   id: string;
   title: string;
-  arsiId: string | null;
+  externalCatalogId: string | null;
 };
 
 export type EmployeeCareerPath = {
@@ -139,7 +139,7 @@ export async function getEmployeeCareerPath(userId: string): Promise<EmployeeCar
   );
 
   const moduleIds = incomplete.map((m) => m.id);
-  const withArsi =
+  const withCatalog =
     moduleIds.length > 0
       ? await prisma.formationModule.findMany({
           where: { id: { in: moduleIds } },
@@ -151,7 +151,7 @@ export async function getEmployeeCareerPath(userId: string): Promise<EmployeeCar
         })
       : [];
 
-  const arsiById = new Map(withArsi.map((m) => [m.id, m.sop?.arsiId ?? null]));
+  const catalogIdByModule = new Map(withCatalog.map((m) => [m.id, m.sop?.arsiId ?? null]));
 
   const allMandatory = await prisma.formationModule.findMany({
     where: {
@@ -192,7 +192,7 @@ export async function getEmployeeCareerPath(userId: string): Promise<EmployeeCar
           colorHex: membership.station.colorHex,
           slug: membership.station.slug,
           sortOrder: membership.station.sortOrder,
-          tipPoints: Number(membership.station.tipPoints),
+          kind: membership.station.kind,
           isActive: membership.station.isActive,
           capacity: membership.station.capacity,
           surfaceSqm: membership.station.surfaceSqm,
@@ -203,7 +203,7 @@ export async function getEmployeeCareerPath(userId: string): Promise<EmployeeCar
     missingModules: incomplete.map((m) => ({
       id: m.id,
       title: m.title,
-      arsiId: arsiById.get(m.id) ?? null,
+      externalCatalogId: catalogIdByModule.get(m.id) ?? null,
     })),
     completedMandatoryCount: completed,
     totalMandatoryCount: allMandatory.length,

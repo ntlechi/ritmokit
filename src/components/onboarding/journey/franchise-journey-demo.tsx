@@ -137,7 +137,7 @@ export function FranchiseJourneyDemo({ initialDay = 1 }: { initialDay?: number }
             brandColor={brand.primaryColor}
             tag="Jour 1 · Étape 3"
             title="Module 1"
-            sub="Les valeurs Bati · 10 minutes"
+            sub="Les valeurs du studio · 10 minutes"
             progress={65}
           >
             <div className="mb-3 rounded-xl border border-zinc-200 bg-white p-3">
@@ -204,7 +204,7 @@ export function FranchiseJourneyDemo({ initialDay = 1 }: { initialDay?: number }
               <div>
                 <p className="text-xs font-bold text-zinc-900">Module 2 déverrouillé</p>
                 <p className="text-[11px] text-zinc-500">
-                  Le système Bati — disponible ce soir sur ton téléphone.
+                  RitmoKit — disponible ce soir sur ton téléphone.
                 </p>
               </div>
             </div>
@@ -335,7 +335,7 @@ export function FranchiseJourneyDemo({ initialDay = 1 }: { initialDay?: number }
 }
 
 const DEMO_SECTIONS = [
-  { title: "Pourquoi Bati existe", minutes: 3 },
+  { title: "Pourquoi ce studio existe", minutes: 3 },
   { title: "Les 5 valeurs de l'équipe", minutes: 4 },
   { title: "Quiz de validation", minutes: 3 },
 ];

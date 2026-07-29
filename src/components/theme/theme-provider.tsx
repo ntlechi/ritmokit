@@ -17,9 +17,16 @@ function getSystemTheme(): "light" | "dark" {
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
+const THEME_STORAGE_KEY = "ritmokit-theme";
+const LEGACY_THEME_STORAGE_KEY = "mirok-theme";
+
 function readStoredTheme(): Theme {
   if (typeof window === "undefined") return "light";
-  return (localStorage.getItem("mirok-theme") as Theme | null) ?? "light";
+  return (
+    (localStorage.getItem(THEME_STORAGE_KEY) as Theme | null) ??
+    (localStorage.getItem(LEGACY_THEME_STORAGE_KEY) as Theme | null) ??
+    "light"
+  );
 }
 
 function resolveTheme(theme: Theme): "light" | "dark" {
@@ -55,7 +62,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const setTheme = useCallback((next: Theme) => {
     setThemeState(next);
-    localStorage.setItem("mirok-theme", next);
+    localStorage.setItem(THEME_STORAGE_KEY, next);
     applyTheme(resolveTheme(next));
   }, []);
 

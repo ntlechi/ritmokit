@@ -74,8 +74,8 @@ export function TabletShell({
           >
             {brand.logoMark}
           </span>
-          <p className="text-sm font-black tracking-wide" style={{ color: brand.primaryColor }}>
-            MIROK
+          <p className="text-sm font-black tracking-wide uppercase" style={{ color: brand.primaryColor }}>
+            {brand.name}
           </p>
         </div>
         <div className="flex items-center gap-3 text-xs font-semibold">

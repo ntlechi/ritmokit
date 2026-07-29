@@ -19,11 +19,11 @@ async function main() {
   });
 
   const mods = [
-    { id: "00000000-0000-0000-0000-000000000205", title: "Les valeurs Bati", unlockDay: 1, sortOrder: 0, estimatedMinutes: 10 },
-    { id: "00000000-0000-0000-0000-000000000206", title: "Le système Bati", unlockDay: 2, sortOrder: 1, estimatedMinutes: 12 },
-    { id: "00000000-0000-0000-0000-000000000207", title: "Accueil et commande", unlockDay: 3, sortOrder: 2, estimatedMinutes: 7 },
-    { id: "00000000-0000-0000-0000-000000000208", title: "Assemblage et précision", unlockDay: 4, sortOrder: 3, estimatedMinutes: 10 },
-    { id: "00000000-0000-0000-0000-000000000209", title: "Propreté en continu", unlockDay: 5, sortOrder: 4, estimatedMinutes: 8 },
+    { id: "00000000-0000-0000-0000-000000000205", title: "Les valeurs du studio", unlockDay: 1, sortOrder: 0, estimatedMinutes: 10 },
+    { id: "00000000-0000-0000-0000-000000000206", title: "RitmoKit au quotidien", unlockDay: 2, sortOrder: 1, estimatedMinutes: 12 },
+    { id: "00000000-0000-0000-0000-000000000207", title: "Accueil des élèves", unlockDay: 3, sortOrder: 2, estimatedMinutes: 7 },
+    { id: "00000000-0000-0000-0000-000000000208", title: "Animation de cours", unlockDay: 4, sortOrder: 3, estimatedMinutes: 10 },
+    { id: "00000000-0000-0000-0000-000000000209", title: "Propreté des salles", unlockDay: 5, sortOrder: 4, estimatedMinutes: 8 },
   ] as const;
 
   for (const m of mods) {

@@ -1,6 +1,6 @@
 /**
  * Liens vidéo de formation — YouTube et Vimeo. On ne stocke que l'URL saisie
- * par l'auteur : aucun fichier n'est hébergé par Mirok, donc aucun coût de
+ * par l'auteur : aucun fichier n'est hébergé par RitmoKit, donc aucun coût de
  * stockage ni de bande passante côté Supabase.
  */
 const YOUTUBE_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;

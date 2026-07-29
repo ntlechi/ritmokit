@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { isLocale } from "@/lib/i18n/config";
 
-/** QSR tips pool retired in RitmoKit — redirect to manager hub. */
+/** Retired module — redirects to manager hub. */
 export default async function RetiredTipsPage({
   params,
 }: {

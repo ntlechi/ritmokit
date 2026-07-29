@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { canAccessManagerSettings, getSessionUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { actionDatabaseError } from "@/lib/actions/result";
+import type { StationKindValue } from "@/lib/stations/dance-defaults";
 
 export type StationActionResult =
   | { ok: true; stationId: string }
@@ -58,6 +59,7 @@ export async function createStationAction(input: {
   slug?: string;
   capacity?: number | null;
   surfaceSqm?: number | null;
+  kind?: StationKindValue;
 }): Promise<StationActionResult> {
   try {
     const auth = await assertManagerForLocation(input.locationId);
@@ -90,6 +92,7 @@ export async function createStationAction(input: {
         nameEs,
         colorHex,
         slug,
+        kind: input.kind ?? "ROOM",
         sortOrder: (maxOrder._max.sortOrder ?? 0) + 1,
         capacity: capacity as number | null,
         surfaceSqm: surfaceSqm as number | null,
@@ -116,8 +119,6 @@ export async function updateStationAction(input: {
   isActive: boolean;
   capacity?: number | null;
   surfaceSqm?: number | null;
-  /** @deprecated Ignored — tip points are QSR-only. */
-  tipPoints?: number;
 }): Promise<StationActionResult> {
   try {
     const auth = await assertManagerForLocation(input.locationId);

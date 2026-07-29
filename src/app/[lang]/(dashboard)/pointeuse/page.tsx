@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import { DbErrorBanner } from "@/components/db-error-banner";
 import { OnboardingComplianceBanner } from "@/components/onboarding/onboarding-compliance-banner";
 import { PendingFeedbackQueue } from "@/components/feedback/flash-feedback-card";
-import { TipVoteCard } from "@/components/punch/tip-vote-card";
 import { PunchScreen } from "@/components/punch/punch-screen";
 import { PulseSurveyCard } from "@/components/pulse/pulse-survey-card";
 import { TrainingComplianceBanner } from "@/components/training/training-compliance-banner";
@@ -11,7 +10,6 @@ import { getPendingFeedbackForManager } from "@/lib/data/feedback";
 import { getEmployeeOnboardingState } from "@/lib/data/hr-onboarding";
 import { getPunchStatusForUser, type PunchStatus } from "@/lib/data/punch";
 import { getPulsePromptForUser } from "@/lib/data/pulse";
-import { getEmployeeVoteBallot } from "@/lib/data/tips";
 import { getTrainingComplianceForUser } from "@/lib/data/training";
 import { safeQuery } from "@/lib/data/safe";
 import { isLocale } from "@/lib/i18n/config";
@@ -48,12 +46,10 @@ export default async function PunchPage({ params }: { params: Promise<{ lang: st
 
   const [
     { data: status, dbError },
-    { data: voteBallot },
     { data: onboardingState },
     { data: pendingFeedback },
   ] = await Promise.all([
     safeQuery(() => getPunchStatusForUser(user.id), EMPTY_STATUS),
-    safeQuery(() => getEmployeeVoteBallot(user.id, lang), null),
     safeQuery(
       () => (user.role === "EMPLOYEE" ? getEmployeeOnboardingState(user.id) : Promise.resolve(null)),
       null,
@@ -104,11 +100,6 @@ export default async function PunchPage({ params }: { params: Promise<{ lang: st
       {showTrainingBlock && (
         <div className="mx-auto w-full max-w-md px-4 pt-4">
           <TrainingComplianceBanner lang={lang} dict={dict} compliance={trainingCompliance} />
-        </div>
-      )}
-      {voteBallot && (
-        <div className="mx-auto w-full max-w-md px-4 pt-4">
-          <TipVoteCard ballot={voteBallot} dict={dict} defaultSignature={user.fullName} />
         </div>
       )}
       {isManager && pendingFeedback && pendingFeedback.length > 0 && (

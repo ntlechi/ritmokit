@@ -9,7 +9,6 @@ import { reassignShiftAction } from "@/lib/actions/shifts";
 import { AutoScheduleControls } from "@/components/calendar/auto-schedule-controls";
 import { CoverageHeatmap } from "@/components/calendar/coverage-heatmap";
 import { OrphanShiftsDrawer } from "@/components/calendar/orphan-shifts-drawer";
-import { CrisisShiftsBanner } from "@/components/calendar/crisis-shifts-banner";
 import { ReplacementFinderSheet, type ReplacementScanState } from "@/components/calendar/replacement-finder-sheet";
 import { TodayStaffedShiftsBar } from "@/components/calendar/today-staffed-shifts-bar";
 import type { SicknessFlowResult } from "@/components/calendar/report-sickness-trigger";
@@ -122,7 +121,7 @@ export function ManagerScheduleView({
       dayBounds.end,
     );
     return buildHourlyCoverage({
-      salesByHour: dayPayload.salesByHour,
+      classRevenueByHour: dayPayload.classRevenueByHour,
       stationIds,
       profiles: previewProfiles,
       scheduledByStation,
@@ -250,13 +249,6 @@ export function ManagerScheduleView({
         dict={dict}
         locale={locale}
         onSicknessSuccess={handleSicknessSuccess}
-      />
-
-      <CrisisShiftsBanner
-        shifts={dayShiftsForBanner}
-        dict={dict}
-        locale={locale}
-        onOpenReplacement={handleOpenReplacement}
       />
 
       {dayPayload && (

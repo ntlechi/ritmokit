@@ -36,6 +36,22 @@ export async function runDanceAgent(log: AgentLogRow): Promise<Record<string, un
         // Guardrail: human must confirm any capacity overrides.
         requiresUserConfirmation: true,
       };
+    case "enrollment.paid":
+      return {
+        acknowledged: true,
+        suggestion: "record_payment_confirmed",
+        enrollmentId: log.payload.enrollmentId ?? null,
+        sessionId: log.payload.sessionId ?? null,
+        provider: log.payload.provider ?? null,
+      };
+    case "enrollment.waitlist_promoted":
+      return {
+        acknowledged: true,
+        suggestion: "notify_waitlist_promoted",
+        enrollmentId: log.payload.enrollmentId ?? null,
+        sessionId: log.payload.sessionId ?? null,
+        danceRole: log.payload.danceRole ?? null,
+      };
     case "instructor.payroll_calculated":
       return {
         acknowledged: true,

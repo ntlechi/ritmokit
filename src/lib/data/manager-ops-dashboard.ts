@@ -19,16 +19,6 @@ export type FloorStationCount = {
   count: number;
 };
 
-export type ActiveCodeRedCrisis = {
-  shiftId: string;
-  stationNameFr: string;
-  stationNameEn: string;
-  stationNameEs: string;
-  startsAt: string;
-  hoursUntilStart: number;
-  notifiedCount: number;
-  surgeBonus: number | null;
-};
 
 export type ManagerOpsDashboard = {
   locationName: string;
@@ -47,7 +37,6 @@ export type ManagerOpsDashboard = {
   conventionTotalEmployees: number;
   conventionPendingCount: number;
   conventionVersion: string;
-  crises: ActiveCodeRedCrisis[];
   kpiSnapshot: LocationKpiSnapshot;
   generatedAt: string;
 };
@@ -109,7 +98,6 @@ export async function getManagerOpsDashboard(
     activeShifts,
     formationModules,
     formationProgress,
-    crises,
     shoutOutsToday,
     conventionStats,
     kpiSnapshot,
@@ -167,20 +155,6 @@ export async function getManagerOpsDashboard(
         },
       },
       select: { userId: true, moduleId: true },
-    }),
-    prisma.shift.findMany({
-      where: {
-        locationId,
-        urgency: "CODE_RED",
-        employeeId: null,
-        startsAt: { gte: new Date(now.getTime() - 60 * 60 * 1000) },
-      },
-      include: {
-        station: true,
-        emergencyBids: { where: { status: "PENDING" }, select: { id: true } },
-      },
-      orderBy: { startsAt: "asc" },
-      take: 5,
     }),
     prisma.stationShoutOut.count({
       where: {
@@ -257,16 +231,6 @@ export async function getManagerOpsDashboard(
     conventionTotalEmployees: conventionStats.totalEmployees,
     conventionPendingCount: conventionStats.pendingCount,
     conventionVersion: conventionStats.version,
-    crises: crises.map((shift) => ({
-      shiftId: shift.id,
-      stationNameFr: shift.station.nameFr,
-      stationNameEn: shift.station.nameEn,
-      stationNameEs: shift.station.nameEs,
-      startsAt: shift.startsAt.toISOString(),
-      hoursUntilStart: Math.max(0, (shift.startsAt.getTime() - now.getTime()) / 3_600_000),
-      notifiedCount: shift.emergencyBids.length,
-      surgeBonus: shift.surgeBonus != null ? asPlainNumber(shift.surgeBonus) : null,
-    })),
     kpiSnapshot,
     generatedAt: now.toISOString(),
   };

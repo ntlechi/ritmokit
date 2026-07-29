@@ -1,5 +1,5 @@
 /**
- * Mirok Design DNA — Modernist Organic / Apple–Claude Era
+ * RitmoKit Design DNA — Modernist Organic / Apple–Claude Era
  * Shared class fragments for panels, pills, fields, and chrome.
  */
 

@@ -4,7 +4,7 @@ import { createHash } from "crypto";
 import type { AuditType } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
 import { asPlainNumber } from "@/lib/data/serialize";
-import { getTorontoDayBounds } from "@/lib/finance/tips";
+import { getTorontoDayBounds } from "@/lib/finance/business-date";
 import { canonicalStringify } from "@/lib/audit/canonical-json";
 import { buildZip, type ZipEntry } from "@/lib/audit/zip";
 
@@ -54,7 +54,7 @@ export async function compileAuditPackage(input: CompileAuditInput): Promise<Com
 
   const manifest: Record<string, unknown> = {
     metadata: {
-      platform: "Mirok.ca — QSR Operating System",
+      platform: "RitmoKit — Dance Studio OS",
       generatedAt: new Date().toISOString(),
       generatedByUserId: userId,
       locationId,
@@ -84,18 +84,9 @@ export async function compileAuditPackage(input: CompileAuditInput): Promise<Com
 
   if (type === "FISCAL" || type === "FULL") {
     const fiscal = await compileFiscalEvidence(locationId, periodStart, periodEnd);
-    evidence.fiscal_tip_pool_agreement = fiscal.tipPoolAgreement;
-    evidence.fiscal_tip_votes = fiscal.tipVotes;
-    evidence.fiscal_tip_distributions = fiscal.tipDistributions;
-    evidence.fiscal_pos_sales_hourly = fiscal.posSalesHourly;
     evidence.fiscal_pay_periods = fiscal.payPeriods;
     evidence.fiscal_payroll_exports = fiscal.payrollExports;
-    recordCount +=
-      fiscal.tipVotes.length +
-      fiscal.tipDistributions.length +
-      fiscal.posSalesHourly.length +
-      fiscal.payPeriods.length +
-      fiscal.payrollExports.length;
+    recordCount += fiscal.payPeriods.length + fiscal.payrollExports.length;
   }
 
   manifest.metadata = { ...(manifest.metadata as object), recordCount };
@@ -105,7 +96,7 @@ export async function compileAuditPackage(input: CompileAuditInput): Promise<Com
 
   const startLabel = periodStart.toISOString().slice(0, 10);
   const endLabel = new Date(periodEnd.getTime() - 1).toISOString().slice(0, 10);
-  const fileName = `mirok-audit-${type.toLowerCase()}-${location.slug}-${startLabel}-to-${endLabel}.zip`;
+  const fileName = `ritmokit-audit-${type.toLowerCase()}-${location.slug}-${startLabel}-to-${endLabel}.zip`;
 
   const summaryText = buildHumanReadableSummary(manifest, manifestHash, recordCount, fileName);
   const integrityText = buildIntegrityCertificate(manifestHash, manifestJson);
@@ -122,7 +113,7 @@ export async function compileAuditPackage(input: CompileAuditInput): Promise<Com
 }
 
 async function compileCnesstEvidence(locationId: string, periodStart: Date, periodEnd: Date) {
-  // Mirok ne conserve pas d'historique des dates de mouvement d'effectif —
+  // RitmoKit ne conserve pas d'historique des dates de mouvement d'effectif —
   // le rapport de conformité RH reflète donc le roster actif au moment de
   // la génération, quelle que soit la période sélectionnée pour les
   // preuves transactionnelles (pointages, violations de pause).
@@ -271,80 +262,20 @@ async function compileFiscalEvidence(locationId: string, periodStart: Date, peri
     Date.UTC(periodEnd.getUTCFullYear(), periodEnd.getUTCMonth(), periodEnd.getUTCDate()),
   );
 
-  const [config, votes, distributions, posSales, payPeriods, stations] = await Promise.all([
-    prisma.tipPoolConfig.findUnique({ where: { locationId } }),
-    prisma.tipPoolVote.findMany({
-      where: { config: { locationId }, signedAt: { gte: periodStart, lt: periodEnd } },
-      include: { user: { select: { fullName: true } } },
-      orderBy: { signedAt: "asc" },
-    }),
-    prisma.tipDistribution.findMany({
-      where: { locationId, distributionDate: { gte: distributionStart, lt: distributionEndExclusive } },
-      include: { distributedBy: { select: { fullName: true } } },
-      orderBy: { distributionDate: "asc" },
-    }),
-    prisma.posSalesHourly.findMany({
-      where: { locationId, date: { gte: distributionStart, lt: distributionEndExclusive } },
-      orderBy: [{ date: "asc" }, { hour: "asc" }],
-    }),
-    prisma.payPeriod.findMany({
-      where: {
-        locationId,
-        status: "LOCKED",
-        startDate: { lt: distributionEndExclusive },
-        endDate: { gt: distributionStart },
-      },
-      include: {
-        lockedBy: { select: { fullName: true } },
-        lineItems: { select: { grossPay: true } },
-        exports: { include: { exportedBy: { select: { fullName: true } } } },
-      },
-      orderBy: { startDate: "asc" },
-    }),
-    prisma.station.findMany({
-      where: { locationId, isActive: true },
-      select: { id: true, nameFr: true, tipPoints: true },
-      orderBy: { sortOrder: "asc" },
-    }),
-  ]);
-
-  const tipPoolAgreement = config
-    ? {
-        isActive: config.isActive,
-        status: config.status,
-        votedAt: config.votedAt?.toISOString() ?? null,
-        stationTipPoints: stations.map((s) => ({
-          stationId: s.id,
-          nameFr: s.nameFr,
-          tipPoints: asPlainNumber(s.tipPoints),
-        })),
-        agreementText: config.agreementText,
-      }
-    : null;
-
-  const tipVotes = votes.map((vote) => ({
-    employee: vote.user.fullName,
-    isApproved: vote.isApproved,
-    signatureName: vote.signatureName,
-    signedAt: vote.signedAt.toISOString(),
-    ipAddress: vote.ipAddress,
-  }));
-
-  const tipDistributions = distributions.map((d) => ({
-    distributionDate: d.distributionDate.toISOString().slice(0, 10),
-    totalTipsCollected: asPlainNumber(d.totalTipsCollected),
-    totalWeightedHours: asPlainNumber(d.totalWeightedHours),
-    valuePerPoint: asPlainNumber(d.valuePerPoint),
-    distributedBy: d.distributedBy.fullName,
-    distributedAt: d.distributedAt.toISOString(),
-  }));
-
-  const posSalesHourly = posSales.map((s) => ({
-    date: s.date.toISOString().slice(0, 10),
-    hour: s.hour,
-    netSales: asPlainNumber(s.netSales),
-    tipsCollected: asPlainNumber(s.tipsCollected),
-  }));
+  const payPeriods = await prisma.payPeriod.findMany({
+    where: {
+      locationId,
+      status: "LOCKED",
+      startDate: { lt: distributionEndExclusive },
+      endDate: { gt: distributionStart },
+    },
+    include: {
+      lockedBy: { select: { fullName: true } },
+      lineItems: { select: { grossPay: true } },
+      exports: { include: { exportedBy: { select: { fullName: true } } } },
+    },
+    orderBy: { startDate: "asc" },
+  });
 
   const payPeriodsEvidence = payPeriods.map((p) => ({
     startDate: p.startDate.toISOString().slice(0, 10),
@@ -368,10 +299,6 @@ async function compileFiscalEvidence(locationId: string, periodStart: Date, peri
   );
 
   return {
-    tipPoolAgreement,
-    tipVotes,
-    tipDistributions,
-    posSalesHourly,
     payPeriods: payPeriodsEvidence,
     payrollExports,
   };
@@ -385,7 +312,7 @@ function buildHumanReadableSummary(
 ): string {
   const metadata = manifest.metadata as Record<string, unknown>;
   const lines = [
-    "MIROK.CA — DOSSIER D'AUDIT SCELLÉ",
+    "RITMOKIT — DOSSIER D'AUDIT SCELLÉ",
     "===================================",
     "",
     `Fichier : ${fileName}`,
@@ -415,7 +342,7 @@ function buildIntegrityCertificate(hash: string, manifestJson: string): string {
   const byteLength = Buffer.byteLength(manifestJson, "utf8");
   return (
     [
-      "CERTIFICAT D'INTÉGRITÉ — MIROK.CA",
+      "CERTIFICAT D'INTÉGRITÉ — RITMOKIT",
       "==================================",
       "",
       "Algorithme de hachage : SHA-256",

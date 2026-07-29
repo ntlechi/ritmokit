@@ -1,5 +1,10 @@
 import { calculateClassEconomics } from "@/lib/dance/class-economics";
 import { getClassAvailability, type RoleCapacity } from "@/lib/dance/parity";
+import {
+  enrollmentRevenueCad,
+  waitlistExpectedAmountCad,
+  type PricingTier,
+} from "@/lib/dance/pricing";
 import type {
   ChurnRiskStudent,
   ClassEconomicsRow,
@@ -17,6 +22,8 @@ export type RawClassForAnalytics = {
   maxLeads: number;
   maxFollows: number;
   priceRegular: number;
+  priceCouple: number | null;
+  priceStudent: number | null;
   courseTitle: string;
   style: string;
   level: string;
@@ -31,8 +38,11 @@ export type RawClassForAnalytics = {
   enrollments: Array<{
     danceRole: "LEAD" | "FOLLOW" | "SOLO";
     paid: boolean;
+    paymentStatus?: string | null;
     waitlisted: boolean;
     attended: boolean;
+    amountCad?: number | null;
+    pricingTier?: PricingTier | null;
     studentId: string;
     studentName: string;
     studentEmail: string;
@@ -45,6 +55,14 @@ function hoursBetween(start: Date, end: Date): number {
   return Math.max(0, (end.getTime() - start.getTime()) / (1000 * 60 * 60));
 }
 
+function sessionPrices(row: RawClassForAnalytics) {
+  return {
+    priceRegular: row.priceRegular,
+    priceCouple: row.priceCouple,
+    priceStudent: row.priceStudent,
+  };
+}
+
 export function buildClassEconomicsRows(raw: RawClassForAnalytics[]): ClassEconomicsRow[] {
   return raw.map((row) => {
     let leadsFilled = 0;
@@ -52,20 +70,30 @@ export function buildClassEconomicsRows(raw: RawClassForAnalytics[]): ClassEcono
     let paidCount = 0;
     let waitlistedCount = 0;
     let attendees = 0;
+    let revenue = 0;
+    let waitlistBlockedRevenue = 0;
+    const prices = sessionPrices(row);
 
     for (const e of row.enrollments) {
       if (e.waitlisted) {
         waitlistedCount += 1;
+        waitlistBlockedRevenue += waitlistExpectedAmountCad(e, prices);
         continue;
       }
       if (e.danceRole === "LEAD") leadsFilled += 1;
       else if (e.danceRole === "FOLLOW") followsFilled += 1;
-      if (e.paid) paidCount += 1;
+
+      const seatRevenue = enrollmentRevenueCad(e, prices);
+      if (seatRevenue != null) {
+        paidCount += 1;
+        revenue += seatRevenue;
+      }
       if (e.attended) attendees += 1;
     }
 
     const hours = hoursBetween(row.startTime, row.endTime);
     const economics = calculateClassEconomics({
+      revenue: Math.round(revenue * 100) / 100,
       paidEnrollmentCount: paidCount,
       pricePerStudent: row.priceRegular,
       payType: row.payType,
@@ -109,6 +137,7 @@ export function buildClassEconomicsRows(raw: RawClassForAnalytics[]): ClassEcono
       instructorCost: economics.instructorCost,
       grossMargin: economics.grossMargin,
       roomYieldPerSqm: economics.roomYieldPerSqm,
+      waitlistBlockedRevenue: Math.round(waitlistBlockedRevenue * 100) / 100,
       utilizationPct,
       hours,
       payType: row.payType,
@@ -120,8 +149,10 @@ export function buildParitySnapshots(rows: ClassEconomicsRow[]): ParitySnapshot[
   return rows.map((row) => {
     const blockedFollows = Math.max(0, row.followsFilled - row.leadsFilled - 2);
     const blockedLeads = Math.max(0, row.leadsFilled - row.followsFilled - 2);
-    const blockedSeats = blockedFollows + blockedLeads + row.waitlistedCount;
-    const blockedRevenue = blockedSeats * row.priceRegular;
+    const imbalanceBlockedSeats = blockedFollows + blockedLeads;
+    // Real waitlist CAD + theoretical parity pressure at regular price.
+    const blockedRevenue =
+      row.waitlistBlockedRevenue + imbalanceBlockedSeats * row.priceRegular;
     let status: ParitySnapshot["status"] = "balanced";
     if (row.waitlistedCount > 0 || row.imbalance > 2) status = "blocked";
     else if (row.imbalance >= 1) status = "warning";
@@ -135,7 +166,7 @@ export function buildParitySnapshots(rows: ClassEconomicsRow[]): ParitySnapshot[
       maxFollows: row.maxFollows,
       imbalance: row.imbalance,
       waitlistedCount: row.waitlistedCount,
-      blockedRevenue,
+      blockedRevenue: Math.round(blockedRevenue * 100) / 100,
       status,
     };
   });
@@ -264,7 +295,8 @@ export function buildChurnRiskStudents(raw: RawClassForAnalytics[]): ChurnRiskSt
   const map = new Map<string, ChurnRiskStudent>();
   for (const row of raw) {
     for (const e of row.enrollments) {
-      if (e.waitlisted || e.attended || !e.paid) continue;
+      const isPaid = e.paid || e.paymentStatus === "PAID";
+      if (e.waitlisted || e.attended || !isPaid) continue;
       const prev = map.get(e.studentId);
       if (!prev) {
         map.set(e.studentId, {

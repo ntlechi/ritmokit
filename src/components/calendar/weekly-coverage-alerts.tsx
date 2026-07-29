@@ -34,8 +34,8 @@ function alertLabel(
       return dict.autoSchedule.alertOverstaffed.replace("{station}", stationName);
     case "labor_cost_critical":
       return dict.autoSchedule.alertLaborCostCritical;
-    case "splh_low":
-      return dict.autoSchedule.alertSplhLow;
+    case "revenue_per_hour_low":
+      return dict.autoSchedule.alertRevenuePerHourLow;
   }
 }
 

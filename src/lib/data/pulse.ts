@@ -42,7 +42,7 @@ function pickQuestionText(
 
 /**
  * Banque de secours (rotation modulo 8) si aucune PulseQuestion n'est seedée
- * pour la semaine ISO courante. Chaque question est taguée à une valeur Bati.
+ * pour la semaine ISO courante. Chaque question est taguée à une valeur studio.
  */
 const FALLBACK_BANK: Array<{
   textFr: string;

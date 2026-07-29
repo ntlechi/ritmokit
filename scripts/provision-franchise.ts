@@ -1,20 +1,19 @@
 /**
- * CLI — provisionne une franchise Bati sur la DB pointée par DATABASE_URL.
+ * CLI — provision a new dance studio tenant on DATABASE_URL.
  *
  * Usage:
  *   npx tsx scripts/provision-franchise.ts \
- *     --org "Bati Québec" --org-slug bati \
- *     --location "Bati — Québec Centre" --location-slug quebec-centre \
+ *     --org "Salsa Attitude" --org-slug salsa-attitude \
+ *     --location "Salsa Attitude — Québec" --location-slug quebec \
  *     --owner-id <uuid-auth-user> \
  *     [--city Québec] [--lat 46.8139] [--lng -71.208]
  *
- * Guardrails:
- * - Requires DIRECT_DATABASE_URL for migrations separately (not this script).
- * - Owner user must already exist (Supabase Auth → public.users sync).
- * - Never run against production without staging rehearsal.
+ * After provisioning, seed dance rooms + demo data:
+ *   npm run seed:dance-stations -- <locationId>
+ *   npm run seed:dance-demo -- <locationId>
  */
 import "dotenv/config";
-import { provisionNewBatiFranchise } from "../src/lib/production/provision-franchise";
+import { provisionNewStudioFranchise } from "../src/lib/production/provision-franchise";
 
 function arg(name: string): string | undefined {
   const idx = process.argv.indexOf(`--${name}`);
@@ -46,7 +45,7 @@ async function main() {
   const lat = arg("lat");
   const lng = arg("lng");
 
-  const result = await provisionNewBatiFranchise({
+  const result = await provisionNewStudioFranchise({
     orgName,
     orgSlug,
     locationName,
@@ -60,6 +59,8 @@ async function main() {
   });
 
   console.log(JSON.stringify({ ok: true, ...result }, null, 2));
+  console.log("\nNext: npm run seed:dance-stations --", result.locationId);
+  console.log("       npm run seed:dance-demo --", result.locationId);
 }
 
 main().catch((error) => {

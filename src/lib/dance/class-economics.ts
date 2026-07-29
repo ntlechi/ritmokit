@@ -1,6 +1,11 @@
 import type { InstructorPayType } from "@/generated/prisma/enums";
 
 export type ClassEconomicsInput = {
+  /**
+   * Explicit revenue (preferred — sum of paid Enrollment.amountCad).
+   * When omitted, falls back to paidEnrollmentCount × pricePerStudent.
+   */
+  revenue?: number;
   paidEnrollmentCount: number;
   pricePerStudent: number;
   payType: InstructorPayType | null;
@@ -20,7 +25,10 @@ export type ClassEconomics = {
 };
 
 export function calculateClassEconomics(input: ClassEconomicsInput): ClassEconomics {
-  const revenue = input.paidEnrollmentCount * input.pricePerStudent;
+  const revenue =
+    input.revenue != null && Number.isFinite(input.revenue)
+      ? input.revenue
+      : input.paidEnrollmentCount * input.pricePerStudent;
   const rate = input.payRate ?? 0;
   let instructorCost = 0;
 

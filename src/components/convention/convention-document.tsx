@@ -15,7 +15,7 @@ import {
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
 import { getConventionContent } from "@/lib/policy/workplace-convention";
-import { BATI_CULTURE_CONSTITUTION } from "@/lib/culture/values";
+import { STUDIO_CULTURE_CONSTITUTION } from "@/lib/culture/values";
 import { cn } from "@/lib/utils";
 
 const SECTION_ICONS: Record<string, LucideIcon> = {
@@ -30,7 +30,7 @@ const SECTION_ICONS: Record<string, LucideIcon> = {
 
 function cultureTitle(key: string | undefined, lang: Locale) {
   if (!key) return null;
-  const row = BATI_CULTURE_CONSTITUTION.find((v) => v.valueKey === key);
+  const row = STUDIO_CULTURE_CONSTITUTION.find((v) => v.valueKey === key);
   if (!row) return null;
   if (lang === "en") return row.titleEn;
   if (lang === "es") return row.titleEs;

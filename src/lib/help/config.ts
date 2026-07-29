@@ -100,8 +100,8 @@ export const HELP_FAQ_CATEGORIES: HelpCategoryKey[] = [
   "team", // Où changer la langue
   "manage", // Enregistrer un modèle de semaine
   "manage", // Déplacer un quart publié
-  "team", // Envoyer un message privé
-  "schedule", // Code Rouge
+  "team", // Send a private message
+  "schedule", // Sick report / replacement
 ];
 
 /** Les gestes du quotidien mis en avant en haut du centre d'aide. */

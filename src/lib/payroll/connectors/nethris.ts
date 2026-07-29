@@ -7,14 +7,11 @@ import { CSV_LINE_BREAK, csvRow, fallbackEmployeeCode, formatDateForCsv, splitFu
  * Codes de gains par défaut Nethris — le gain « 1 » (Régulier) et le gain
  * « 43 » (Supplémentaire) sont les codes standards les plus répandus chez
  * les clients Nethris, mais **restent configurables par compagnie** (voir
- * Paie → Paramètres de compagnie → Gains et déductions). Le code des
- * pourboires n'a pas d'équivalent universel : le gérant doit confirmer le
- * sien avant le premier import réel.
+ * Paie → Paramètres de compagnie → Gains et déductions).
  */
 export const NETHRIS_EARNING_CODES = {
   REGULAR: "1",
   OVERTIME: "43",
-  TIPS: "9",
 } as const;
 
 const NETHRIS_HEADERS = [
@@ -75,20 +72,6 @@ export function generateNethrisCsv(lines: PayrollEmployeeLine[], periodEndDate: 
       );
     }
 
-    if (line.tipsAmount > 0) {
-      rows.push(
-        csvRow([
-          matricule,
-          lastName,
-          firstName,
-          NETHRIS_EARNING_CODES.TIPS,
-          "Pourboires",
-          "",
-          line.tipsAmount.toFixed(2),
-          periodEndLabel,
-        ]),
-      );
-    }
   }
 
   return rows.join(CSV_LINE_BREAK) + CSV_LINE_BREAK;

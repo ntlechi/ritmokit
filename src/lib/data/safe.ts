@@ -10,7 +10,7 @@ export async function safeQuery<T>(fn: () => Promise<T>, fallback: T): Promise<{
     const data = await fn();
     return { data, dbError: false };
   } catch (error) {
-    console.error("[mirok:db]", error);
+    console.error("[ritmokit:db]", error);
     return { data: fallback, dbError: true };
   }
 }

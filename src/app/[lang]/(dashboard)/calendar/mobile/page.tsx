@@ -1,15 +1,12 @@
 import { notFound } from "next/navigation";
 import { BuddyCard } from "@/components/hr/buddy-card";
-import { CodeRedOffersStack } from "@/components/calendar/code-red-alert-card";
 import { MobileView } from "@/components/calendar/mobile-view";
 import { EmployeeBenefitsCard } from "@/components/benefits/employee-benefits-card";
 import { CareerPathCard } from "@/components/benefits/career-path-card";
 import { CultureWeekCard } from "@/components/culture/culture-week-card";
-import { TipVoteCard } from "@/components/punch/tip-vote-card";
 import { EmployeeSelfEvalCard } from "@/components/reviews/employee-self-eval-card";
 import { SkillProgressCard } from "@/components/skills/skill-progress-card";
 import { ShoutOutComposer } from "@/components/shoutouts/shout-out-composer";
-import { EmployeeTipsCard } from "@/components/tips/employee-tips-card";
 import { DbErrorBanner } from "@/components/db-error-banner";
 import { getActiveBenefitsForEmployee, getEmployeeCareerPath } from "@/lib/data/benefits";
 import { getMobileCultureCardData } from "@/lib/data/culture-mobile";
@@ -18,8 +15,6 @@ import { getEmployeeOpenReviews } from "@/lib/data/reviews";
 import { getEmployeeSkillProgress } from "@/lib/data/skills";
 import { getShoutOutComposerContext } from "@/lib/data/shoutouts";
 import { getUpcomingShiftsForEmployee } from "@/lib/data/shifts";
-import { getPendingCodeRedOffersForUser } from "@/lib/data/code-red";
-import { getEmployeeTipsSummary, getEmployeeVoteBallot } from "@/lib/data/tips";
 import { safeQuery } from "@/lib/data/safe";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { isLocale } from "@/lib/i18n/config";
@@ -29,8 +24,6 @@ import { DEFAULT_PLATFORM_FLAGS } from "@/lib/rsi/experiment-catalog";
 import { resolveLocationExperimentFlags } from "@/lib/rsi/platform-experiments";
 
 export const dynamic = "force-dynamic";
-
-const EMPTY_TIPS = { poolConfig: null, entries: [], periodTotal: 0 };
 
 export default async function MobilePage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;
@@ -48,9 +41,6 @@ export default async function MobilePage({ params }: { params: Promise<{ lang: s
 
   const [
     { data: shifts, dbError },
-    { data: codeRedOffers },
-    { data: tipsSummary },
-    { data: voteBallot },
     { data: buddy },
     { data: skillProgress },
     { data: openReviews },
@@ -61,9 +51,6 @@ export default async function MobilePage({ params }: { params: Promise<{ lang: s
     { data: experimentFlags },
   ] = await Promise.all([
     safeQuery(() => getUpcomingShiftsForEmployee(user.id), []),
-    safeQuery(() => getPendingCodeRedOffersForUser(user.id), []),
-    safeQuery(() => getEmployeeTipsSummary(user.id), EMPTY_TIPS),
-    safeQuery(() => getEmployeeVoteBallot(user.id, lang), null),
     safeQuery(() => getEmployeeBuddyCard(user.id), null),
     safeQuery(() => getEmployeeSkillProgress(user.id), null),
     safeQuery(() => getEmployeeOpenReviews(user.id), []),
@@ -102,7 +89,6 @@ export default async function MobilePage({ params }: { params: Promise<{ lang: s
       )}
 
       <div className="flex flex-col gap-4 lg:col-span-7 xl:col-span-8">
-        <CodeRedOffersStack offers={codeRedOffers ?? []} dict={dict} lang={lang} />
         <MobileView shifts={shifts} locale={lang} dict={dict} />
       </div>
 
@@ -144,10 +130,6 @@ export default async function MobilePage({ params }: { params: Promise<{ lang: s
         {benefitsBundle && benefitsBundle.benefits.length > 0 && (
           <EmployeeBenefitsCard benefits={benefitsBundle.benefits} dict={dict} />
         )}
-        {voteBallot && (
-          <TipVoteCard ballot={voteBallot} dict={dict} defaultSignature={user.fullName} />
-        )}
-        <EmployeeTipsCard summary={tipsSummary} locale={lang} dict={dict} />
       </div>
     </div>
   );

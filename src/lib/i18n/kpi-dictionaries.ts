@@ -41,7 +41,7 @@ export const kpiFr: Dictionary["kpi"] = pack(
     },
     YIELD_PER_SQM: { shortLabel: "$/m²", hint: "Marge nette ÷ superficie" },
     INSTRUCTOR_SUB_RATE: { shortLabel: "Remplacements", hint: "Heures sub ÷ heures planifiées" },
-    LEAD_FOLLOW_DELTA: { shortLabel: "Δ Parité", hint: "|Cavaliers − Cavalières|" },
+    LEAD_FOLLOW_DELTA: { shortLabel: "Δ Parité", hint: "|Leads − Follows|" },
     BLOCKED_REVENUE: { shortLabel: "Revenus bloqués", hint: "Liste d'attente × prix" },
     SOLO_COUPLE_RATIO: { shortLabel: "Solo / couple", hint: "Inscriptions solo ÷ couples" },
     NET_PROFIT_PER_CLASS: { shortLabel: "Profit / cours", hint: "Revenus − paie prof" },
@@ -75,8 +75,8 @@ export const kpiFr: Dictionary["kpi"] = pack(
       source: "ClassSession + substitutions (à venir).",
     },
     LEAD_FOLLOW_DELTA: {
-      title: "Écart Cavalier / Cavalière",
-      formula: "|Nombre de Cavaliers − Nombre de Cavalières|",
+      title: "Écart Lead / Follow",
+      formula: "|Nombre de Leads − Nombre de Follows|",
       why: "C'est le coin différenciateur RitmoKit — un Δ > 2 bloque les ventes.",
       target: "Δ = 0 (vert). 1–2 = jaune. > 2 = rouge / waitlist.",
       source: "Moteur de parité + enrollments.",
@@ -84,7 +84,7 @@ export const kpiFr: Dictionary["kpi"] = pack(
     BLOCKED_REVENUE: {
       title: "Revenus bloqués par la parité",
       formula: "(Places waitlist / déséquilibre) × Prix régulier",
-      why: "Quantifie l'argent perdu faute de cavaliers — justifie les campagnes « Free Lead ».",
+      why: "Quantifie l'argent perdu faute de Leads — justifie les campagnes « Free Lead ».",
       target: "0 $. Toute valeur > 0 = opportunité marketing ciblée.",
       source: "Waitlist + imbalance × priceRegular.",
     },
@@ -154,7 +154,7 @@ export const kpiFr: Dictionary["kpi"] = pack(
     targetLabel: "Cible studio",
     sourceLabel: "Source",
     sampleSize: "n = {count} observations",
-    posLiveNote: "Données d'inscriptions en direct — parité et occupation mises à jour.",
+    liveEnrollmentNote: "Données d'inscriptions en direct — parité et occupation mises à jour.",
     availability: { live: "Direct", partial: "Partiel", pending: "À brancher" },
     channels: {
       IN_STORE: "Studio",
@@ -285,7 +285,7 @@ export const kpiEn: Dictionary["kpi"] = pack(
     targetLabel: "Studio target",
     sourceLabel: "Source",
     sampleSize: "n = {count} observations",
-    posLiveNote: "Live enrollment data — parity and occupancy updating.",
+    liveEnrollmentNote: "Live enrollment data — parity and occupancy updating.",
     availability: { live: "Live", partial: "Partial", pending: "Pending" },
     channels: {
       IN_STORE: "Studio",
@@ -416,7 +416,7 @@ export const kpiEs: Dictionary["kpi"] = pack(
     targetLabel: "Objetivo estudio",
     sourceLabel: "Fuente",
     sampleSize: "n = {count} observaciones",
-    posLiveNote: "Datos de inscripción en vivo — paridad y ocupación al día.",
+    liveEnrollmentNote: "Datos de inscripción en vivo — paridad y ocupación al día.",
     availability: { live: "En vivo", partial: "Parcial", pending: "Pendiente" },
     channels: {
       IN_STORE: "Estudio",

@@ -25,7 +25,7 @@ export default async function ManagerStationsPage({
   }
 
   const { data: result, dbError } = await safeQuery(
-    () => getStationsForUser(user.id, { activeOnly: false }),
+    () => getStationsForUser(user.id, { activeOnly: false, kind: "DEPARTMENT" }),
     null,
   );
 
@@ -41,8 +41,12 @@ export default async function ManagerStationsPage({
         <div className="mt-2 flex items-center gap-2">
           <Users className="h-5 w-5 text-accent" aria-hidden />
           <div>
-            <h1 className="text-xl font-semibold tracking-tight">{dict.manager.stations.title}</h1>
-            <p className="mt-1 text-sm text-foreground-muted">{dict.manager.stations.subtitle}</p>
+            <h1 className="text-xl font-semibold tracking-tight">
+              {dict.manager.stations.departmentsTitle}
+            </h1>
+            <p className="mt-1 text-sm text-foreground-muted">
+              {dict.manager.stations.departmentsSubtitle}
+            </p>
           </div>
         </div>
       </header>
@@ -56,6 +60,7 @@ export default async function ManagerStationsPage({
             dict={dict}
             locale={lang}
             lang={lang}
+            kind="DEPARTMENT"
           />
         )}
       </div>

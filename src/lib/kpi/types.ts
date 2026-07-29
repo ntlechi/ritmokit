@@ -54,7 +54,7 @@ export type LocationKpiSnapshot = {
   /** True when enrollment/class data is available for live dance KPIs. */
   hasLiveData: boolean;
   /** @deprecated Prefer hasLiveData. */
-  hasPosLive: boolean;
+  hasLiveEnrollment: boolean;
 };
 
 export const DANCE_KPI_KEYS: DanceKpiKey[] = [

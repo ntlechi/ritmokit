@@ -17,19 +17,19 @@ export const jobApplySchema = z
     availableShifts: z.array(jobShiftWindowSchema).min(1),
     commuteMinutes: z.number().int().nonnegative().max(240),
     yearsExperience: z.number().nonnegative().max(50).default(0),
-    /** Deprecated QSR field — accepted for wire compat, ignored by RitmoKit UX. */
+    /** Legacy wire field — accepted for API compat, ignored by RitmoKit. */
     hasFoodPermit: z.boolean().default(false),
     speaksFrench: z.boolean().default(true),
     notes: z.string().max(2000).optional(),
-    /** When true, skip Arsimatrix push (store only). */
+    /** When true, store application locally only (no external push). */
     dryRun: z.boolean().optional(),
   })
   .strict();
 
 export type JobApplyInput = z.infer<typeof jobApplySchema>;
 
-/** Wire format pushed to Arsimatrix Mirok connector. */
-export const mirokApplicationWireSchema = z
+/** Legacy external application wire format (careers API compat). */
+export const legacyApplicationWireSchema = z
   .object({
     id: z.string().uuid(),
     locationId: z.string().uuid(),
@@ -52,7 +52,7 @@ export const mirokApplicationWireSchema = z
   })
   .strict();
 
-export type MirokApplicationWire = z.infer<typeof mirokApplicationWireSchema>;
+export type LegacyApplicationWire = z.infer<typeof legacyApplicationWireSchema>;
 
 export const triageCandidateSchema = z.object({
   candidateId: z.string().min(1),
@@ -75,8 +75,8 @@ export const triageResultSchema = z
   })
   .strict();
 
-/** Synchronous REPORT payload nested under Arsimatrix push responses. */
-export const arsimatrixTriageReportSchema = z
+/** Synchronous triage report payload (careers API compat). */
+export const triageReportSchema = z
   .object({
     report: z
       .object({

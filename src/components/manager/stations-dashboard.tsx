@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Check, Loader2, Plus } from "lucide-react";
 import { createStationAction, updateStationAction } from "@/lib/actions/stations";
+import type { StationKindValue } from "@/lib/stations/dance-defaults";
 import { stationLabel, type StationRecord } from "@/lib/stations/display";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
@@ -21,12 +22,13 @@ function resolveError(dict: Dictionary, code: string): string {
   return map[code] ?? dict.manager.stations.errors.databaseError;
 }
 
-function StationEditor({
+export function StationEditor({
   station,
   locationId,
   lang,
   dict,
   locale,
+  kind = "ROOM",
   onCreated,
 }: {
   station?: StationRecord;
@@ -34,8 +36,11 @@ function StationEditor({
   lang: string;
   dict: Dictionary;
   locale: Locale;
+  /** Departments have no capacity or surface — those fields are hidden. */
+  kind?: StationKindValue;
   onCreated?: (stationId: string) => void;
 }) {
+  const isRoom = kind === "ROOM";
   const [values, setValues] = useState({
     nameFr: station?.nameFr ?? "",
     nameEn: station?.nameEn ?? "",
@@ -67,8 +72,9 @@ function StationEditor({
         nameEs: values.nameEs,
         colorHex: values.colorHex,
         slug: values.slug || undefined,
-        capacity,
-        surfaceSqm,
+        capacity: isRoom ? capacity : null,
+        surfaceSqm: isRoom ? surfaceSqm : null,
+        kind,
       };
 
       const result = station
@@ -97,7 +103,11 @@ function StationEditor({
           aria-hidden
         />
         <h3 className="text-sm font-semibold">
-          {station ? stationLabel(station, locale) : dict.manager.stations.newStation}
+          {station
+            ? stationLabel(station, locale)
+            : isRoom
+              ? dict.manager.stations.newStation
+              : dict.manager.stations.newDepartment}
         </h3>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -141,31 +151,35 @@ function StationEditor({
             className="rounded-lg border border-border bg-background px-2 py-1.5 text-sm"
           />
         </label>
-        <label className="flex flex-col gap-1 text-xs text-foreground-muted">
-          {dict.manager.stations.capacity}
-          <input
-            type="number"
-            min={1}
-            max={500}
-            value={values.capacity}
-            onChange={(e) => setValues((v) => ({ ...v, capacity: e.target.value }))}
-            placeholder="24"
-            className="rounded-lg border border-border bg-background px-2 py-1.5 text-sm"
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-xs text-foreground-muted">
-          {dict.manager.stations.surfaceSqm}
-          <input
-            type="number"
-            min={1}
-            max={10000}
-            step={0.1}
-            value={values.surfaceSqm}
-            onChange={(e) => setValues((v) => ({ ...v, surfaceSqm: e.target.value }))}
-            placeholder="80"
-            className="rounded-lg border border-border bg-background px-2 py-1.5 text-sm"
-          />
-        </label>
+        {isRoom && (
+          <>
+            <label className="flex flex-col gap-1 text-xs text-foreground-muted">
+              {dict.manager.stations.capacity}
+              <input
+                type="number"
+                min={1}
+                max={500}
+                value={values.capacity}
+                onChange={(e) => setValues((v) => ({ ...v, capacity: e.target.value }))}
+                placeholder="24"
+                className="rounded-lg border border-border bg-background px-2 py-1.5 text-sm"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-xs text-foreground-muted">
+              {dict.manager.stations.surfaceSqm}
+              <input
+                type="number"
+                min={1}
+                max={10000}
+                step={0.1}
+                value={values.surfaceSqm}
+                onChange={(e) => setValues((v) => ({ ...v, surfaceSqm: e.target.value }))}
+                placeholder="80"
+                className="rounded-lg border border-border bg-background px-2 py-1.5 text-sm"
+              />
+            </label>
+          </>
+        )}
         {station && (
           <label className="flex items-center gap-2 text-sm">
             <input
@@ -200,29 +214,36 @@ export function StationsDashboard({
   dict,
   locale,
   lang,
+  kind = "DEPARTMENT",
 }: {
   locationId: string;
   stations: StationRecord[];
   dict: Dictionary;
   locale: Locale;
   lang: string;
+  kind?: StationKindValue;
 }) {
   const [showCreate, setShowCreate] = useState(false);
+  const copy = dict.manager.stations;
+  const isRoom = kind === "ROOM";
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-foreground-muted">{dict.manager.stations.subtitle}</p>
+        <p className="text-sm text-foreground-muted">
+          {isRoom ? copy.subtitle : copy.departmentsSubtitle}
+        </p>
         <button
           type="button"
           onClick={() => setShowCreate((v) => !v)}
+          aria-expanded={showCreate}
           className={cn(
             "inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium hover:bg-surface-muted",
             showCreate && "bg-surface-muted",
           )}
         >
           <Plus className="h-3.5 w-3.5" />
-          {dict.manager.stations.addStation}
+          {isRoom ? copy.addStation : copy.addDepartment}
         </button>
       </div>
 
@@ -232,13 +253,14 @@ export function StationsDashboard({
           lang={lang}
           dict={dict}
           locale={locale}
+          kind={kind}
           onCreated={() => setShowCreate(false)}
         />
       )}
 
       {initialStations.length === 0 ? (
         <p className="rounded-2xl border border-border bg-surface-muted px-4 py-8 text-center text-sm text-foreground-muted">
-          {dict.manager.stations.empty}
+          {isRoom ? copy.empty : copy.emptyDepartments}
         </p>
       ) : (
         initialStations.map((station) => (
@@ -249,6 +271,7 @@ export function StationsDashboard({
             lang={lang}
             dict={dict}
             locale={locale}
+            kind={kind}
           />
         ))
       )}

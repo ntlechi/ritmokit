@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { isHelpTopicKey, type HelpTopicKey } from "@/lib/help/config";
 
-const STORAGE_KEY = "mirok-help-recent";
+const STORAGE_KEY = "ritmokit-help-recent";
 const MAX_RECENT = 6;
 
 /**

@@ -26,7 +26,7 @@ export default function GlobalError({
         }}
       >
         <div style={{ maxWidth: 360, padding: 24, textAlign: "center" }}>
-          <h1 style={{ fontSize: 18, fontWeight: 600, margin: "0 0 8px" }}>Mirok</h1>
+          <h1 style={{ fontSize: 18, fontWeight: 600, margin: "0 0 8px" }}>RitmoKit</h1>
           <p style={{ fontSize: 14, color: "#71717a", margin: "0 0 16px" }}>
             Une erreur critique s&apos;est produite.
             {error.digest ? ` (réf. ${error.digest})` : ""}

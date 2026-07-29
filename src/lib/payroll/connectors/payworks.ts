@@ -5,13 +5,11 @@ import { CSV_LINE_BREAK, csvRow, fallbackEmployeeCode, formatDateForCsv } from "
 
 /**
  * Codes de gains par défaut Payworks/Powerpay — REG/OT sont les libellés
- * standards ; TIPS doit être confirmé par le gérant dans son propre
- * paramétrage « Custom Import » (Company → Custom Import Setup).
+ * standards ; confirm earning codes in Payworks « Custom Import » setup.
  */
 export const PAYWORKS_EARNING_CODES = {
   REGULAR: "REG",
   OVERTIME: "OT",
-  TIPS: "TIPS",
 } as const;
 
 const PAYWORKS_HEADERS = [
@@ -61,18 +59,6 @@ export function generatePayworksCsv(lines: PayrollEmployeeLine[], periodEndDate:
       );
     }
 
-    if (line.tipsAmount > 0) {
-      rows.push(
-        csvRow([
-          employeeNumber,
-          line.fullName,
-          PAYWORKS_EARNING_CODES.TIPS,
-          "",
-          line.tipsAmount.toFixed(2),
-          periodEndLabel,
-        ]),
-      );
-    }
   }
 
   return rows.join(CSV_LINE_BREAK) + CSV_LINE_BREAK;

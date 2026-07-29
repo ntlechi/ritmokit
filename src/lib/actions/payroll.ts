@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { canAccessManagerSettings, getSessionUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { actionDatabaseError } from "@/lib/actions/result";
-import { parseBusinessDateInput } from "@/lib/finance/tips";
+import { parseBusinessDateInput } from "@/lib/finance/business-date";
 import { asPlainNumber } from "@/lib/data/serialize";
 import { calculatePayrollForPeriod, validatePayPeriodBounds, type PayrollWarning } from "@/lib/payroll/calculate";
 import { generateNethrisCsv } from "@/lib/payroll/connectors/nethris";
@@ -114,7 +114,6 @@ export async function lockPayPeriodAction(payPeriodId: string): Promise<LockPayP
           overtimeHours: line.overtimeHours,
           regularPay: line.regularPay,
           overtimePay: line.overtimePay,
-          tipsAmount: line.tipsAmount,
           grossPay: line.grossPay,
           shiftCount: line.shiftCount,
           incompletePunchCount: line.incompletePunchCount,
@@ -188,7 +187,6 @@ export async function generatePayrollExportAction(
       overtimeHours: asPlainNumber(li.overtimeHours),
       regularPay: asPlainNumber(li.regularPay),
       overtimePay: asPlainNumber(li.overtimePay),
-      tipsAmount: asPlainNumber(li.tipsAmount),
       grossPay: asPlainNumber(li.grossPay),
       shiftCount: li.shiftCount,
       incompletePunchCount: li.incompletePunchCount,

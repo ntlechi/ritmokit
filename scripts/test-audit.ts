@@ -100,7 +100,7 @@ async function main() {
       endDate,
     });
 
-    assert(compiled.fileName.startsWith(`mirok-audit-${type.toLowerCase()}-quebec-`), `${type}: fileName is well-formed`);
+    assert(compiled.fileName.startsWith(`ritmokit-audit-${type.toLowerCase()}-quebec-`), `${type}: fileName is well-formed`);
     assert(/^[0-9a-f]{64}$/.test(compiled.manifestHash), `${type}: manifestHash looks like a valid SHA-256 hex digest`);
     assert(compiled.zipBuffer.length > 0, `${type}: zipBuffer is non-empty`);
 
@@ -128,8 +128,8 @@ async function main() {
     }
     if (type === "FISCAL" || type === "FULL") {
       assert(
-        "fiscal_tip_pool_agreement" in parsed.evidence,
-        `${type}: fiscal_tip_pool_agreement key is present`,
+        Array.isArray(parsed.evidence.fiscal_pay_periods),
+        `${type}: fiscal_pay_periods evidence is present`,
       );
     }
 

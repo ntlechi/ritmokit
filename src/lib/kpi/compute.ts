@@ -54,7 +54,7 @@ function profitHealth(value: number): KpiHealth {
 
 /**
  * Dance-native location KPI snapshot for the studio cockpit.
- * Replaces QSR labor/SPLH/POS metrics.
+ * Studio labor KPIs — class revenue vs labor cost for dance/fitness tenants.
  */
 export async function computeLocationKpiSnapshot(
   locationId: string,
@@ -164,6 +164,6 @@ export async function computeLocationKpiSnapshot(
     metrics,
     computedAt: targetDate.toISOString(),
     hasLiveData,
-    hasPosLive: hasLiveData,
+    hasLiveEnrollment: hasLiveData,
   };
 }

@@ -58,33 +58,33 @@ export type DemoAlert = {
 };
 
 export const DEMO_BRAND: DemoBrandKit = {
-  name: "Bati",
-  slug: "bati",
-  logoMark: "B",
-  primaryColor: "#FF0013",
+  name: "RitmoKit Demo",
+  slug: "ritmokit-demo",
+  logoMark: "RK",
+  primaryColor: "#E11D48",
   welcomeCopy:
-    "Ton application de travail. Horaires, formations, fiches de paie, et tout ce qu'il te faut pour réussir ici.",
-  rewardMessage: "5 modules, 1 convention signée, 1 semaine de faite. Ton gérant a été notifié.",
+    "Ton application studio. Horaires, Accueil, formations et tout ce qu'il te faut pour enseigner ou accueillir.",
+  rewardMessage: "5 modules, 1 convention signée, 1 semaine complétée. La direction a été notifiée.",
   managerMessageWeek1:
-    "Bon travail cette semaine. On se voit pour ton check-in de 5 minutes avant ton prochain quart.",
+    "Belle première semaine. On se voit pour ton check-in de 5 minutes avant ton prochain quart.",
 };
 
 export const DEMO_MODULES: DemoModule[] = [
   {
     id: "m1",
-    title: "Les valeurs Bati",
+    title: "Les valeurs du studio",
     unlockDay: 1,
     estimatedMinutes: 10,
     sections: [
-      { title: "Pourquoi Bati existe", minutes: 3 },
+      { title: "Pourquoi ce studio existe", minutes: 3 },
       { title: "Les 5 valeurs de l'équipe", minutes: 4 },
       { title: "Quiz de validation", minutes: 3 },
     ],
   },
-  { id: "m2", title: "Le système Bati", unlockDay: 2, estimatedMinutes: 12 },
-  { id: "m3", title: "Accueil et commande", unlockDay: 3, estimatedMinutes: 7 },
-  { id: "m4", title: "Assemblage et précision", unlockDay: 4, estimatedMinutes: 10 },
-  { id: "m5", title: "Propreté en continu", unlockDay: 5, estimatedMinutes: 8 },
+  { id: "m2", title: "RitmoKit — ton outil", unlockDay: 2, estimatedMinutes: 12 },
+  { id: "m3", title: "Accueil & check-in", unlockDay: 3, estimatedMinutes: 7 },
+  { id: "m4", title: "Salle & sécurité CNESST", unlockDay: 4, estimatedMinutes: 10 },
+  { id: "m5", title: "Parité Lead / Follow", unlockDay: 5, estimatedMinutes: 8 },
 ];
 
 export const DEMO_EMPLOYEES: DemoEmployee[] = [
@@ -92,8 +92,8 @@ export const DEMO_EMPLOYEES: DemoEmployee[] = [
     id: "sofia",
     fullName: "Sofia L.",
     initials: "SL",
-    role: "Caisse & comptoir",
-    station: "Comptoir",
+    role: "Accueil",
+    station: "Accueil",
     pin: "1234",
     trainingPercent: 80,
     status: "on_floor",
@@ -103,8 +103,8 @@ export const DEMO_EMPLOYEES: DemoEmployee[] = [
     id: "karim",
     fullName: "Karim B.",
     initials: "KB",
-    role: "Assemblage",
-    station: "Assemblage",
+    role: "Instructeur Bachata",
+    station: "Instructeurs",
     pin: "2222",
     trainingPercent: 40,
     status: "late",
@@ -114,8 +114,8 @@ export const DEMO_EMPLOYEES: DemoEmployee[] = [
     id: "maya",
     fullName: "Maya T.",
     initials: "MT",
-    role: "Cuisine",
-    station: "Cuisine",
+    role: "Instructrice Salsa",
+    station: "Instructeurs",
     pin: "3333",
     trainingPercent: 100,
     status: "on_floor",
@@ -163,7 +163,7 @@ const DEMO_ALERTS: DemoAlert[] = [
     id: "a1",
     tone: "danger",
     title: "Karim B. — retard sans avis",
-    body: "22 min de retard. Coaching verbal requis. Niveau 0 → documenté dans Mirok automatiquement.",
+    body: "22 min de retard. Coaching verbal requis. Niveau 0 → documenté dans RitmoKit automatiquement.",
     minutesAgo: 24,
     visibleFromDay: 2,
   },

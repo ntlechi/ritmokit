@@ -42,7 +42,7 @@ export function categoryIcon(key: string | null): LucideIcon {
   return BookOpen;
 }
 
-/** Teintes prêtes à l'emploi, cohérentes avec les couleurs de poste Mirok. */
+/** Teintes prêtes à l'emploi, cohérentes avec les couleurs de poste RitmoKit. */
 export const CATEGORY_COLORS = [
   "#52525b",
   "#0f766e",

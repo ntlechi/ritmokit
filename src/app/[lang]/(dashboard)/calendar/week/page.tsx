@@ -12,7 +12,7 @@ import {
   getSessionUser,
 } from "@/lib/auth/session";
 import { getWeekDays, getWeekRange, parseDateParam } from "@/lib/calendar/grid";
-import { WEEK_START_COOKIE, parseWeekStart } from "@/lib/calendar/week-start";
+import { WEEK_START_COOKIE, LEGACY_WEEK_START_COOKIE, readWeekStartCookie } from "@/lib/calendar/week-start";
 import { formatWeekRangeLabel } from "@/lib/calendar/format";
 import { getWeeklyCoverageForUser } from "@/lib/data/coverage";
 import { getEmployeeRoster } from "@/lib/data/employees";
@@ -46,7 +46,10 @@ export default async function WeekPage({
     cookiePromise,
     user ? getPrimaryMembership(user.id) : Promise.resolve(null),
   ]);
-  const weekStart = parseWeekStart(cookieStore.get(WEEK_START_COOKIE)?.value);
+  const weekStart = readWeekStartCookie(
+    cookieStore.get(WEEK_START_COOKIE)?.value,
+    cookieStore.get(LEGACY_WEEK_START_COOKIE)?.value,
+  );
   const days = getWeekDays(anchor, weekStart);
   const { start, end } = getWeekRange(anchor, weekStart);
   const locationId = membership?.locationId;

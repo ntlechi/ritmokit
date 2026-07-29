@@ -1,13 +1,10 @@
 "use client";
 
-import { Funnel, Mail, MessageSquare } from "lucide-react";
+import { Funnel as FunnelIcon, Mail, MessageSquare } from "lucide-react";
+import { Funnel, ProgressRing, toneForHigher } from "@/components/charts/primitives";
 import type { ChurnRiskStudent, ProgressionFunnel as ProgressionFunnelData } from "@/lib/dance/analytics";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
-
-function stageWidth(value: number, max: number): string {
-  if (max <= 0) return "12%";
-  return `${Math.max(12, Math.round((value / max) * 100))}%`;
-}
+import { KPI_L1_L2_GOOD_MIN, KPI_L1_L2_WARN_MIN } from "@/lib/kpi/thresholds";
 
 export function ProgressionFunnel({
   progression,
@@ -19,12 +16,6 @@ export function ProgressionFunnel({
   dict: Dictionary;
 }) {
   const c = dict.studioCockpit;
-  const max = Math.max(
-    progression.beginnerCompleters,
-    progression.intermediateEnrolled,
-    progression.advancedEnrolled,
-    1,
-  );
 
   const stages = [
     {
@@ -50,37 +41,48 @@ export function ProgressionFunnel({
   return (
     <section className="flex h-full flex-col rounded-2xl border border-border bg-surface p-5 shadow-sm">
       <div className="flex items-center gap-2">
-        <Funnel className="h-4 w-4 text-accent" aria-hidden />
+        <FunnelIcon className="h-4 w-4 text-accent" aria-hidden />
         <div>
           <h2 className="text-sm font-semibold">{c.funnel.title}</h2>
           <p className="text-xs text-foreground-muted">{c.funnel.subtitle}</p>
         </div>
       </div>
 
-      <div className="mt-5 space-y-3">
-        {stages.map((stage, idx) => (
-          <div key={stage.key} className="space-y-1">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-medium">{stage.label}</span>
-              <span className="tabular-nums text-foreground-muted">
-                {stage.count}
-                {stage.rate != null && (
-                  <span className="ml-2 text-accent">
-                    {idx === 1 ? "L1→L2" : "L2→L3"} {stage.rate.toFixed(0)}%
-                  </span>
-                )}
-              </span>
-            </div>
-            <div className="flex justify-center">
-              <div
-                className="h-8 rounded-lg bg-gradient-to-r from-accent/80 to-accent text-center text-xs font-semibold leading-8 text-accent-foreground transition-all"
-                style={{ width: stageWidth(stage.count, max) }}
-              >
-                {stage.count > 0 ? stage.count : ""}
+      <div className="mt-5 flex items-center gap-5">
+        <div className="min-w-0 flex-1">
+          <Funnel
+            height={120}
+            stages={stages.map((stage) => ({ label: stage.label, value: stage.count, tone: "accent" }))}
+            caption={c.funnel.title}
+          />
+          <ul className="mt-2 space-y-1">
+            {stages.map((stage) => (
+              <li key={stage.key} className="flex items-center justify-between text-xs">
+                <span className="font-medium">{stage.label}</span>
+                <span className="metric tabular-nums text-foreground-muted">{stage.count}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="flex shrink-0 flex-col items-center gap-3">
+          {stages
+            .filter((stage) => stage.rate != null)
+            .map((stage, idx) => (
+              <div key={stage.key} className="flex flex-col items-center gap-1">
+                <ProgressRing
+                  value={stage.rate ?? 0}
+                  size={54}
+                  strokeWidth={5}
+                  caption={idx === 0 ? "L1→L2" : "L2→L3"}
+                  tone={toneForHigher(stage.rate ?? 0, KPI_L1_L2_GOOD_MIN, KPI_L1_L2_WARN_MIN)}
+                />
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">
+                  {idx === 0 ? "L1→L2" : "L2→L3"}
+                </span>
               </div>
-            </div>
-          </div>
-        ))}
+            ))}
+        </div>
       </div>
 
       <div className="mt-6 border-t border-border pt-4">

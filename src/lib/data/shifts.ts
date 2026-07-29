@@ -22,10 +22,9 @@ type ClientEmployee = Omit<EmployeeWithProfileRaw, "employeeProfile"> & {
 /** Client-safe shift row — Prisma Decimal fields are plain numbers. */
 export type ShiftWithEmployee = Omit<
   ShiftWithEmployeeRaw,
-  "weeklyHoursSnapshot" | "surgeBonus" | "employee" | "station"
+  "weeklyHoursSnapshot" | "employee" | "station"
 > & {
   weeklyHoursSnapshot: number;
-  surgeBonus: number | null;
   employee: ClientEmployee | null;
   station: StationRecord;
 };
@@ -45,7 +44,7 @@ function mapStation(row: NonNullable<ShiftWithEmployeeRaw["station"]>): StationR
     colorHex: row.colorHex,
     slug: row.slug,
     sortOrder: row.sortOrder,
-    tipPoints: asPlainNumber(row.tipPoints),
+    kind: row.kind,
     isActive: row.isActive,
     capacity: row.capacity,
     surfaceSqm: row.surfaceSqm,
@@ -76,7 +75,6 @@ function serializeShift(
   return {
     ...rest,
     weeklyHoursSnapshot: asPlainNumber(shift.weeklyHoursSnapshot),
-    surgeBonus: shift.surgeBonus != null ? asPlainNumber(shift.surgeBonus) : null,
     employee,
     station: mapStation(stationRow),
   };
@@ -116,7 +114,6 @@ function serializeOwnShift(shift: ShiftWithStationRaw): ShiftWithEmployee {
   return {
     ...rest,
     weeklyHoursSnapshot: asPlainNumber(shift.weeklyHoursSnapshot),
-    surgeBonus: shift.surgeBonus != null ? asPlainNumber(shift.surgeBonus) : null,
     employee: null,
     station: mapStation(stationRow),
   };

@@ -22,11 +22,10 @@ import {
 import type { EmployeeCareerPath } from "@/lib/data/benefits";
 import type { ProfileDossierCore } from "@/lib/data/profile-dossier";
 import type { EmployeeSkillProgress } from "@/lib/data/skills";
-import type { EmployeeTipsSummary } from "@/lib/data/tips";
+import type { TimeOffRequestEntry } from "@/lib/data/timeoff";
 import type { FormationCatalog } from "@/lib/data/training";
 import type { ShoutOutComposerContext } from "@/lib/data/shoutouts";
 import type { WeeklyAvailability } from "@/lib/data/availability";
-import type { TimeOffRequestEntry } from "@/lib/data/timeoff";
 import type { SkillLevel } from "@/generated/prisma/enums";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
@@ -57,7 +56,6 @@ export type ProfileDossierData = {
   recognition: ShoutOutComposerContext | null;
   availability: WeeklyAvailability | null;
   timeOff: TimeOffRequestEntry[];
-  tips: EmployeeTipsSummary | null;
 };
 
 function formatDate(iso: string, lang: Locale): string {
@@ -226,7 +224,7 @@ export function ProfileDossierView({
   data: ProfileDossierData;
 }) {
   const copy = dict.profile.dossier;
-  const { core, training, skills, career, recognition, availability, timeOff, tips } = data;
+  const { core, training, skills, career, recognition, availability, timeOff } = data;
   const station = core.placement.station;
   const accent = station?.colorHex ?? DEFAULT_COVER_ACCENT;
 
@@ -908,34 +906,13 @@ export function ProfileDossierView({
                 </div>
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-[0.07em] text-foreground-muted">
-                    {copy.tips30}
-                  </p>
-                  <p className="metric mt-0.5 text-xl font-bold">
-                    {tips ? formatCurrency(tips.periodTotal, lang) : "—"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.07em] text-foreground-muted">
                     {copy.scheduledHours}
                   </p>
                   <p className="metric mt-0.5 text-xl font-bold">
                     {core.pay.scheduledHoursThisWeek} h
                   </p>
                 </div>
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.07em] text-foreground-muted">
-                    {copy.tipShifts}
-                  </p>
-                  <p className="metric mt-0.5 text-xl font-bold">{tips?.entries.length ?? 0}</p>
-                </div>
               </div>
-              <Link
-                href={`/${lang}/calendar/mobile`}
-                className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-accent hover:underline"
-              >
-                <Banknote className="h-3.5 w-3.5" aria-hidden />
-                {copy.payLink}
-              </Link>
             </CardShell>
           </div>
         </div>

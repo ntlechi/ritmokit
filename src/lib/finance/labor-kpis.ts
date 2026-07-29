@@ -3,7 +3,7 @@ import "server-only";
 import type { ShiftStatus } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
 import { asPlainNumber } from "@/lib/data/serialize";
-import { getTorontoDayBounds } from "@/lib/finance/tips";
+import { getTorontoDayBounds } from "@/lib/finance/business-date";
 import {
   LABOR_COST_CRITICAL_THRESHOLD,
   LABOR_COST_TARGET_MAX,
@@ -28,9 +28,9 @@ export type LaborCostStatus = "good" | "warning" | "critical";
 
 export type HourlyLaborBucket = {
   hour: number;
-  projectedSales: number;
-  /** Ventes réelles captées via webhook POS (Cluster) — `null` tant qu'aucune facture n'a fermé pour cette heure. */
-  actualSales: number | null;
+  projectedClassRevenue: number;
+  /** Class revenue for the hour — `null` until enrollment/checkout data is wired for this hour. */
+  actualClassRevenue: number | null;
   laborHours: number;
   laborCost: number;
 };
@@ -65,19 +65,19 @@ export type LiveLaborKpiReport = {
   isToday: boolean;
   currentHour: number;
   buckets: HourlyLaborBucket[];
-  totalProjectedSales: number;
+  totalProjectedClassRevenue: number;
   totalLaborHours: number;
   totalLaborCost: number;
   fullDayLaborCostPercentage: number;
   liveLaborCostPercentage: number;
   liveLaborCostStatus: LaborCostStatus;
-  dailySplh: number;
-  currentHourSplh: number | null;
+  dailyRevenuePerLaborHour: number;
+  currentHourRevenuePerLaborHour: number | null;
   overtimeRisk: OvertimeRiskEmployee[];
   laborVariance: LaborVarianceReport;
-  hasSalesData: boolean;
-  /** Vrai si au moins une tranche horaire provient du POS (Cluster) plutôt que de la projection. */
-  hasPosData: boolean;
+  hasClassRevenueData: boolean;
+  /** True when at least one hour uses live enrollment revenue instead of projection. */
+  hasLiveRevenueData: boolean;
 };
 
 export async function calculateLiveLaborKpis(input: {
@@ -88,13 +88,11 @@ export async function calculateLiveLaborKpis(input: {
 }): Promise<LiveLaborKpiReport> {
   const { locationId, targetDate, skipOvertimeRisk = false } = input;
 
-  const dayOfWeek = getDayOfWeekFromLocalDate(targetDate);
   const { dayStart, dayEnd } = getDayBoundsFromLocalDate(targetDate);
-  const { distributionDate } = getTorontoDayBounds(targetDate);
   const isToday = isSameLocalDay(targetDate, new Date());
   const currentHour = getHourInToronto(new Date());
 
-  const [shifts, projections, posSalesRows, overtimeRisk] = await Promise.all([
+  const [shifts, overtimeRisk] = await Promise.all([
     prisma.shift.findMany({
       where: {
         locationId,
@@ -104,24 +102,15 @@ export async function calculateLiveLaborKpis(input: {
       include: { employee: { include: { employeeProfile: true } } },
       orderBy: { startsAt: "asc" },
     }),
-    prisma.hourlySalesProjection.findMany({
-      where: { locationId, dayOfWeek },
-    }),
-    prisma.posSalesHourly.findMany({
-      where: { locationId, date: distributionDate },
-    }),
     skipOvertimeRisk
       ? Promise.resolve([] as Awaited<ReturnType<typeof calculateOvertimeRisk>>)
       : calculateOvertimeRisk(locationId, targetDate),
   ]);
 
-  const projectionByHour = new Map(projections.map((row) => [row.hour, asPlainNumber(row.amount)]));
-  const posSalesByHour = new Map(posSalesRows.map((row) => [row.hour, asPlainNumber(row.netSales)]));
-
   const buckets: HourlyLaborBucket[] = Array.from({ length: 24 }, (_, hour) => ({
     hour,
-    projectedSales: projectionByHour.get(hour) ?? 0,
-    actualSales: posSalesByHour.has(hour) ? posSalesByHour.get(hour)! : null,
+    projectedClassRevenue: 0,
+    actualClassRevenue: null,
     laborHours: 0,
     laborCost: 0,
   }));
@@ -137,16 +126,14 @@ export async function calculateLiveLaborKpis(input: {
     });
   }
 
-  // Coalesce applicatif : les ventes réelles Cluster POS remplacent la
-  // projection statique heure par heure dès qu'une facture a fermé.
-  const effectiveSales = (bucket: HourlyLaborBucket) => bucket.actualSales ?? bucket.projectedSales;
+  const effectiveSales = (_bucket: HourlyLaborBucket) => 0;
 
-  const totalProjectedSales = sum(buckets.map((b) => b.projectedSales));
-  const totalSales = sum(buckets.map(effectiveSales));
+  const totalProjectedClassRevenue = 0;
+  const totalSales = 0;
   const totalLaborHours = sum(buckets.map((b) => b.laborHours));
   const totalLaborCost = sum(buckets.map((b) => b.laborCost));
-  const hasPosData = posSalesRows.length > 0;
-  const hasSalesData = projections.length > 0 || hasPosData;
+  const hasLiveRevenueData = false;
+  const hasClassRevenueData = false;
 
   const fullDayLaborCostPercentage = laborCostPercentage(totalLaborCost, totalSales);
 
@@ -155,9 +142,9 @@ export async function calculateLiveLaborKpis(input: {
   const elapsedLaborCost = sum(elapsedBuckets.map((b) => b.laborCost));
   const liveLaborCostPercentage = laborCostPercentage(elapsedLaborCost, elapsedSales);
 
-  const dailySplh = totalLaborHours > 0 ? round2(totalSales / totalLaborHours) : 0;
+  const dailyRevenuePerLaborHour = totalLaborHours > 0 ? round2(totalSales / totalLaborHours) : 0;
   const currentBucket = isToday ? buckets[currentHour] : null;
-  const currentHourSplh =
+  const currentHourRevenuePerLaborHour =
     currentBucket && currentBucket.laborHours > 0
       ? round2(effectiveSales(currentBucket) / currentBucket.laborHours)
       : null;
@@ -170,18 +157,18 @@ export async function calculateLiveLaborKpis(input: {
     isToday,
     currentHour,
     buckets,
-    totalProjectedSales: round2(totalProjectedSales),
+    totalProjectedClassRevenue: round2(totalProjectedClassRevenue),
     totalLaborHours: round2(totalLaborHours),
     totalLaborCost: round2(totalLaborCost),
     fullDayLaborCostPercentage: round1(fullDayLaborCostPercentage),
     liveLaborCostPercentage: round1(liveLaborCostPercentage),
     liveLaborCostStatus: laborCostStatus(liveLaborCostPercentage),
-    dailySplh,
-    currentHourSplh,
+    dailyRevenuePerLaborHour,
+    currentHourRevenuePerLaborHour,
     overtimeRisk,
     laborVariance,
-    hasSalesData,
-    hasPosData,
+    hasClassRevenueData,
+    hasLiveRevenueData,
   };
 }
 

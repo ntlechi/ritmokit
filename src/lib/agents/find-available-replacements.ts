@@ -292,7 +292,7 @@ export async function findAvailableReplacementsForShift(
   });
 }
 
-/** Politique Bati : abandon à moins de 4 semaines du quart = assiduité HIGH. */
+/** Politique studio : abandon à moins de 4 semaines du quart = assiduité HIGH. */
 export function assessShortNoticePolicy(shiftStartsAt: Date): CrisisPolicyAssessment {
   const now = new Date();
   const fourWeeksFromNow = new Date(now);

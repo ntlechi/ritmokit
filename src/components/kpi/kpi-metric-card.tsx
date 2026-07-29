@@ -4,6 +4,7 @@ import type { Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { KpiMetric } from "@/lib/kpi/types";
 import { KpiExplainer } from "@/components/kpi/kpi-explainer";
+import { Meter, type ChartTone } from "@/components/charts/primitives";
 import { cn } from "@/lib/utils";
 
 function formatValue(metric: KpiMetric, lang: Locale): string {
@@ -29,6 +30,28 @@ function healthTone(health: KpiMetric["health"]): string {
   return "border-border bg-surface";
 }
 
+function meterTone(health: KpiMetric["health"]): ChartTone {
+  if (health === "good") return "success";
+  if (health === "warning") return "warning";
+  if (health === "critical") return "danger";
+  return "muted";
+}
+
+/**
+ * Scale a metric onto a 0-100 track so every card shares one visual language.
+ * Percentages map directly; other units are read against their target band.
+ */
+function meterScale(metric: KpiMetric): { value: number; max: number; target?: number } | null {
+  if (metric.value == null) return null;
+  if (metric.unit === "percent") {
+    return { value: metric.value, max: 100, target: metric.targetMin ?? metric.targetMax };
+  }
+  const target = metric.targetMin ?? metric.targetMax;
+  if (target == null || target <= 0) return null;
+  const max = Math.max(metric.value, target) * 1.25;
+  return { value: metric.value, max, target };
+}
+
 function availabilityBadge(
   availability: KpiMetric["availability"],
   dict: Dictionary,
@@ -52,6 +75,7 @@ export function KpiMetricCard({
 }) {
   const meta = dict.kpi.metrics[metric.key];
   const badge = availabilityBadge(metric.availability, dict);
+  const scale = meterScale(metric);
 
   return (
     <article
@@ -86,6 +110,17 @@ export function KpiMetricCard({
       <p className={cn("metric mt-2 font-bold text-foreground", compact ? "text-xl" : "text-2xl")}>
         {formatValue(metric, lang)}
       </p>
+
+      {scale && (
+        <Meter
+          className="mt-2"
+          value={scale.value}
+          max={scale.max}
+          target={scale.target}
+          tone={meterTone(metric.health)}
+          caption={`${meta.shortLabel}: ${formatValue(metric, lang)}`}
+        />
+      )}
 
       {metric.channelBreakdown && metric.channelBreakdown.length > 0 && (
         <ul className="mt-2 space-y-0.5 border-t border-border-subtle pt-2">

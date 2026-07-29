@@ -30,8 +30,6 @@ type DrillStepId =
   | "cnesst_punches"
   | "cnesst_breaks"
   | "mapaq_training"
-  | "fiscal_tips"
-  | "fiscal_pos"
   | "fiscal_payroll"
   | "seal_manifest"
   | "seal_zip";
@@ -42,15 +40,13 @@ const DRILL_STEPS_BY_TYPE: Record<AuditType, DrillStepId[]> = {
     "cnesst_punches",
     "cnesst_breaks",
     "mapaq_training",
-    "fiscal_tips",
-    "fiscal_pos",
     "fiscal_payroll",
     "seal_manifest",
     "seal_zip",
   ],
   CNESST: ["cnesst_roster", "cnesst_punches", "cnesst_breaks", "seal_manifest", "seal_zip"],
   MAPAQ: ["mapaq_training", "seal_manifest", "seal_zip"],
-  FISCAL: ["fiscal_tips", "fiscal_pos", "fiscal_payroll", "seal_manifest", "seal_zip"],
+  FISCAL: ["fiscal_payroll", "seal_manifest", "seal_zip"],
 };
 
 const DRILL_STEP_MS = 520;

@@ -1,4 +1,4 @@
-// RitmoKit — dance studio ops on Mirok engine (CNESST HR + agentic bus)
+// RitmoKit — dance & fitness studio operations (CNESST HR + agentic bus)
 // Prisma ORM v7 — client Rust-free, généré via l'adaptateur `pg`.
 
 generator client {
@@ -19,7 +19,7 @@ enum Role {
   MANAGER
   OWNER
   ADMIN
-  /// Dance studio roles (extend Mirok RBAC — do not rewrite auth).
+  /// Dance studio roles (instructor, front desk, student).
   INSTRUCTOR
   FRONT_DESK
   STUDENT
@@ -35,6 +35,14 @@ enum CourseLevel {
   BEGINNER
   INTERMEDIATE
   ADVANCED
+}
+
+/// A `Station` row is either a physical dance room (bookable by ClassSession)
+/// or a staff department used to group the roster. Rooms and departments are
+/// different axes: an instructor belongs to a department, teaches in a room.
+enum StationKind {
+  ROOM
+  DEPARTMENT
 }
 
 enum SessionSeasonStatus {
@@ -53,6 +61,29 @@ enum InstructorPayrollStatus {
   DRAFT
   APPROVED
   PAID
+}
+
+/// Public enrollment checkout lifecycle (Phase A payments).
+enum PaymentStatus {
+  /// No checkout expected yet (offline, waitlist hold, provider=none).
+  NONE
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+/// Price list applied at enrollment time — stored so cockpit yield uses real money.
+enum PricingTier {
+  REGULAR
+  STUDENT
+  COUPLE
+  UNLIMITED_PASS
+}
+
+enum PaymentProvider {
+  PAYPAL
+  STRIPE
 }
 
 enum Locale {
@@ -78,20 +109,6 @@ enum ShiftStatus {
   CRISIS_ALERT
 }
 
-/// Liquidité d'urgence — Code Rouge déclenche la cascade d'offres flash.
-enum ShiftUrgency {
-  NORMAL
-  CODE_RED
-}
-
-enum EmergencyBidStatus {
-  PENDING
-  ACCEPTED
-  DECLINED
-  MISSED
-  EXPIRED
-}
-
 enum SwapRequestStatus {
   PENDING
   AGENT_NEGOTIATING
@@ -106,14 +123,6 @@ enum AgentTaskStatus {
   RUNNING
   SUCCEEDED
   FAILED
-}
-
-/// Cycle de vie de la convention de partage des pourboires (LNT art. 50).
-enum VoteStatus {
-  DRAFT
-  VOTING
-  APPROVED
-  REJECTED
 }
 
 /// Statut d'une demande de congé / indisponibilité ponctuelle.
@@ -152,30 +161,6 @@ enum FormationAudience {
   USER
 }
 
-/// Fournisseur de caisse (POS) branché sur la succursale. Cluster est le
-/// système installé aux comptoirs Bati Québec dès l'ouverture (oct. 2026) ;
-/// Square/Clover suivront derrière la même interface `PosIntegration`.
-enum PosProvider {
-  CLUSTER
-  SQUARE
-  CLOVER
-}
-
-/// Résultat d'une tentative d'ingestion webhook POS — visible dans le
-/// journal d'audit du panneau gérant.
-enum PosIngestionStatus {
-  PROCESSED
-  DUPLICATE
-}
-
-/// Canal de vente — comptoir, UEAT, DoorDash, etc.
-enum PosSalesChannel {
-  IN_STORE
-  UEAT
-  DOORDASH
-  OTHER
-}
-
 /// Progression du parcours d'accueil RH — verrouille le pointage tant que
 /// `COMPLETED` n'est pas atteint.
 enum OnboardingStatus {
@@ -184,7 +169,7 @@ enum OnboardingStatus {
   COMPLETED
 }
 
-/// Échelle disciplinaire progressive — Convention de travail plancher Bati.
+/// Échelle disciplinaire progressive — convention de travail studio.
 enum DisciplineStep {
   VERBAL_COACHING
   WRITTEN_FIRST
@@ -198,25 +183,6 @@ enum OnboardingTaskKey {
   UNIFORM_AND_PWA
   FLOOR_FEEDBACK_J7
   INTEGRATION_REVIEW_J30
-}
-
-/// Pipeline recrutement externe → Arsimatrix (bati-recruit).
-enum JobApplicationStatus {
-  PENDING
-  TRIAGING
-  SHORTLISTED
-  REJECTED
-  INTERVIEW
-  HIRED
-  WITHDRAWN
-}
-
-/// Fenêtres de disponibilité déclarées à la candidature (alignées Bati / RTC).
-enum JobShiftWindow {
-  MIDI
-  SOIR
-  FERMETURE
-  WEEKEND
 }
 
 /// Niveau de maîtrise par station — matrice de compétences & succession.
@@ -242,7 +208,7 @@ enum BenefitType {
   DOCUMENT
 }
 
-/// Type de canal de messagerie QSR.
+/// Type de canal de messagerie interne.
 enum ChatChannelType {
   ANNOUNCEMENTS
   STATION
@@ -288,27 +254,27 @@ enum AuditType {
 }
 
 // ---------------------------------------------------------------------------
-// Franchise / Multi-sites — Bati Québec comme premier Location
+// Franchise / Multi-sites — studio branches under Organization
 // ---------------------------------------------------------------------------
 
 model Organization {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name      String
-  slug      String   @unique
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name         String
+  slug         String   @unique
   /// Brand kit — logo URL, primary color, welcome copy for onboarding/tablet.
-  logoUrl       String? @map("logo_url")
-  primaryColor  String  @default("#4f46e5") @map("primary_color")
-  welcomeCopy   String? @map("welcome_copy") @db.Text
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  logoUrl      String?  @map("logo_url")
+  primaryColor String   @default("#4f46e5") @map("primary_color")
+  welcomeCopy  String?  @map("welcome_copy") @db.Text
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   locations          Location[]
   sops               Sop[]
   formationModules   FormationModule[]
   trainingCategories TrainingCategory[]
-  arsiSyncLogs     ArsiSyncLog[]
-  pulseQuestions   PulseQuestion[]
-  cultureValues    OrganizationValue[]
+  arsiSyncLogs       ArsiSyncLog[]
+  pulseQuestions     PulseQuestion[]
+  cultureValues      OrganizationValue[]
   productExperiments ProductExperiment[]
   courses            Course[]
 
@@ -326,13 +292,11 @@ model Location {
   timezone String  @default("America/Toronto")
   isActive Boolean @default(true) @map("is_active")
 
-  /// Coordonnées du restaurant — géorepérage optionnel pour la pointeuse
+  /// Coordonnées du studio — géorepérage optionnel pour la pointeuse
   /// mobile (bonus sécurité : confirme que l'employé est bien sur place).
   latitude             Float?
   longitude            Float?
   geofenceRadiusMeters Int    @default(150) @map("geofence_radius_meters")
-  /// Food cost % (COGS) — saisi hebdo par le gérant ou sync Kompul. Alimente Prime Cost.
-  foodCostPct          Decimal? @map("food_cost_pct") @db.Decimal(5, 2)
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -343,17 +307,9 @@ model Location {
   sops                   Sop[]
   chatChannels           ChatChannel[]
   conversations          DirectConversation[]
-  hourlySalesProjections HourlySalesProjection[]
-  tipPoolConfig          TipPoolConfig?
-  tipDistributions       TipDistribution[]
   formationModules       FormationModule[]
   trainingCategories     TrainingCategory[]
-  posIntegration         PosIntegration?
-  posSalesHourly         PosSalesHourly[]
-  posChannelSalesDaily   PosChannelSalesDaily[]
-  posIngestionLogs       PosIngestionLog[]
   staffDepartures        StaffDeparture[]
-  staffingProfiles       StaffingProfile[]
   payPeriods             PayPeriod[]
   auditPackageLogs       AuditPackageLog[]
   onboardingTasks        OnboardingTask[]
@@ -371,45 +327,10 @@ model Location {
   disciplinaryRecords    DisciplinaryRecord[]
   punchAttempts          PunchAttempt[]
   operationalGoals       OperationalGoal[]
-  jobApplications        JobApplication[]
   sessionSeasons         SessionSeason[]
 
   @@unique([organizationId, slug])
   @@map("locations")
-}
-
-/// Candidature externe (recrutement) — poussée vers Arsimatrix bati-recruit.
-model JobApplication {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  locationId String   @map("location_id") @db.Uuid
-  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
-
-  fullName          String @map("full_name")
-  email             String?
-  phone             String?
-  neighborhood      String
-  availableShifts   JobShiftWindow[] @map("available_shifts")
-  commuteMinutes    Int              @map("commute_minutes")
-  yearsExperience   Float            @default(0) @map("years_experience")
-  hasFoodPermit     Boolean          @default(false) @map("has_food_permit")
-  speaksFrench      Boolean          @default(true) @map("speaks_french")
-  notes             String?          @db.Text
-
-  status JobApplicationStatus @default(PENDING)
-
-  /// Score / raisons renvoyés par Arsimatrix bati-recruit.
-  triageScore   Int?      @map("triage_score")
-  triageReasons String[]  @default([]) @map("triage_reasons")
-  triageSummary String?   @map("triage_summary") @db.Text
-  triagedAt     DateTime? @map("triaged_at")
-  arsimatrixTraceId String? @map("arsimatrix_trace_id")
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@index([locationId, status, createdAt])
-  @@index([status, createdAt])
-  @@map("job_applications")
 }
 
 /// Poste / zone opérationnelle configurable par succursale (SaaS multi-bannière).
@@ -418,138 +339,43 @@ model Station {
   locationId String   @map("location_id") @db.Uuid
   location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
 
-  nameFr    String  @map("name_fr")
-  nameEn    String  @map("name_en")
-  nameEs    String  @map("name_es")
-  colorHex  String  @default("#3B82F6") @map("color_hex")
+  nameFr     String      @map("name_fr")
+  nameEn     String      @map("name_en")
+  nameEs     String      @map("name_es")
+  colorHex   String      @default("#3B82F6") @map("color_hex")
   /// Slug stable pour canaux (#services) — unique par succursale quand défini.
-  slug      String?
-  sortOrder Int     @default(0) @map("sort_order")
-  /// Poids pourboires (heures × points) — deprecated QSR; kept for schema compat.
-  tipPoints Decimal @default(1.0) @map("tip_points") @db.Decimal(3, 2)
-  isActive  Boolean @default(true) @map("is_active")
+  slug       String?
+  sortOrder  Int         @default(0) @map("sort_order")
+  /// ROOM = salle de danse réservable ; DEPARTMENT = regroupement d'équipe.
+  kind       StationKind @default(ROOM)
+  isActive   Boolean     @default(true) @map("is_active")
   /// Dance room capacity (students).
-  capacity    Int?
+  capacity   Int?
   /// Floor area m² — class profitability $/m².
-  surfaceSqm  Float?  @map("surface_sqm")
+  surfaceSqm Float?      @map("surface_sqm")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  members          LocationMember[]
-  shifts           Shift[]
-  staffingProfiles StaffingProfile[]
-  skills           EmployeeStationSkill[]
-  formationModules FormationModule[]
+  members              LocationMember[]
+  shifts               Shift[]
+  skills               EmployeeStationSkill[]
+  formationModules     FormationModule[]
   formationAssignments FormationAssignment[]
-  sops             Sop[]
-  documents        Document[]
-  chatChannels     ChatChannel[]
-  shoutOuts        StationShoutOut[]
-  pulseResponses   PulseResponse[]
-  payrollLineItems PayrollLineItem[]
-  templateShifts   ScheduleTemplateShift[]
-  classSessions    ClassSession[]
+  sops                 Sop[]
+  documents            Document[]
+  chatChannels         ChatChannel[]
+  shoutOuts            StationShoutOut[]
+  pulseResponses       PulseResponse[]
+  payrollLineItems     PayrollLineItem[]
+  templateShifts       ScheduleTemplateShift[]
+  classSessions        ClassSession[]
 
   @@unique([locationId, nameFr])
   @@unique([locationId, slug])
   @@index([locationId, isActive, sortOrder])
+  @@index([locationId, kind, isActive, sortOrder])
   @@map("stations")
-}
-
-/// Cible de dotation par station — pivot du Score de Couverture et du
-/// moteur Auto-Planif. `targetSplh` (Sales Per Labor Hour) traduit les
-/// ventes projetées/réelles en effectif requis : requiredHeadcount(heure) =
-/// ceil(ventesHeure × salesSharePercent / targetSplh), borné par
-/// [minHeadcount, maxHeadcount] pendant les heures d'ouverture.
-model StaffingProfile {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  locationId String   @map("location_id") @db.Uuid
-  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
-
-  stationId String  @map("station_id") @db.Uuid
-  station   Station @relation(fields: [stationId], references: [id], onDelete: Cascade)
-
-  /// Ventes ($) qu'une heure-personne de cette station doit générer.
-  targetSplh        Decimal @map("target_splh") @db.Decimal(10, 2)
-  /// Part (0-100) du chiffre d'affaires horaire attribuable à cette station.
-  salesSharePercent Decimal @map("sales_share_percent") @db.Decimal(5, 2)
-  /// Effectif plancher dès que la succursale est ouverte, même à faible achalandage.
-  minHeadcount      Int     @default(1) @map("min_headcount")
-  /// Garde-fou contre le sur-effectif calculé.
-  maxHeadcount      Int     @default(6) @map("max_headcount")
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@unique([locationId, stationId])
-  @@map("staffing_profiles")
-}
-
-/// Connexion webhook à la caisse (POS) d'une succursale. Un secret par
-/// intégration — jamais partagé entre succursales — signe chaque requête
-/// entrante pour garantir l'étanchéité de la passerelle de données.
-model PosIntegration {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  locationId String   @unique @map("location_id") @db.Uuid
-  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
-
-  provider PosProvider @default(CLUSTER)
-  isActive Boolean     @default(true) @map("is_active")
-
-  /// Secret de signature HMAC — jamais renvoyé côté client une fois généré.
-  webhookSecret String  @map("webhook_secret") @db.Text
-  /// Identifiant de la succursale dans le portail du fournisseur POS.
-  externalId    String? @map("external_id")
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@index([provider, externalId])
-  @@map("pos_integrations")
-}
-
-/// Cumul horaire des ventes nettes et pourboires captés en temps réel par
-/// webhook POS — remplace la projection statique dans le moteur Labor Cost.
-model PosSalesHourly {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  locationId String   @map("location_id") @db.Uuid
-  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
-
-  /// Jour d'affaires (date locale succursale, sans heure) — même convention que `TipDistribution`.
-  date DateTime @db.Date
-  /// Heure locale 0-23 (succursale).
-  hour Int
-
-  /// Ventes nettes hors taxes, hors pourboires.
-  netSales      Decimal @default(0) @map("net_sales") @db.Decimal(10, 2)
-  /// Pourboires saisis au terminal (carte) pour cette tranche horaire.
-  tipsCollected Decimal @default(0) @map("tips_collected") @db.Decimal(10, 2)
-  /// Nombre de commandes fermées dans cette tranche (Cluster webhook).
-  orderCount    Int     @default(0) @map("order_count")
-
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@unique([locationId, date, hour])
-  @@map("pos_sales_hourly")
-}
-
-/// Ventes et commandes agrégées par canal et par jour — panier moyen UEAT vs DoorDash.
-model PosChannelSalesDaily {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  locationId String   @map("location_id") @db.Uuid
-  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
-
-  date       DateTime        @db.Date
-  channel    PosSalesChannel
-  netSales   Decimal         @default(0) @map("net_sales") @db.Decimal(10, 2)
-  orderCount Int             @default(0) @map("order_count")
-
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@unique([locationId, date, channel])
-  @@index([locationId, date])
-  @@map("pos_channel_sales_daily")
 }
 
 /// Départ d'un employé — alimente le taux de roulement sans soft-delete des membres.
@@ -566,136 +392,6 @@ model StaffDeparture {
   @@map("staff_departures")
 }
 
-/// Journal d'idempotence réseau — bloque le double traitement d'une facture
-/// POS renvoyée par un retry webhook (à-plat, sans FK : purement défensif).
-model PosIdempotencyLog {
-  posOrderId  String   @id @map("pos_order_id")
-  processedAt DateTime @default(now()) @map("processed_at")
-
-  @@map("pos_idempotency_logs")
-}
-
-/// Audit des 5 dernières ingestions webhook — alimente le panneau gérant POS.
-model PosIngestionLog {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  locationId String   @map("location_id") @db.Uuid
-  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
-
-  posOrderId    String             @map("pos_order_id")
-  netSales      Decimal            @map("net_sales") @db.Decimal(10, 2)
-  tipsCollected Decimal            @map("tips_collected") @db.Decimal(10, 2)
-  channel       PosSalesChannel    @default(IN_STORE)
-  /// Horodatage paiement (KDS / UEAT) — début du chronomètre SOS.
-  paidAt        DateTime?          @map("paid_at")
-  /// Horodatage scellé emballage — fin du chronomètre SOS.
-  readyAt       DateTime?          @map("ready_at")
-  status        PosIngestionStatus
-
-  processedAt DateTime @default(now()) @map("processed_at")
-
-  @@index([locationId, processedAt(sort: Desc)])
-  @@map("pos_ingestion_logs")
-}
-
-/// Convention de partage des pourboires votée par l'équipe (50 %+1, LNT art. 50).
-/// L'employeur ne peut pas imposer le pool — `votedAt` documente le consentement.
-model TipPoolConfig {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  locationId String   @unique @map("location_id") @db.Uuid
-  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
-
-  isActive      Boolean    @default(false) @map("is_active")
-  status        VoteStatus @default(DRAFT)
-  agreementText String?    @map("agreement_text") @db.Text
-  votedAt       DateTime?  @map("voted_at")
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  votes TipPoolVote[]
-
-  @@map("tip_pool_configs")
-}
-
-/// Signature numérique individuelle d'un employé sur la convention de pourboires.
-model TipPoolVote {
-  id       String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  configId String        @map("config_id") @db.Uuid
-  config   TipPoolConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
-  userId   String        @map("user_id") @db.Uuid
-  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  isApproved    Boolean  @map("is_approved")
-  signatureName String   @map("signature_name")
-  signedAt      DateTime @default(now()) @map("signed_at")
-  ipAddress     String?  @map("ip_address")
-
-  @@unique([configId, userId])
-  @@map("tip_pool_votes")
-}
-
-/// Clôture journalière du pot — le gérant saisit le total POS et Mirok répartit.
-model TipDistribution {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  locationId String   @map("location_id") @db.Uuid
-  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
-
-  /// Jour d'affaires (date locale succursale, sans heure).
-  distributionDate   DateTime @map("distribution_date") @db.Date
-  totalTipsCollected Decimal  @map("total_tips_collected") @db.Decimal(10, 2)
-  totalWeightedHours Decimal  @map("total_weighted_hours") @db.Decimal(10, 4)
-  valuePerPoint      Decimal  @map("value_per_point") @db.Decimal(10, 4)
-
-  distributedById String @map("distributed_by_id") @db.Uuid
-  distributedBy   User   @relation("TipDistributedBy", fields: [distributedById], references: [id])
-
-  distributedAt DateTime @default(now()) @map("distributed_at")
-
-  shiftTips ShiftTipEarned[]
-
-  @@unique([locationId, distributionDate])
-  @@map("tip_distributions")
-}
-
-/// Part de pourboire attribuée à un quart pointé — transparence totale pour l'employé.
-model ShiftTipEarned {
-  id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  shiftId        String          @unique @map("shift_id") @db.Uuid
-  shift          Shift           @relation(fields: [shiftId], references: [id], onDelete: Cascade)
-  distributionId String          @map("distribution_id") @db.Uuid
-  distribution   TipDistribution @relation(fields: [distributionId], references: [id], onDelete: Cascade)
-
-  amountPaid    Decimal @map("amount_paid") @db.Decimal(10, 2)
-  weightedScore Decimal @map("weighted_score") @db.Decimal(10, 4)
-  workedHours   Decimal @map("worked_hours") @db.Decimal(6, 2)
-  stationPoints Decimal @map("station_points") @db.Decimal(3, 2)
-
-  declaredAt DateTime @default(now()) @map("declared_at")
-
-  @@map("shift_tips_earned")
-}
-
-/// Projection de ventes horaires — base du calcul du Labor Cost % en direct
-/// tant qu'aucune caisse/POS n'est branchée. Une ligne par (jour de semaine, heure).
-model HourlySalesProjection {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  locationId String   @map("location_id") @db.Uuid
-  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
-
-  /// 0 = dimanche … 6 = samedi (convention JS `Date.getDay()`), aligné sur `EmployeeAvailability`.
-  dayOfWeek Int @map("day_of_week")
-  /// Heure locale 0-23 (succursale) — un solde de ventes estimées pour cette heure précise.
-  hour      Int
-
-  amount Decimal @db.Decimal(10, 2)
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@unique([locationId, dayOfWeek, hour])
-  @@map("hourly_sales_projections")
-}
-
 /// Appartenance d'un utilisateur à une succursale + poste sur le plancher.
 model LocationMember {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -704,8 +400,8 @@ model LocationMember {
   userId     String   @map("user_id") @db.Uuid
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  stationId String  @map("station_id") @db.Uuid
-  station   Station @relation(fields: [stationId], references: [id])
+  stationId String    @map("station_id") @db.Uuid
+  station   Station   @relation(fields: [stationId], references: [id])
   isPrimary Boolean   @default(true) @map("is_primary")
   hiredAt   DateTime? @map("hired_at")
 
@@ -725,73 +421,69 @@ model LocationMember {
 /// Prisma ne gère pas le schéma `auth` (géré par Supabase Auth) ; la
 /// synchronisation se fait applicativement lors de l'inscription.
 model User {
-  id        String   @id @db.Uuid
-  email     String   @unique
-  fullName  String   @map("full_name")
-  role      Role     @default(EMPLOYEE)
+  id                String             @id @db.Uuid
+  email             String             @unique
+  fullName          String             @map("full_name")
+  role              Role               @default(EMPLOYEE)
   /// Photo de profil (data URL WebP/JPEG compressée) — trombinoscope équipe.
-  profilePictureUrl String? @map("profile_picture_url") @db.Text
-  phone     String?
-  locale    Locale   @default(FR)
+  profilePictureUrl String?            @map("profile_picture_url") @db.Text
+  phone             String?
+  locale            Locale             @default(FR)
   /// Instructor pay model (dance domain).
   instructorPayType InstructorPayType? @map("instructor_pay_type")
   instructorPayRate Decimal?           @map("instructor_pay_rate") @db.Decimal(10, 2)
-  bio       String?  @db.Text
-  specialties String[] @default([])
+  bio               String?            @db.Text
+  specialties       String[]           @default([])
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  employeeProfile        EmployeeProfile?
-  shiftsWorked           Shift[]                     @relation("ShiftEmployee")
-  shiftsCreated          Shift[]                     @relation("ShiftCreatedBy")
-  codeRedShiftsTriggered Shift[]                     @relation("CodeRedTriggeredBy")
-  swapRequestsMade       ShiftSwapRequest[]          @relation("SwapRequestedBy")
-  swapRequestsTaken      ShiftSwapRequest[]          @relation("SwapTargetEmployee")
-  emergencyBids          EmergencyBid[]
-  documentsUploaded      Document[]                  @relation("DocumentUploadedBy")
-  locationMembers        LocationMember[]
-  channelMembers         ChatChannelMember[]
-  messagesSent           ChatMessage[]               @relation("MessageAuthor")
-  conversations          ConversationParticipant[]
-  sopPinsCreated         SopChannelPin[]             @relation("SopPinnedBy")
-  timeOffReviews         TimeOffRequest[]            @relation("ReviewerToRequest")
-  tipDistributions       TipDistribution[]           @relation("TipDistributedBy")
-  tipPoolVotes           TipPoolVote[]
-  formationProgress      EmployeeFormationProgress[]
-  formationAssignments   FormationAssignment[]       @relation("FormationAssignedTo")
-  formationAssignmentsMade FormationAssignment[]     @relation("FormationAssignedBy")
-  hrProfile              EmployeeHrProfile?
-  payPeriodsLocked       PayPeriod[]                 @relation("PayPeriodLockedBy")
-  payrollLineItems       PayrollLineItem[]           @relation("PayrollLineItemUser")
-  payrollExports         PayrollExport[]             @relation("PayrollExportedBy")
-  auditPackagesGenerated AuditPackageLog[]
-  arsiSyncsImported      ArsiSyncLog[]
-  buddyMentees             EmployeeHrProfile[] @relation("BuddyRelation")
-  recruitOnboardingTasks   OnboardingTask[]    @relation("RecruitTasks")
-  completedOnboardingTasks OnboardingTask[]    @relation("ManagerCompletedTasks")
-  feedbacksReceived        ShiftFeedback[]     @relation("EmployeeFeedbacks")
-  feedbacksSubmitted       ShiftFeedback[]     @relation("ManagerFeedbacks")
-  stationSkills            EmployeeStationSkill[]
-  skillsAssessed           EmployeeStationSkill[] @relation("SkillAssessedBy")
-  reviewsAsEmployee        QuarterlyReview[]      @relation("EmployeeReviews")
-  reviewsAsManager         QuarterlyReview[]      @relation("ManagerReviews")
-  pulseReceipts            PulseReceipt[]
-  shoutOutsSent            StationShoutOut[]      @relation("SentShoutOuts")
-  shoutOutsReceived        StationShoutOut[]      @relation("ReceivedShoutOuts")
-  insightsUpdated          ImprovementInsight[]   @relation("ManagerInsights")
-  playbooksApproved        AgentPlaybookProposal[] @relation("ManagerPlaybookApprovals")
-  agentConfigsUpdated      LocationAgentConfig[]   @relation("ManagerAgentConfigs")
-  experimentsDecided       ProductExperiment[]     @relation("ManagerExperimentDecisions")
-  scheduleTemplatesCreated ScheduleTemplate[]      @relation("ScheduleTemplateCreatedBy")
-  scheduleTemplateShifts   ScheduleTemplateShift[] @relation("ScheduleTemplateShiftEmployee")
+  employeeProfile               EmployeeProfile?
+  shiftsWorked                  Shift[]                        @relation("ShiftEmployee")
+  shiftsCreated                 Shift[]                        @relation("ShiftCreatedBy")
+  swapRequestsMade              ShiftSwapRequest[]             @relation("SwapRequestedBy")
+  swapRequestsTaken             ShiftSwapRequest[]             @relation("SwapTargetEmployee")
+  documentsUploaded             Document[]                     @relation("DocumentUploadedBy")
+  locationMembers               LocationMember[]
+  channelMembers                ChatChannelMember[]
+  messagesSent                  ChatMessage[]                  @relation("MessageAuthor")
+  conversations                 ConversationParticipant[]
+  sopPinsCreated                SopChannelPin[]                @relation("SopPinnedBy")
+  timeOffReviews                TimeOffRequest[]               @relation("ReviewerToRequest")
+  formationProgress             EmployeeFormationProgress[]
+  formationAssignments          FormationAssignment[]          @relation("FormationAssignedTo")
+  formationAssignmentsMade      FormationAssignment[]          @relation("FormationAssignedBy")
+  hrProfile                     EmployeeHrProfile?
+  payPeriodsLocked              PayPeriod[]                    @relation("PayPeriodLockedBy")
+  payrollLineItems              PayrollLineItem[]              @relation("PayrollLineItemUser")
+  payrollExports                PayrollExport[]                @relation("PayrollExportedBy")
+  auditPackagesGenerated        AuditPackageLog[]
+  arsiSyncsImported             ArsiSyncLog[]
+  buddyMentees                  EmployeeHrProfile[]            @relation("BuddyRelation")
+  recruitOnboardingTasks        OnboardingTask[]               @relation("RecruitTasks")
+  completedOnboardingTasks      OnboardingTask[]               @relation("ManagerCompletedTasks")
+  feedbacksReceived             ShiftFeedback[]                @relation("EmployeeFeedbacks")
+  feedbacksSubmitted            ShiftFeedback[]                @relation("ManagerFeedbacks")
+  stationSkills                 EmployeeStationSkill[]
+  skillsAssessed                EmployeeStationSkill[]         @relation("SkillAssessedBy")
+  reviewsAsEmployee             QuarterlyReview[]              @relation("EmployeeReviews")
+  reviewsAsManager              QuarterlyReview[]              @relation("ManagerReviews")
+  pulseReceipts                 PulseReceipt[]
+  shoutOutsSent                 StationShoutOut[]              @relation("SentShoutOuts")
+  shoutOutsReceived             StationShoutOut[]              @relation("ReceivedShoutOuts")
+  insightsUpdated               ImprovementInsight[]           @relation("ManagerInsights")
+  playbooksApproved             AgentPlaybookProposal[]        @relation("ManagerPlaybookApprovals")
+  agentConfigsUpdated           LocationAgentConfig[]          @relation("ManagerAgentConfigs")
+  experimentsDecided            ProductExperiment[]            @relation("ManagerExperimentDecisions")
+  scheduleTemplatesCreated      ScheduleTemplate[]             @relation("ScheduleTemplateCreatedBy")
+  scheduleTemplateShifts        ScheduleTemplateShift[]        @relation("ScheduleTemplateShiftEmployee")
   workplaceConventionSignatures WorkplaceConventionSignature[]
-  disciplinaryRecordsAsEmployee DisciplinaryRecord[] @relation("DisciplinaryEmployee")
-  disciplinaryRecordsAsManager  DisciplinaryRecord[] @relation("DisciplinaryManager")
-  punchAttemptsMatched          PunchAttempt[]       @relation("PunchAttemptMatchedUser")
-  operationalGoalsOwned         OperationalGoal[]    @relation("OperationalGoalOwner")
+  disciplinaryRecordsAsEmployee DisciplinaryRecord[]           @relation("DisciplinaryEmployee")
+  disciplinaryRecordsAsManager  DisciplinaryRecord[]           @relation("DisciplinaryManager")
+  punchAttemptsMatched          PunchAttempt[]                 @relation("PunchAttemptMatchedUser")
+  operationalGoalsOwned         OperationalGoal[]              @relation("OperationalGoalOwner")
   staffDepartures               StaffDeparture[]
-  taughtClassSessions           ClassSession[]       @relation("PrimaryInstructor")
+  taughtClassSessions           ClassSession[]                 @relation("PrimaryInstructor")
   enrollments                   Enrollment[]
   instructorPayrollLogs         InstructorPayrollLog[]
 
@@ -867,17 +559,17 @@ model OnboardingTask {
 
 /// Maîtrise d'un employé sur une station (Junior → Autonome → Lead).
 model EmployeeStationSkill {
-  id         String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  locationId String     @map("location_id") @db.Uuid
-  userId     String     @map("user_id") @db.Uuid
+  id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  locationId   String     @map("location_id") @db.Uuid
+  userId       String     @map("user_id") @db.Uuid
   stationId    String     @map("station_id") @db.Uuid
   station      Station    @relation(fields: [stationId], references: [id], onDelete: Cascade)
-  level      SkillLevel @default(JUNIOR)
-  notes      String?
-  assessedAt DateTime   @default(now()) @map("assessed_at")
-  assessedById String?  @map("assessed_by_id") @db.Uuid
-  createdAt  DateTime   @default(now()) @map("created_at")
-  updatedAt  DateTime   @updatedAt @map("updated_at")
+  level        SkillLevel @default(JUNIOR)
+  notes        String?
+  assessedAt   DateTime   @default(now()) @map("assessed_at")
+  assessedById String?    @map("assessed_by_id") @db.Uuid
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
 
   location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -920,12 +612,12 @@ model QuarterlyReview {
   feedbackCount          Int?   @map("feedback_count")
 
   /// Clôture légale — signatures numériques + IP.
-  employeeSignedAt    DateTime? @map("employee_signed_at")
-  employeeSignatureIp String?   @map("employee_signature_ip") @db.VarChar(45)
-  employeeSignatureName String? @map("employee_signature_name")
-  managerSignedAt     DateTime? @map("manager_signed_at")
-  managerSignatureIp  String?   @map("manager_signature_ip") @db.VarChar(45)
-  managerSignatureName String?  @map("manager_signature_name")
+  employeeSignedAt      DateTime? @map("employee_signed_at")
+  employeeSignatureIp   String?   @map("employee_signature_ip") @db.VarChar(45)
+  employeeSignatureName String?   @map("employee_signature_name")
+  managerSignedAt       DateTime? @map("manager_signed_at")
+  managerSignatureIp    String?   @map("manager_signature_ip") @db.VarChar(45)
+  managerSignatureName  String?   @map("manager_signature_name")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -1032,7 +724,7 @@ model Shift {
 
   stationId String      @map("station_id") @db.Uuid
   station   Station     @relation(fields: [stationId], references: [id])
-  period  ShiftPeriod @default(DAY)
+  period    ShiftPeriod @default(DAY)
 
   employeeId String? @map("employee_id") @db.Uuid
   employee   User?   @relation("ShiftEmployee", fields: [employeeId], references: [id], onDelete: SetNull)
@@ -1061,14 +753,6 @@ model Shift {
   notes       String?
   publishedAt DateTime?   @map("published_at")
 
-  /// Code Rouge — cascade d'offres flash aux employés qualifiés (liquidité 2h).
-  urgency    ShiftUrgency @default(NORMAL)
-  /// Prime horaire optionnelle (ex. 2.50 $) pour motiver la prise du quart.
-  surgeBonus Decimal?     @map("surge_bonus") @db.Decimal(10, 2)
-  codeRedAt  DateTime?    @map("code_red_at")
-  codeRedById String?     @map("code_red_by_id") @db.Uuid
-  codeRedBy   User?       @relation("CodeRedTriggeredBy", fields: [codeRedById], references: [id], onDelete: SetNull)
-
   /// Créé par le moteur Auto-Planif (voir `src/lib/scheduling/auto-schedule.ts`)
   /// plutôt que manuellement — permet de regénérer un brouillon sans toucher
   /// aux quarts déjà ajustés/publiés à la main.
@@ -1089,17 +773,14 @@ model Shift {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  swapRequests  ShiftSwapRequest[]
-  emergencyBids EmergencyBid[]
-  agentLogs     AgentLog[]
-  chatChannels  ChatChannel[]
-  tipEarned     ShiftTipEarned?
-  feedback      ShiftFeedback?
+  swapRequests ShiftSwapRequest[]
+  agentLogs    AgentLog[]
+  chatChannels ChatChannel[]
+  feedback     ShiftFeedback?
 
   @@index([locationId, startsAt])
   @@index([employeeId, startsAt])
   @@index([stationId, startsAt])
-  @@index([urgency, startsAt])
   @@map("shifts")
 }
 
@@ -1133,7 +814,7 @@ model ScheduleTemplateShift {
   dayOfWeek Int @map("day_of_week")
 
   /// Minutes depuis minuit (0–1439).
-  startMinutes Int @map("start_minutes")
+  startMinutes    Int @map("start_minutes")
   /// Durée en minutes — peut dépasser minuit.
   durationMinutes Int @map("duration_minutes")
 
@@ -1152,37 +833,16 @@ model ScheduleTemplateShift {
   @@map("schedule_template_shifts")
 }
 
-/// Offre flash Code Rouge — premier arrivé, premier servi parmi les candidats filtrés.
-model EmergencyBid {
-  id      String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  shiftId String @map("shift_id") @db.Uuid
-  shift   Shift  @relation(fields: [shiftId], references: [id], onDelete: Cascade)
-  userId  String @map("user_id") @db.Uuid
-  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  status    EmergencyBidStatus @default(PENDING)
-  notifiedAt DateTime?         @map("notified_at")
-  respondedAt DateTime?        @map("responded_at")
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@unique([shiftId, userId])
-  @@index([userId, status])
-  @@index([shiftId, status])
-  @@map("emergency_bids")
-}
-
 /// Micro-feedback post-quart (1 tap) — évaluation à chaud Attitude / Vitesse / Fiabilité.
 model ShiftFeedback {
-  id                String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  shiftId           String @unique @map("shift_id") @db.Uuid
-  employeeId        String @map("employee_id") @db.Uuid
-  submittedById     String @map("submitted_by_id") @db.Uuid
-  ratingAttitude    Int    @map("rating_attitude")
-  ratingSpeed       Int    @map("rating_speed")
-  ratingReliability Int    @map("rating_reliability")
-  comment           String? @db.VarChar(140)
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shiftId           String   @unique @map("shift_id") @db.Uuid
+  employeeId        String   @map("employee_id") @db.Uuid
+  submittedById     String   @map("submitted_by_id") @db.Uuid
+  ratingAttitude    Int      @map("rating_attitude")
+  ratingSpeed       Int      @map("rating_speed")
+  ratingReliability Int      @map("rating_reliability")
+  comment           String?  @db.VarChar(140)
   createdAt         DateTime @default(now()) @map("created_at")
 
   shift       Shift @relation(fields: [shiftId], references: [id], onDelete: Cascade)
@@ -1252,7 +912,7 @@ model PayPeriod {
 
 /// Instantané figé du calcul de paie d'un employé pour une période verrouillée
 /// — heures régulières/supplémentaires (CNESST, semaine par semaine),
-/// pourboires carte réellement perçus, et la paye brute qui en résulte.
+/// et la paye brute qui en résulte.
 /// Une fois créé (au verrouillage), n'est jamais recalculé : c'est l'audit
 /// trail immuable exigé pour justifier un fichier déjà transmis au fournisseur.
 model PayrollLineItem {
@@ -1277,7 +937,6 @@ model PayrollLineItem {
   overtimeHours Decimal @map("overtime_hours") @db.Decimal(6, 2)
   regularPay    Decimal @map("regular_pay") @db.Decimal(10, 2)
   overtimePay   Decimal @map("overtime_pay") @db.Decimal(10, 2)
-  tipsAmount    Decimal @map("tips_amount") @db.Decimal(10, 2)
   grossPay      Decimal @map("gross_pay") @db.Decimal(10, 2)
 
   shiftCount           Int @default(0) @map("shift_count")
@@ -1387,7 +1046,7 @@ model Sop {
   scope  SopScope @default(CORPORATE)
   title  String
   /// Identifiant stable poussé par Arsi (ex. `arsi-latte-signature`) — clé
-  /// d'upsert corporatif. Null pour les SOPs créées manuellement dans Mirok.
+  /// d'upsert corporatif. Null pour les SOPs créées manuellement dans RitmoKit.
   arsiId String?  @map("arsi_id")
   /// Corps Markdown — fragmentable pour vectorisation future (RAG).
   body   String
@@ -1396,7 +1055,7 @@ model Sop {
 
   stationId String?  @map("station_id") @db.Uuid
   station   Station? @relation(fields: [stationId], references: [id], onDelete: SetNull)
-  role    Role?
+  role      Role?
 
   version  Int     @default(1)
   isActive Boolean @default(true) @map("is_active")
@@ -1414,7 +1073,7 @@ model Sop {
   @@map("sops")
 }
 
-/// Module de formation interactif — fiches Bati, sécurité CNESST, recettes.
+/// Module de formation interactif — sécurité studio, onboarding, procédures.
 /// Pont optionnel vers `Sop` pour réutiliser le contenu corporatif existant.
 model FormationModule {
   id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -1431,9 +1090,9 @@ model FormationModule {
   categoryId String?           @map("category_id") @db.Uuid
   category   TrainingCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
-  kind    FormationModuleKind
-  title   String
-  summary String?
+  kind     FormationModuleKind
+  title    String
+  summary  String?
   /// Corps Markdown — affiché en introduction avant les cartes flash.
   body     String              @db.Text
   /// Étapes interactives (cartes flash) : `{ order, title, body }[]`.
@@ -1485,7 +1144,7 @@ model TrainingCategory {
   nameEs String @map("name_es")
 
   /// Accent de la carte dans le catalogue (hex).
-  colorHex String @default("#52525b") @map("color_hex")
+  colorHex String  @default("#52525b") @map("color_hex")
   /// Clé d'icône Lucide résolue côté client (voir components/training/admin).
   icon     String?
 
@@ -1574,14 +1233,14 @@ model SopChannelPin {
 }
 
 model Document {
-  id       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  title    String
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title     String
   /// Chemin dans Supabase Storage (bucket `documents`).
-  url      String
-  mimeType String   @map("mime_type")
+  url       String
+  mimeType  String   @map("mime_type")
   stationId String?  @map("station_id") @db.Uuid
   station   Station? @relation(fields: [stationId], references: [id], onDelete: SetNull)
-  role     Role?
+  role      Role?
 
   sopId String? @map("sop_id") @db.Uuid
   sop   Sop?    @relation(fields: [sopId], references: [id], onDelete: SetNull)
@@ -1595,7 +1254,7 @@ model Document {
 }
 
 // ---------------------------------------------------------------------------
-// Messagerie QSR — Supabase Realtime + Prisma, Agent-Ready
+// Messagerie interne — Supabase Realtime + Prisma, Agent-Ready
 // ---------------------------------------------------------------------------
 
 /// Canal segmenté : annonces, station, rush shift, ou DM (via Conversation).
@@ -1604,11 +1263,11 @@ model ChatChannel {
   locationId String   @map("location_id") @db.Uuid
   location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
 
-  type    ChatChannelType
-  name    String
-  slug    String
-  stationId String?  @map("station_id") @db.Uuid
-  station   Station? @relation(fields: [stationId], references: [id], onDelete: SetNull)
+  type      ChatChannelType
+  name      String
+  slug      String
+  stationId String?         @map("station_id") @db.Uuid
+  station   Station?        @relation(fields: [stationId], references: [id], onDelete: SetNull)
 
   /// Groupe éphémère lié à un bloc horaire (ex: #rush-midi-07-07).
   shiftId String? @map("shift_id") @db.Uuid
@@ -1755,15 +1414,15 @@ model OrganizationValue {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   /// Clé stable (ex. VITESSE_SANS_CHAOS) — lie Pulse, reviews, feedback.
-  valueKey   String @map("value_key") @db.VarChar(64)
-  titleFr    String @map("title_fr")
-  titleEn    String @map("title_en")
-  titleEs    String @map("title_es")
+  valueKey   String  @map("value_key") @db.VarChar(64)
+  titleFr    String  @map("title_fr")
+  titleEn    String  @map("title_en")
+  titleEs    String  @map("title_es")
   /// « Au rush, ça veut dire… » — norme comportementale concrète.
-  behaviorFr String @map("behavior_fr") @db.Text
-  behaviorEn String @map("behavior_en") @db.Text
-  behaviorEs String @map("behavior_es") @db.Text
-  sortOrder  Int    @default(0) @map("sort_order")
+  behaviorFr String  @map("behavior_fr") @db.Text
+  behaviorEn String  @map("behavior_en") @db.Text
+  behaviorEs String  @map("behavior_es") @db.Text
+  sortOrder  Int     @default(0) @map("sort_order")
   isActive   Boolean @default(true) @map("is_active")
 
   createdAt DateTime @default(now()) @map("created_at")
@@ -1774,8 +1433,8 @@ model OrganizationValue {
   @@map("organization_values")
 }
 
-/// Reconnaissance pair-à-pair taguée à une valeur Bati — levier Chatman
-/// (exhaustivité). Publié aussi sur le canal station (#cuisine…).
+/// Reconnaissance pair-à-pair taguée à une valeur culture — levier Chatman
+/// (exhaustivité). Publié aussi sur le canal département.
 model StationShoutOut {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   locationId String   @map("location_id") @db.Uuid
@@ -1789,8 +1448,8 @@ model StationShoutOut {
   stationId String  @map("station_id") @db.Uuid
   station   Station @relation(fields: [stationId], references: [id])
   /// Clé OrganizationValue (ex. EQUIPE_DABORD) — cohérence narrative.
-  valueKey String  @map("value_key") @db.VarChar(64)
-  message  String  @db.VarChar(140)
+  valueKey  String  @map("value_key") @db.VarChar(64)
+  message   String  @db.VarChar(140)
 
   /// Message miroir dans le canal station (optionnel si canal absent).
   chatMessageId String? @map("chat_message_id") @db.Uuid
@@ -1855,10 +1514,10 @@ model PulseResponse {
 /// Registre d'idempotence — prouve qu'un employé a déjà répondu cette semaine.
 /// Isolé des réponses : impossible de joindre score ↔ identité.
 model PulseReceipt {
-  id         String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId     String @map("user_id") @db.Uuid
-  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  questionId String @map("question_id") @db.Uuid
+  id         String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String        @map("user_id") @db.Uuid
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questionId String        @map("question_id") @db.Uuid
   question   PulseQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
   weekNumber Int @map("week_number")
@@ -1898,21 +1557,21 @@ enum InsightSeverity {
 /// Diagnostic opérationnel déterministe — propositions à 1 tap pour le gérant.
 /// Jamais d'auto-application sur CNESST / paie : statut OPEN → APPLIED|DISMISSED.
 model ImprovementInsight {
-  id         String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  locationId String @map("location_id") @db.Uuid
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  locationId String   @map("location_id") @db.Uuid
   location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
 
-  type     InsightType
-  severity InsightSeverity @default(LOW)
+  type        InsightType
+  severity    InsightSeverity @default(LOW)
   /// Clé de dédoublonnage OPEN (ex. PULSE_ALERT:CUISINE) — un seul OPEN par fingerprint.
-  fingerprint String @db.VarChar(96)
+  fingerprint String          @db.VarChar(96)
 
   /// Preuves agrégées anonymes (scores, compteurs) — jamais d'identité Pulse.
   evidence        Json
-  suggestedAction String         @map("suggested_action") @db.Text
+  suggestedAction String        @map("suggested_action") @db.Text
   /// Route relative sans locale (ex. /settings/manager/onboarding).
-  actionLink      String         @map("action_link") @db.VarChar(255)
-  status          InsightStatus  @default(OPEN)
+  actionLink      String        @map("action_link") @db.VarChar(255)
+  status          InsightStatus @default(OPEN)
 
   updatedById String?   @map("updated_by_id") @db.Uuid
   updatedBy   User?     @relation("ManagerInsights", fields: [updatedById], references: [id], onDelete: SetNull)
@@ -1966,7 +1625,7 @@ model AgentPlaybookProposal {
   locationId String   @map("location_id") @db.Uuid
   location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
 
-  agentName String @map("agent_name") @db.VarChar(64)
+  agentName   String @map("agent_name") @db.VarChar(64)
   /// Dédoublonnage hebdo (ex. CRISIS_REPLACEMENT:2026-W28:CROSS_STATION).
   fingerprint String @db.VarChar(96)
 
@@ -1994,7 +1653,7 @@ model AgentPlaybookProposal {
 }
 
 // ---------------------------------------------------------------------------
-// Mirok Autopilot — loop engineering (measure → learn → propose → human act)
+// RitmoKit Autopilot — loop engineering (measure → learn → propose → human act)
 // ---------------------------------------------------------------------------
 
 enum AutopilotLoopKind {
@@ -2115,15 +1774,15 @@ model GoalTacticalLog {
 
   evaluationDay DateTime @map("evaluation_day") @db.Date
 
-  currentValue     Decimal    @map("current_value") @db.Decimal(12, 4)
-  startValue       Decimal    @map("start_value") @db.Decimal(12, 4)
-  targetValue      Decimal    @map("target_value") @db.Decimal(12, 4)
+  currentValue      Decimal   @map("current_value") @db.Decimal(12, 4)
+  startValue        Decimal   @map("start_value") @db.Decimal(12, 4)
+  targetValue       Decimal   @map("target_value") @db.Decimal(12, 4)
   /// Fraction de temps écoulé τ ∈ [0,1] (jours civils).
-  tau              Decimal    @db.Decimal(8, 6)
+  tau               Decimal   @db.Decimal(8, 6)
   /// Drift Δ = p(t) − τ(t).
-  drift            Decimal    @db.Decimal(8, 6)
+  drift             Decimal   @db.Decimal(8, 6)
   /// Rate Deficit Ratio — null si r_obs ≈ 0 (STALLED) ou deadline atteinte.
-  rateDeficitRatio Decimal?   @map("rate_deficit_ratio") @db.Decimal(12, 4)
+  rateDeficitRatio  Decimal?  @map("rate_deficit_ratio") @db.Decimal(12, 4)
   projectedDeadline DateTime? @map("projected_deadline") @db.Date
 
   state         GoalState
@@ -2161,8 +1820,8 @@ enum ExperimentVariant {
 
 /// Hypothèse UX immuable (catalogue code) — flags / copy / ordre d'affichage uniquement.
 model ProductExperiment {
-  id             String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  organizationId String @map("organization_id") @db.Uuid
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   /// Clé catalogue stable (ex. CULTURE_CARD_ABOVE_BUDDY).
@@ -2172,10 +1831,10 @@ model ProductExperiment {
   descriptionEs String @map("description_es") @db.Text
 
   /// Métrique déterministe (ex. SHOUTOUT_VOLUME).
-  targetMetric   String @map("target_metric") @db.VarChar(64)
+  targetMetric  String @map("target_metric") @db.VarChar(64)
   /// Seuil de lift B vs A (ex. 0.15 = +15 %).
-  liftThreshold  Float  @default(0.15) @map("lift_threshold")
-  durationDays   Int    @default(28) @map("duration_days")
+  liftThreshold Float  @default(0.15) @map("lift_threshold")
+  durationDays  Int    @default(28) @map("duration_days")
 
   status ExperimentStatus @default(DRAFT)
 
@@ -2186,14 +1845,14 @@ model ProductExperiment {
   endsAt    DateTime? @map("ends_at")
 
   /// Résultats d'évaluation (moyennes, lift) — immuables après conclusion.
-  resultJson   Json?   @map("result_json")
-  avgMetricA   Float?  @map("avg_metric_a")
-  avgMetricB   Float?  @map("avg_metric_b")
-  liftRatio    Float?  @map("lift_ratio")
-  concludedAt  DateTime? @map("concluded_at")
+  resultJson  Json?     @map("result_json")
+  avgMetricA  Float?    @map("avg_metric_a")
+  avgMetricB  Float?    @map("avg_metric_b")
+  liftRatio   Float?    @map("lift_ratio")
+  concludedAt DateTime? @map("concluded_at")
 
-  decidedById String? @map("decided_by_id") @db.Uuid
-  decidedBy   User?   @relation("ManagerExperimentDecisions", fields: [decidedById], references: [id], onDelete: SetNull)
+  decidedById String?   @map("decided_by_id") @db.Uuid
+  decidedBy   User?     @relation("ManagerExperimentDecisions", fields: [decidedById], references: [id], onDelete: SetNull)
   decidedAt   DateTime? @map("decided_at")
 
   createdAt DateTime @default(now()) @map("created_at")
@@ -2208,14 +1867,14 @@ model ProductExperiment {
 }
 
 model ExperimentAllocation {
-  id           String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  experimentId String @map("experiment_id") @db.Uuid
+  id           String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  experimentId String            @map("experiment_id") @db.Uuid
   experiment   ProductExperiment @relation(fields: [experimentId], references: [id], onDelete: Cascade)
-  locationId   String @map("location_id") @db.Uuid
-  location     Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  locationId   String            @map("location_id") @db.Uuid
+  location     Location          @relation(fields: [locationId], references: [id], onDelete: Cascade)
 
   variant    ExperimentVariant
-  assignedAt DateTime @default(now()) @map("assigned_at")
+  assignedAt DateTime          @default(now()) @map("assigned_at")
 
   @@unique([experimentId, locationId])
   @@index([locationId])
@@ -2244,23 +1903,23 @@ model WorkplaceConventionSignature {
 
 /// Dossier disciplinaire — coaching verbal documenté à congédiement.
 model DisciplinaryRecord {
-  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  locationId      String         @map("location_id") @db.Uuid
-  employeeId      String         @map("employee_id") @db.Uuid
-  managerId       String         @map("manager_id") @db.Uuid
-  infractionCode  String         @map("infraction_code") @db.VarChar(64)
-  disciplineStep  DisciplineStep @map("discipline_step")
-  cultureValueKey String?        @map("culture_value_key") @db.VarChar(32)
-  facts           String         @db.Text
-  managerNotes    String?        @map("manager_notes") @db.Text
-  managerScript   String?        @map("manager_script") @db.Text
-  employeeComment String?        @map("employee_comment") @db.Text
-  occurredAt      DateTime       @map("occurred_at")
-  requiresEmployeeSignature Boolean @default(false) @map("requires_employee_signature")
-  employeeSignatureName String?  @map("employee_signature_name")
-  employeeSignedAt    DateTime?  @map("employee_signed_at")
-  employeeSignatureIp String?    @map("employee_signature_ip") @db.VarChar(45)
-  createdAt       DateTime       @default(now()) @map("created_at")
+  id                        String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  locationId                String         @map("location_id") @db.Uuid
+  employeeId                String         @map("employee_id") @db.Uuid
+  managerId                 String         @map("manager_id") @db.Uuid
+  infractionCode            String         @map("infraction_code") @db.VarChar(64)
+  disciplineStep            DisciplineStep @map("discipline_step")
+  cultureValueKey           String?        @map("culture_value_key") @db.VarChar(32)
+  facts                     String         @db.Text
+  managerNotes              String?        @map("manager_notes") @db.Text
+  managerScript             String?        @map("manager_script") @db.Text
+  employeeComment           String?        @map("employee_comment") @db.Text
+  occurredAt                DateTime       @map("occurred_at")
+  requiresEmployeeSignature Boolean        @default(false) @map("requires_employee_signature")
+  employeeSignatureName     String?        @map("employee_signature_name")
+  employeeSignedAt          DateTime?      @map("employee_signed_at")
+  employeeSignatureIp       String?        @map("employee_signature_ip") @db.VarChar(45)
+  createdAt                 DateTime       @default(now()) @map("created_at")
 
   location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
   employee User     @relation("DisciplinaryEmployee", fields: [employeeId], references: [id], onDelete: Cascade)
@@ -2296,14 +1955,14 @@ model SessionSeason {
 }
 
 model Course {
-  id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  organizationId String      @map("organization_id") @db.Uuid
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   title          String
-  level          CourseLevel @default(BEGINNER)
+  level          CourseLevel  @default(BEGINNER)
   style          String
-  createdAt      DateTime    @default(now()) @map("created_at")
-  updatedAt      DateTime    @updatedAt @map("updated_at")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
 
   sessions ClassSession[]
 
@@ -2311,7 +1970,7 @@ model Course {
   @@map("courses")
 }
 
-/// Weekly (or dated) class slot — distinct from Mirok `Shift` (staff hours).
+/// Weekly (or dated) class slot — distinct from staff `Shift` (hours on floor).
 model ClassSession {
   id           String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   seasonId     String?        @map("season_id") @db.Uuid
@@ -2324,14 +1983,14 @@ model ClassSession {
   instructor   User           @relation("PrimaryInstructor", fields: [instructorId], references: [id], onDelete: Restrict)
 
   /// 0=Sun … 6=Sat for recurring grid; null = one-off dated class.
-  dayOfWeek    Int?      @map("day_of_week")
-  startTime    DateTime  @map("start_time")
-  endTime      DateTime  @map("end_time")
-  maxLeads     Int       @default(12) @map("max_leads")
-  maxFollows   Int       @default(12) @map("max_follows")
-  priceRegular Decimal   @map("price_regular") @db.Decimal(10, 2)
-  priceCouple  Decimal?  @map("price_couple") @db.Decimal(10, 2)
-  priceStudent Decimal?  @map("price_student") @db.Decimal(10, 2)
+  dayOfWeek    Int?     @map("day_of_week")
+  startTime    DateTime @map("start_time")
+  endTime      DateTime @map("end_time")
+  maxLeads     Int      @default(12) @map("max_leads")
+  maxFollows   Int      @default(12) @map("max_follows")
+  priceRegular Decimal  @map("price_regular") @db.Decimal(10, 2)
+  priceCouple  Decimal? @map("price_couple") @db.Decimal(10, 2)
+  priceStudent Decimal? @map("price_student") @db.Decimal(10, 2)
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -2345,36 +2004,65 @@ model ClassSession {
 }
 
 model Enrollment {
-  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  sessionId String    @map("session_id") @db.Uuid
-  session   ClassSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  studentId String    @map("student_id") @db.Uuid
-  student   User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  danceRole DanceRole @map("dance_role")
-  paid      Boolean   @default(false)
-  paymentRef String?  @map("payment_ref")
-  attended  Boolean   @default(false)
-  waitlisted Boolean  @default(false)
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
+  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId     String        @map("session_id") @db.Uuid
+  session       ClassSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  studentId     String        @map("student_id") @db.Uuid
+  student       User          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  danceRole     DanceRole     @map("dance_role")
+  paid          Boolean       @default(false)
+  paymentRef    String?       @map("payment_ref")
+  /// Checkout lifecycle — keep `paid` in sync for legacy readers until A1b.
+  paymentStatus PaymentStatus @default(NONE) @map("payment_status")
+  pricingTier   PricingTier   @default(REGULAR) @map("pricing_tier")
+  /// Exact CAD amount for this enrollment (tier price at checkout time).
+  amountCad     Decimal?      @map("amount_cad") @db.Decimal(10, 2)
+  paidAt        DateTime?     @map("paid_at")
+  /// Set when waitlisted=true; used by A3 promotion queue ordering.
+  waitlistedAt  DateTime?     @map("waitlisted_at")
+  promotedAt    DateTime?     @map("promoted_at")
+  attended      Boolean       @default(false)
+  waitlisted    Boolean       @default(false)
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  paymentEvents PaymentEvent[]
 
   @@unique([sessionId, studentId])
   @@index([sessionId, danceRole, waitlisted])
+  @@index([sessionId, paymentStatus, paid])
+  @@index([sessionId, waitlisted, waitlistedAt])
   @@map("enrollments")
 }
 
+/// Immutable audit log of provider callbacks / checkout intents (Phase A).
+model PaymentEvent {
+  id                    String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  enrollmentId          String          @map("enrollment_id") @db.Uuid
+  enrollment            Enrollment      @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  provider              PaymentProvider
+  externalTransactionId String          @map("external_transaction_id")
+  eventType             String          @map("event_type")
+  payload               Json            @map("payload")
+  createdAt             DateTime        @default(now()) @map("created_at")
+
+  @@unique([provider, externalTransactionId, eventType])
+  @@index([enrollmentId, createdAt])
+  @@map("payment_events")
+}
+
 model InstructorPayrollLog {
-  id           String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  instructorId String                   @map("instructor_id") @db.Uuid
-  instructor   User                     @relation(fields: [instructorId], references: [id], onDelete: Cascade)
-  periodStart  DateTime                 @map("period_start") @db.Date
-  periodEnd    DateTime                 @map("period_end") @db.Date
-  totalClasses Int                      @default(0) @map("total_classes")
-  totalHours   Float                    @default(0) @map("total_hours")
-  grossPay     Decimal                  @map("gross_pay") @db.Decimal(12, 2)
-  status       InstructorPayrollStatus  @default(DRAFT)
-  createdAt    DateTime                 @default(now()) @map("created_at")
-  updatedAt    DateTime                 @updatedAt @map("updated_at")
+  id           String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  instructorId String                  @map("instructor_id") @db.Uuid
+  instructor   User                    @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+  periodStart  DateTime                @map("period_start") @db.Date
+  periodEnd    DateTime                @map("period_end") @db.Date
+  totalClasses Int                     @default(0) @map("total_classes")
+  totalHours   Float                   @default(0) @map("total_hours")
+  grossPay     Decimal                 @map("gross_pay") @db.Decimal(12, 2)
+  status       InstructorPayrollStatus @default(DRAFT)
+  createdAt    DateTime                @default(now()) @map("created_at")
+  updatedAt    DateTime                @updatedAt @map("updated_at")
 
   @@index([instructorId, periodStart, periodEnd])
   @@map("instructor_payroll_logs")

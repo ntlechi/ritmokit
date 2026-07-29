@@ -69,7 +69,7 @@ export async function generateStaticParams() {
  * Applique le thème stocké AVANT la première peinture — élimine le flash
  * clair→sombre et les rendus hybrides. Doit rester du JS ES5 inline minimal.
  */
-const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("mirok-theme")||"light";var r=t==="system"?(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"):t;document.documentElement.setAttribute("data-theme",r==="dark"?"dark":"light");}catch(e){}})();`;
+const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("ritmokit-theme")||localStorage.getItem("mirok-theme")||"light";var r=t==="system"?(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"):t;document.documentElement.setAttribute("data-theme",r==="dark"?"dark":"light");}catch(e){}})();`;
 
 export default async function RootLayout({
   children,
@@ -90,7 +90,7 @@ export default async function RootLayout({
     >
       <body className="min-h-full flex flex-col antialiased bg-background text-foreground">
         <Script
-          id="mirok-theme-init"
+          id="ritmokit-theme-init"
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }}
         />

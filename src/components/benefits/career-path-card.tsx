@@ -85,9 +85,9 @@ export function CareerPathCard({
                 {path.missingModules.slice(0, 4).map((mod) => (
                   <li key={mod.id} className="text-xs text-foreground">
                     · {mod.title}
-                    {mod.arsiId && (
+                    {mod.externalCatalogId && (
                       <span className="ml-1 text-[10px] text-foreground-muted">
-                        (#{mod.arsiId})
+                        (#{mod.externalCatalogId})
                       </span>
                     )}
                   </li>

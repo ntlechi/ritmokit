@@ -1,5 +1,5 @@
-/** Clés stables — lient Pulse, reviews et Culture Health (Chatman cohérence). */
-export const BATI_VALUE_KEYS = [
+/** Clés stables — lient Pulse, reviews et Culture Health. */
+export const STUDIO_VALUE_KEYS = [
   "VITESSE_SANS_CHAOS",
   "EQUIPE_DABORD",
   "FIABILITE_1TAP",
@@ -7,10 +7,10 @@ export const BATI_VALUE_KEYS = [
   "RESPECT",
 ] as const;
 
-export type BatiValueKey = (typeof BATI_VALUE_KEYS)[number];
+export type StudioValueKey = (typeof STUDIO_VALUE_KEYS)[number];
 
 export type CultureValueSeed = {
-  valueKey: BatiValueKey;
+  valueKey: StudioValueKey;
   sortOrder: number;
   titleFr: string;
   titleEn: string;
@@ -20,20 +20,20 @@ export type CultureValueSeed = {
   behaviorEs: string;
 };
 
-/** Constitution Bati Québec — 5 valeurs max, comportements observables au rush. */
-export const BATI_CULTURE_CONSTITUTION: CultureValueSeed[] = [
+/** Constitution studio — 5 valeurs max, comportements observables en cours et en Accueil. */
+export const STUDIO_CULTURE_CONSTITUTION: CultureValueSeed[] = [
   {
     valueKey: "VITESSE_SANS_CHAOS",
     sortOrder: 1,
-    titleFr: "Vitesse sans chaos",
-    titleEn: "Speed without chaos",
-    titleEs: "Velocidad sin caos",
+    titleFr: "Fluidité sans chaos",
+    titleEn: "Flow without chaos",
+    titleEs: "Fluidez sin caos",
     behaviorFr:
-      "Prioriser la cadence client sans jamais couper les coins ronds sur la sécurité CNESST.",
+      "Accueillir et faire démarrer les cours à l'heure sans jamais sacrifier la sécurité des élèves ni la qualité pédagogique.",
     behaviorEn:
-      "Prioritize guest pace without ever cutting corners on CNESST safety.",
+      "Welcome students and start classes on time without ever sacrificing student safety or teaching quality.",
     behaviorEs:
-      "Priorizar el ritmo del cliente sin recortar nunca la seguridad CNESST.",
+      "Recibir alumnos y empezar clases a tiempo sin sacrificar nunca la seguridad ni la calidad pedagógica.",
   },
   {
     valueKey: "EQUIPE_DABORD",
@@ -42,11 +42,11 @@ export const BATI_CULTURE_CONSTITUTION: CultureValueSeed[] = [
     titleEn: "Team first",
     titleEs: "El equipo primero",
     behaviorFr:
-      "Prêter main-forte à la station voisine (ex. Emballage) avant de fermer sa propre zone au Comptoir.",
+      "Aider Accueil ou un collègue instructeur (check-in, salle, musique) avant de quitter le studio.",
     behaviorEn:
-      "Help the neighboring station (e.g. Packaging) before closing your own Counter zone.",
+      "Help front desk or a fellow instructor (check-in, room setup, music) before leaving the studio.",
     behaviorEs:
-      "Ayudar a la estación vecina (p. ej. Empaque) antes de cerrar tu propia zona de Mostrador.",
+      "Ayudar recepción o a un colega (check-in, sala, música) antes de salir del estudio.",
   },
   {
     valueKey: "FIABILITE_1TAP",
@@ -55,24 +55,24 @@ export const BATI_CULTURE_CONSTITUTION: CultureValueSeed[] = [
     titleEn: "Absolute reliability",
     titleEs: "Fiabilidad absoluta",
     behaviorFr:
-      "Ponctualité stricte au punch-in et communication immédiate via le flux 1-tap en cas de maladie.",
+      "Ponctualité stricte au pointage et avis immédiat via RitmoKit en cas d'absence ou de retard.",
     behaviorEn:
-      "Strict punctuality at clock-in and immediate 1-tap communication when sick.",
+      "Strict punctuality at clock-in and immediate RitmoKit notice for absence or lateness.",
     behaviorEs:
-      "Puntualidad estricta al fichar y comunicación inmediata 1-tap en caso de enfermedad.",
+      "Puntualidad estricta al fichar y aviso inmediato en RitmoKit por ausencia o retraso.",
   },
   {
     valueKey: "PROPRETE_SECURITE",
     sortOrder: 4,
-    titleFr: "Propreté & sécurité",
-    titleEn: "Cleanliness & safety",
-    titleEs: "Limpieza y seguridad",
+    titleFr: "Studio propre & sécuritaire",
+    titleEn: "Clean & safe studio",
+    titleEs: "Estudio limpio y seguro",
     behaviorFr:
-      "Signaler immédiatement un risque, maintenir la station propre, et ne jamais contourner une SOP sécurité.",
+      "Signaler un risque (sol, miroir, câble), laisser la salle prête pour le cours suivant, respecter les SOP CNESST.",
     behaviorEn:
-      "Report risks immediately, keep the station clean, and never bypass a safety SOP.",
+      "Report hazards (floor, mirror, cables), leave the room ready for the next class, follow CNESST SOPs.",
     behaviorEs:
-      "Señalar riesgos de inmediato, mantener la estación limpia y nunca saltarse un SOP de seguridad.",
+      "Señalar riesgos (piso, espejo, cables), dejar la sala lista para la siguiente clase, seguir SOP CNESST.",
   },
   {
     valueKey: "RESPECT",
@@ -81,10 +81,10 @@ export const BATI_CULTURE_CONSTITUTION: CultureValueSeed[] = [
     titleEn: "Respect",
     titleEs: "Respeto",
     behaviorFr:
-      "Ton professionnel sous pression, feedback constructif, et inclusion de chaque équipier sur le plancher.",
+      "Ton professionnel avec élèves et collègues, feedback constructif, inclusion sur le plancher et en Accueil.",
     behaviorEn:
-      "Professional tone under pressure, constructive feedback, and inclusion of every teammate on the floor.",
+      "Professional tone with students and colleagues, constructive feedback, inclusion on the floor and at front desk.",
     behaviorEs:
-      "Tono profesional bajo presión, feedback constructivo e inclusión de cada compañero en el piso.",
+      "Tono profesional con alumnos y colegas, feedback constructivo, inclusión en piso y recepción.",
   },
 ];

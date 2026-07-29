@@ -11,7 +11,7 @@ export async function OPTIONS(request: NextRequest) {
 
 /**
  * POST /api/public/enrollments
- * Public booking → parity check → Enrollment → payment stub → agent:dance events.
+ * Public booking → parity check → Enrollment → PayPal checkout → agent:dance events.
  */
 export async function POST(request: NextRequest) {
   pruneRateLimitBuckets();
@@ -57,6 +57,7 @@ export async function POST(request: NextRequest) {
         studentId: result.studentId,
         waitlisted: result.waitlisted,
         paid: result.paid,
+        checkoutUrl: result.payment.checkoutUrl,
         payment: result.payment,
       },
       { status: 201 },

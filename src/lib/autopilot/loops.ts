@@ -18,7 +18,6 @@ import { locationTimeZone } from "@/lib/time/location-timezone";
 import {
   getAgentPlaybookSettings,
   type AssiduityPlaybookSettings,
-  type CodeRedSurgePlaybookSettings,
 } from "@/lib/rsi/playbooks";
 
 function percentile(sortedAsc: number[], p: number): number {
@@ -323,11 +322,6 @@ export async function runTokenSafeguardLoop(input: {
   return null;
 }
 
-function proposedSurgeBonus(config: Record<string, unknown>): number | null {
-  const value = config.defaultSurgeBonus;
-  return typeof value === "number" ? value : null;
-}
-
 function proposedWatchHours(config: Record<string, unknown>): number[] {
   if (!Array.isArray(config.watchHours)) return [];
   return config.watchHours.filter((h): h is number => typeof h === "number");
@@ -357,26 +351,6 @@ export async function runDriftGuardLoop(
   const settings = await getAgentPlaybookSettings(locationId, "DRIFT_GUARD");
   if (ledger) trackDbQuery(ledger, 1);
 
-  const priorCodeRed = await prisma.autopilotLoopRun.findMany({
-    where: { locationId, loopKind: "CODE_RED_SURGE" },
-    orderBy: [{ year: "desc" }, { weekNumber: "desc" }],
-    take: settings.decayStableWeeks + 1,
-    select: { outcome: true, evidence: true, year: true, weekNumber: true },
-  });
-  if (ledger) trackDbQuery(ledger, 1);
-
-  const priorRaise = await prisma.agentPlaybookProposal.findFirst({
-    where: {
-      locationId,
-      agentName: "CODE_RED_SURGE",
-      fingerprint: { contains: "SURGE_BONUS" },
-      status: { in: ["SUGGESTED", "APPROVED"] },
-      createdAt: { gte: new Date(Date.now() - 14 * 86_400_000) },
-    },
-    orderBy: { createdAt: "desc" },
-  });
-  if (ledger) trackDbQuery(ledger, 1);
-
   const laborHours = new Set<number>();
   const assiduityHours = new Set<number>();
   for (const c of candidates) {
@@ -395,19 +369,6 @@ export async function runDriftGuardLoop(
 
   for (const candidate of candidates) {
     let holdReason: string | null = null;
-
-    if (candidate.agentName === "CODE_RED_SURGE") {
-      const current = proposedSurgeBonus(candidate.currentConfig) ?? 0;
-      const next = proposedSurgeBonus(candidate.proposedConfig) ?? 0;
-      if (next > current) {
-        const pct = current > 0 ? ((next - current) / current) * 100 : 100;
-        if (pct > settings.maxSingleStepPct) {
-          holdReason = `rate_of_change_${Math.round(pct)}pct`;
-        } else if (priorRaise && settings.blockConsecutiveRaises) {
-          holdReason = "consecutive_surge_raise";
-        }
-      }
-    }
 
     if (
       !holdReason &&
@@ -446,44 +407,7 @@ export async function runDriftGuardLoop(
     allowed.push(candidate);
   }
 
-  // Decay: Code Red fills comfortable for M weeks → propose lowering defaultSurgeBonus.
-  let decay: PlaybookCandidate | null = null;
-  const surgeSettings = await getAgentPlaybookSettings(locationId, "CODE_RED_SURGE");
-  if (ledger) trackDbQuery(ledger, 1);
-
-  const stableWeeks = priorCodeRed.filter((row) => row.outcome === "NO_ACTION").length;
-  const baseline = 2.5;
-  if (
-    settings.enableDecayProposals &&
-    stableWeeks >= settings.decayStableWeeks &&
-    surgeSettings.defaultSurgeBonus > baseline + 0.01
-  ) {
-    const nextBonus = Math.max(
-      baseline,
-      Math.round((surgeSettings.defaultSurgeBonus - 0.5) * 100) / 100,
-    );
-    if (nextBonus < surgeSettings.defaultSurgeBonus) {
-      const proposed: CodeRedSurgePlaybookSettings = {
-        ...surgeSettings,
-        defaultSurgeBonus: nextBonus,
-      };
-      decay = {
-        agentName: "CODE_RED_SURGE",
-        fingerprint: weekFingerprint("DRIFT_GUARD", year, weekNumber, "SURGE_DECAY"),
-        currentConfig: { ...surgeSettings },
-        proposedConfig: { ...proposed },
-        evidence: {
-          guardrail: "decay",
-          stableWeeks,
-          fromBonus: surgeSettings.defaultSurgeBonus,
-          toBonus: nextBonus,
-        },
-        rationaleFr: `Prime Code Rouge stable depuis ${stableWeeks} semaines in-band. Drift-Guard propose de ramener la prime par défaut de ${surgeSettings.defaultSurgeBonus.toFixed(2)} à ${nextBonus.toFixed(2)} $/h (retour à la moyenne).`,
-        rationaleEn: `Code Red bonus in-band for ${stableWeeks} weeks. Drift-Guard proposes decaying default surge from ${surgeSettings.defaultSurgeBonus.toFixed(2)} to ${nextBonus.toFixed(2)}/hr.`,
-        rationaleEs: `Prima Code Rouge estable ${stableWeeks} semanas. Drift-Guard propone bajar de ${surgeSettings.defaultSurgeBonus.toFixed(2)} a ${nextBonus.toFixed(2)} $/h.`,
-      };
-    }
-  }
+  const decay: PlaybookCandidate | null = null;
 
   await recordLoopRun({
     locationId,

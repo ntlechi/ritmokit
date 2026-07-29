@@ -2,7 +2,6 @@ import "server-only";
 
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
-import { asPlainNumber } from "@/lib/data/serialize";
 import {
   defaultProfileForStation,
   computeRequiredHeadcountCurve,
@@ -19,15 +18,10 @@ export {
 export const getStaffingProfilesForLocation = cache(async function getStaffingProfilesForLocation(
   locationId: string,
 ): Promise<{ stations: StationRecord[]; profiles: Record<string, StaffingProfileSnapshot> }> {
-  const [stationRows, profileRows] = await Promise.all([
-    prisma.station.findMany({
-      where: { locationId, isActive: true },
-      orderBy: [{ sortOrder: "asc" }, { nameFr: "asc" }],
-    }),
-    prisma.staffingProfile.findMany({ where: { locationId } }),
-  ]);
-
-  const byStationId = new Map(profileRows.map((row) => [row.stationId, row]));
+  const stationRows = await prisma.station.findMany({
+    where: { locationId, isActive: true },
+    orderBy: [{ sortOrder: "asc" }, { nameFr: "asc" }],
+  });
 
   const stations: StationRecord[] = stationRows.map((row) => ({
     id: row.id,
@@ -38,7 +32,7 @@ export const getStaffingProfilesForLocation = cache(async function getStaffingPr
     colorHex: row.colorHex,
     slug: row.slug,
     sortOrder: row.sortOrder,
-    tipPoints: asPlainNumber(row.tipPoints),
+    kind: row.kind,
     isActive: row.isActive,
     capacity: row.capacity,
     surfaceSqm: row.surfaceSqm,
@@ -46,15 +40,7 @@ export const getStaffingProfilesForLocation = cache(async function getStaffingPr
 
   const profiles: Record<string, StaffingProfileSnapshot> = {};
   for (const station of stations) {
-    const row = byStationId.get(station.id);
-    const fallback = defaultProfileForStation(station);
-    profiles[station.id] = {
-      stationId: station.id,
-      targetSplh: row ? asPlainNumber(row.targetSplh) : fallback.targetSplh,
-      salesSharePercent: row ? asPlainNumber(row.salesSharePercent) : fallback.salesSharePercent,
-      minHeadcount: row?.minHeadcount ?? fallback.minHeadcount,
-      maxHeadcount: row?.maxHeadcount ?? fallback.maxHeadcount,
-    };
+    profiles[station.id] = defaultProfileForStation(station);
   }
 
   return { stations, profiles };

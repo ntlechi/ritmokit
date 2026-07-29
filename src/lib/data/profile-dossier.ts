@@ -65,7 +65,7 @@ function hoursBetween(start: Date, end: Date): number {
   return Math.max(0, (end.getTime() - start.getTime()) / 3_600_000);
 }
 
-/** Prisma `Station` row → serialisable `StationRecord` (Decimal `tipPoints` → number). */
+/** Prisma `Station` row → serialisable `StationRecord`. */
 function toStationRecord(row: {
   id: string;
   locationId: string;
@@ -75,7 +75,7 @@ function toStationRecord(row: {
   colorHex: string;
   slug: string | null;
   sortOrder: number;
-  tipPoints: { toString(): string };
+  kind: StationRecord["kind"];
   isActive: boolean;
   capacity: number | null;
   surfaceSqm: number | null;
@@ -89,7 +89,7 @@ function toStationRecord(row: {
     colorHex: row.colorHex,
     slug: row.slug,
     sortOrder: row.sortOrder,
-    tipPoints: asPlainNumber(row.tipPoints),
+    kind: row.kind,
     isActive: row.isActive,
     capacity: row.capacity,
     surfaceSqm: row.surfaceSqm,

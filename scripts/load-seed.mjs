@@ -2,7 +2,7 @@
  * Seed fixtures for k6 — POST /api/load/seed → tests/load/fixtures.json
  *
  * Usage:
- *   BASE_URL=https://staging.mirok.ca LOAD_TEST_SECRET=xxx node scripts/load-seed.mjs
+ *   BASE_URL=https://staging.ritmokit.app LOAD_TEST_SECRET=xxx node scripts/load-seed.mjs
  *   BASE_URL=... LOAD_TEST_SECRET=... LOCATION_ID=... COUNT=40 node scripts/load-seed.mjs
  */
 import { writeFileSync, mkdirSync } from "node:fs";

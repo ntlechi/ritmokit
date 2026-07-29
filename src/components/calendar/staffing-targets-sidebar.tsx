@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 function resolveError(dict: Dictionary, code: string) {
   const map: Record<string, string> = {
     unauthorized: dict.manager.staffing.errors.unauthorized,
-    invalid_splh: dict.manager.staffing.errors.invalidSplh,
+    invalid_students_per_hour: dict.manager.staffing.errors.invalidStudentsPerHour,
     invalid_share: dict.manager.staffing.errors.invalidShare,
     invalid_headcount: dict.manager.staffing.errors.invalidHeadcount,
     database_error: dict.manager.staffing.errors.databaseError,
@@ -23,15 +23,15 @@ function resolveError(dict: Dictionary, code: string) {
 
 function profilesFromForm(
   stations: StationRecord[],
-  form: Record<string, { targetSplh: string; salesSharePercent: string; minHeadcount: string; maxHeadcount: string }>,
+  form: Record<string, { studentsPerHour: string; classMixSharePercent: string; minHeadcount: string; maxHeadcount: string }>,
 ): Record<string, StaffingProfileSnapshot> {
   const result: Record<string, StaffingProfileSnapshot> = {};
   for (const station of stations) {
     const row = form[station.id];
     result[station.id] = {
       stationId: station.id,
-      targetSplh: Number(row.targetSplh) || 1,
-      salesSharePercent: Number(row.salesSharePercent) || 0,
+      studentsPerHour: Number(row.studentsPerHour) || 1,
+      classMixSharePercent: Number(row.classMixSharePercent) || 0,
       minHeadcount: Number(row.minHeadcount) || 0,
       maxHeadcount: Number(row.maxHeadcount) || 1,
     };
@@ -64,13 +64,13 @@ export function StaffingTargetsSidebar({
       stations.map((station) => [
         station.id,
         {
-          targetSplh: String(initialProfiles[station.id]?.targetSplh ?? 0),
-          salesSharePercent: String(initialProfiles[station.id]?.salesSharePercent ?? 0),
+          studentsPerHour: String(initialProfiles[station.id]?.studentsPerHour ?? 0),
+          classMixSharePercent: String(initialProfiles[station.id]?.classMixSharePercent ?? 0),
           minHeadcount: String(initialProfiles[station.id]?.minHeadcount ?? 0),
           maxHeadcount: String(initialProfiles[station.id]?.maxHeadcount ?? 1),
         },
       ]),
-    ) as Record<string, { targetSplh: string; salesSharePercent: string; minHeadcount: string; maxHeadcount: string }>,
+    ) as Record<string, { studentsPerHour: string; classMixSharePercent: string; minHeadcount: string; maxHeadcount: string }>,
   );
 
   useEffect(() => {
@@ -94,8 +94,8 @@ export function StaffingTargetsSidebar({
         const row = form[station.id];
         const result = await updateStaffingProfileAction({
           stationId: station.id,
-          targetSplh: Number(row.targetSplh),
-          salesSharePercent: Number(row.salesSharePercent),
+          studentsPerHour: Number(row.studentsPerHour),
+          classMixSharePercent: Number(row.classMixSharePercent),
           minHeadcount: Number(row.minHeadcount),
           maxHeadcount: Number(row.maxHeadcount),
         });
@@ -152,24 +152,24 @@ export function StaffingTargetsSidebar({
                 <h3 className="text-sm font-medium">{stationLabel(station, locale)}</h3>
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <label className="flex flex-col gap-1 text-[11px] text-foreground-muted">
-                    {dict.manager.staffing.targetSplh}
+                    {dict.manager.staffing.studentsPerHour}
                     <input
                       type="number"
                       min={1}
                       step="0.5"
-                      value={form[station.id].targetSplh}
-                      onChange={(e) => updateField(station.id, "targetSplh", e.target.value)}
+                      value={form[station.id].studentsPerHour}
+                      onChange={(e) => updateField(station.id, "studentsPerHour", e.target.value)}
                       className="rounded-lg border border-zinc-200/80 bg-white px-2 py-1.5 text-sm dark:border-white/10 dark:bg-zinc-900/60"
                     />
                   </label>
                   <label className="flex flex-col gap-1 text-[11px] text-foreground-muted">
-                    {dict.manager.staffing.salesShare}
+                    {dict.manager.staffing.classMixShare}
                     <input
                       type="number"
                       min={0}
                       max={100}
-                      value={form[station.id].salesSharePercent}
-                      onChange={(e) => updateField(station.id, "salesSharePercent", e.target.value)}
+                      value={form[station.id].classMixSharePercent}
+                      onChange={(e) => updateField(station.id, "classMixSharePercent", e.target.value)}
                       className="rounded-lg border border-zinc-200/80 bg-white px-2 py-1.5 text-sm dark:border-white/10 dark:bg-zinc-900/60"
                     />
                   </label>

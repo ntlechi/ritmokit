@@ -32,7 +32,6 @@ export type PayrollTotals = {
   overtimeHours: number;
   regularPay: number;
   overtimePay: number;
-  tipsAmount: number;
   grossPay: number;
 };
 
@@ -72,10 +71,9 @@ function sumTotals(lines: PayrollEmployeeLine[]): PayrollTotals {
       overtimeHours: round2(acc.overtimeHours + line.overtimeHours),
       regularPay: round2(acc.regularPay + line.regularPay),
       overtimePay: round2(acc.overtimePay + line.overtimePay),
-      tipsAmount: round2(acc.tipsAmount + line.tipsAmount),
       grossPay: round2(acc.grossPay + line.grossPay),
     }),
-    { regularHours: 0, overtimeHours: 0, regularPay: 0, overtimePay: 0, tipsAmount: 0, grossPay: 0 },
+    { regularHours: 0, overtimeHours: 0, regularPay: 0, overtimePay: 0, grossPay: 0 },
   );
 }
 
@@ -151,7 +149,6 @@ export async function getPayPeriodDetailForManager(input: {
         overtimeHours: asPlainNumber(li.overtimeHours),
         regularPay: asPlainNumber(li.regularPay),
         overtimePay: asPlainNumber(li.overtimePay),
-        tipsAmount: asPlainNumber(li.tipsAmount),
         grossPay: asPlainNumber(li.grossPay),
         shiftCount: li.shiftCount,
         incompletePunchCount: li.incompletePunchCount,

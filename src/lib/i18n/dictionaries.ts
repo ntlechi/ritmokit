@@ -12,6 +12,7 @@ export interface Dictionary {
     calendar: string;
     sessions: string;
     rooms: string;
+    accueil: string;
     sops: string;
     team: string;
     messages: string;
@@ -21,6 +22,34 @@ export interface Dictionary {
     help: string;
     cockpit: string;
     franchiseSection: string;
+  };
+  accueil: {
+    title: string;
+    subtitle: string;
+    empty: string;
+    today: string;
+    live: string;
+    upcoming: string;
+    done: string;
+    leads: string;
+    follows: string;
+    present: string;
+    checkIn: string;
+    checkedIn: string;
+    undo: string;
+    unpaid: string;
+    waitlisted: string;
+    filterAll: string;
+    filterUnpaid: string;
+    filterWaitlist: string;
+    filterPending: string;
+    waitlistSection: string;
+    activeSection: string;
+    instructor: string;
+    noMatch: string;
+    refresh: string;
+    classesToday: string;
+    toCheckIn: string;
   };
   opsDashboard: {
     title: string;
@@ -44,19 +73,12 @@ export interface Dictionary {
     peakZone: string;
     overstaffed: string;
     understaffed: string;
-    noCrisis: string;
-    crisisTitle: string;
-    crisisVacant: string;
-    crisisNotified: string;
-    crisisSurge: string;
     hoursShort: string;
     toolsTitle: string;
     openSchedule: string;
     openTeam: string;
     openModules: string;
-    toolTips: string;
     toolSops: string;
-    toolPos: string;
     emptyFloor: string;
     noData: string;
     convention: string;
@@ -81,6 +103,18 @@ export interface Dictionary {
       sessions: string;
       rooms: string;
       settings: string;
+    };
+    pulse: {
+      title: string;
+      floorUtilization: string;
+      roleBalance: string;
+      parityHealth: string;
+      revenueByStyle: string;
+      weekLoad: string;
+      targetHint: string;
+      atRisk: string;
+      locked: string;
+      noData: string;
     };
     parity: {
       title: string;
@@ -183,9 +217,6 @@ export interface Dictionary {
     breakReminder: string;
   };
   agents: {
-    crisisTitle: string;
-    crisisRunning: string;
-    crisisResolved: string;
     lateArrivalBadge: string;
     agentAuthorLabel: string;
   };
@@ -302,6 +333,28 @@ export interface Dictionary {
       magicLinkFailed: string;
     };
   };
+  rooms: {
+    intro: string;
+    addRoom: string;
+    edit: string;
+    empty: string;
+    inactive: string;
+    capacity: string;
+    surface: string;
+    spots: string;
+    dancer: string;
+    spacePerDancer: string;
+    occupancy: string;
+    classesPerWeek: string;
+    students: string;
+    yieldPerSqm: string;
+    weekRhythm: string;
+    peak: string;
+    totalRooms: string;
+    totalCapacity: string;
+    totalSurface: string;
+    avgOccupancy: string;
+  };
   team: {
     title: string;
     station: string;
@@ -325,6 +378,13 @@ export interface Dictionary {
     memberCount: string;
     confirmRemove: string;
     requests: string;
+    department: string;
+    byDepartment: string;
+    instructors: string;
+    stylesCovered: string;
+    weeklyClasses: string;
+    weeklyClassesTotal: string;
+    weeklyClassesShort: string;
     roles: {
       OWNER: string;
       MANAGER: string;
@@ -510,65 +570,6 @@ export interface Dictionary {
         databaseError: string;
       };
     };
-    tips: {
-      title: string;
-      subtitle: string;
-      legalNote: string;
-      poolAgreement: string;
-      poolSignedOn: string;
-      poolInactive: string;
-      stationWeights: string;
-      closeDayTitle: string;
-      closeDaySubtitle: string;
-      totalCollected: string;
-      distributionDate: string;
-      distribute: string;
-      distributing: string;
-      completedShifts: string;
-      alreadyDistributed: string;
-      distributedAmount: string;
-      previewEmpty: string;
-      recentTitle: string;
-      shiftCount: string;
-      valuePerPoint: string;
-      successDistributed: string;
-      posAutoFillDetected: string;
-      posAutoFillButton: string;
-      vote: {
-        title: string;
-        subtitle: string;
-        statusDraft: string;
-        statusVoting: string;
-        statusApproved: string;
-        statusRejected: string;
-        participation: string;
-        yesVotes: string;
-        noVotes: string;
-        quorumRequired: string;
-        startVote: string;
-        startingVote: string;
-        agreementLabel: string;
-        agreementPlaceholder: string;
-        voteRoster: string;
-        voteApproved: string;
-        voteRejected: string;
-        noVotesYet: string;
-        signedAs: string;
-        errors: {
-          agreementTooShort: string;
-        };
-      };
-      errors: {
-        unauthorized: string;
-        databaseError: string;
-        noActiveTipAgreement: string;
-        noCompletedShifts: string;
-        zeroHoursCalculated: string;
-        alreadyDistributed: string;
-        invalidAmount: string;
-        invalidDate: string;
-      };
-    };
     sops: {
       title: string;
       subtitle: string;
@@ -692,82 +693,12 @@ export interface Dictionary {
         hasAttestations: string;
       };
     };
-    pos: {
-      title: string;
-      subtitle: string;
-      activeIntegration: string;
-      statusLive: string;
-      statusIdle: string;
-      lastInvoiceProcessed: string;
-      lastSyncJustNow: string;
-      lastSyncMinutes: string;
-      lastSyncHours: string;
-      noSyncYet: string;
-      noIntegration: string;
-      securityTitle: string;
-      securitySubtitle: string;
-      webhookUrl: string;
-      webhookSecret: string;
-      copyUrl: string;
-      copySecret: string;
-      copied: string;
-      rotateSecret: string;
-      confirmRotate: string;
-      rotating: string;
-      rotateWarning: string;
-      secretRotatedTitle: string;
-      secretRotatedHint: string;
-      newSecretLabel: string;
-      ingestionTitle: string;
-      ingestionSubtitle: string;
-      ingestionEmpty: string;
-      colOrder: string;
-      colNet: string;
-      colTips: string;
-      colStatus: string;
-      statusProcessed: string;
-      statusDuplicate: string;
-      errors: {
-        unauthorized: string;
-        databaseError: string;
-        integrationNotFound: string;
-      };
-    };
-    foodCost: {
-      title: string;
-      subtitle: string;
-      formTitle: string;
-      formSubtitle: string;
-      foodCostLabel: string;
-      foodCostPlaceholder: string;
-      foodCostHint: string;
-      laborCostLabel: string;
-      laborCostHint: string;
-      primeCostLabel: string;
-      primeCostHint: string;
-      save: string;
-      saving: string;
-      saved: string;
-      integrationsTitle: string;
-      integrationsSubtitle: string;
-      clusterTitle: string;
-      clusterConnected: string;
-      clusterPending: string;
-      restockTitle: string;
-      restockPending: string;
-      errors: {
-        unauthorized: string;
-        invalidValue: string;
-        notFound: string;
-        databaseError: string;
-      };
-    };
     staffing: {
       title: string;
       subtitle: string;
-      targetSplh: string;
-      targetSplhHint: string;
-      salesShare: string;
+      studentsPerHour: string;
+      studentsPerHourHint: string;
+      classMixShare: string;
       minHeadcount: string;
       maxHeadcount: string;
       save: string;
@@ -776,7 +707,7 @@ export interface Dictionary {
       errors: {
         unauthorized: string;
         databaseError: string;
-        invalidSplh: string;
+        invalidStudentsPerHour: string;
         invalidShare: string;
         invalidHeadcount: string;
       };
@@ -786,12 +717,16 @@ export interface Dictionary {
       subtitle: string;
       addStation: string;
       newStation: string;
+      departmentsTitle: string;
+      departmentsSubtitle: string;
+      addDepartment: string;
+      newDepartment: string;
+      emptyDepartments: string;
       nameFr: string;
       nameEn: string;
       nameEs: string;
       colorHex: string;
       slug: string;
-      tipPoints: string;
       capacity: string;
       surfaceSqm: string;
       isActive: string;
@@ -803,7 +738,6 @@ export interface Dictionary {
         unauthorized: string;
         missingNames: string;
         invalidColor: string;
-        invalidTipPoints: string;
         invalidCapacity: string;
         invalidSurface: string;
         notFound: string;
@@ -844,7 +778,6 @@ export interface Dictionary {
         overtimeHours: string;
         regularPay: string;
         overtimePay: string;
-        tipsAmount: string;
         grossPay: string;
         employeesTitle: string;
         colEmployee: string;
@@ -852,7 +785,6 @@ export interface Dictionary {
         colRate: string;
         colRegular: string;
         colOvertime: string;
-        colTips: string;
         colGross: string;
         colShifts: string;
         emptyEmployees: string;
@@ -932,8 +864,6 @@ export interface Dictionary {
           cnesst_punches: string;
           cnesst_breaks: string;
           mapaq_training: string;
-          fiscal_tips: string;
-          fiscal_pos: string;
           fiscal_payroll: string;
           seal_manifest: string;
           seal_zip: string;
@@ -955,75 +885,6 @@ export interface Dictionary {
         notFound: string;
       };
     };
-    arsi: {
-      title: string;
-      subtitle: string;
-      organizationLabel: string;
-      pasteLabel: string;
-      pasteHint: string;
-      uploadLabel: string;
-      uploadHint: string;
-      importButton: string;
-      importing: string;
-      resultTitle: string;
-      resultCreated: string;
-      resultUpdated: string;
-      resultInvalidated: string;
-      resultOps: string;
-      historyTitle: string;
-      historySubtitle: string;
-      noHistory: string;
-      colDate: string;
-      colImportedBy: string;
-      colOps: string;
-      colCreated: string;
-      colUpdated: string;
-      colInvalidated: string;
-      colPayloadSize: string;
-      payloadFormatTitle: string;
-      payloadFormatHint: string;
-      errors: {
-        unauthorized: string;
-        databaseError: string;
-        invalidJson: string;
-        invalidPayload: string;
-        organizationNotFound: string;
-        stationRequired: string;
-      };
-    };
-  };
-  tips: {
-    myTips: string;
-    myTipsSubtitle: string;
-    periodTotal: string;
-    shiftShare: string;
-    workedHours: string;
-    stationWeight: string;
-    poolAgreementSigned: string;
-    poolNotActive: string;
-    emptyHistory: string;
-    weightMultiplier: string;
-  };
-  tipVote: {
-    bannerTitle: string;
-    bannerSubtitle: string;
-    readAgreement: string;
-    signatureLabel: string;
-    signaturePlaceholder: string;
-    voteYes: string;
-    voteNo: string;
-    submitting: string;
-    thankYou: string;
-    votedYes: string;
-    votedNo: string;
-    signedAs: string;
-    errors: {
-      noActiveVote: string;
-      onlyEmployees: string;
-      alreadyVoted: string;
-      invalidSignature: string;
-      databaseError: string;
-    };
   };
   autoSchedule: {
     panelTitle: string;
@@ -1042,7 +903,7 @@ export interface Dictionary {
     alertUnderstaffed: string;
     alertOverstaffed: string;
     alertLaborCostCritical: string;
-    alertSplhLow: string;
+    alertRevenuePerHourLow: string;
     errors: {
       unauthorized: string;
       noLocation: string;
@@ -1091,7 +952,7 @@ export interface Dictionary {
     legendCritical: string;
     need: string;
     planned: string;
-    splh: string;
+    revenuePerHour: string;
     laborCostCritical: string;
     closedHour: string;
     tooltip: string;
@@ -1170,38 +1031,6 @@ export interface Dictionary {
         notToday: string;
       };
     };
-    codeRed: {
-      badge: string;
-      triggerButton: string;
-      triggering: string;
-      surgeLabel: string;
-      surgePlaceholder: string;
-      surgeHint: string;
-      confirmTrigger: string;
-      triggeredSuccess: string;
-      candidatesContacted: string;
-      offerTitle: string;
-      offerSubtitle: string;
-      claimButton: string;
-      claiming: string;
-      declineButton: string;
-      claimedSuccess: string;
-      alreadyTaken: string;
-      activeBadge: string;
-      errors: {
-        unauthorized: string;
-        databaseError: string;
-        shiftNotFound: string;
-        alreadyCodeRed: string;
-        notUrgentEnough: string;
-        shiftAlreadyStarted: string;
-        noEligibleCandidates: string;
-        notCodeRed: string;
-        alreadyTaken: string;
-        noPendingBid: string;
-        noLongerEligible: string;
-      };
-    };
   };
   laborKpi: {
     title: string;
@@ -1209,16 +1038,16 @@ export interface Dictionary {
     liveLaborCost: string;
     fullDayLaborCost: string;
     target: string;
-    splh: string;
-    splhCurrentHour: string;
-    splhDaily: string;
+    revenuePerHour: string;
+    revenuePerHourCurrent: string;
+    revenuePerHourDaily: string;
     overtimeRisk: string;
     overtimeRiskEmpty: string;
     laborVariance: string;
     laborVarianceEmpty: string;
-    noSalesData: string;
+    noClassRevenueData: string;
     hoursScheduled: string;
-    projectedSales: string;
+    projectedClassRevenue: string;
     laborCost: string;
     statusGood: string;
     statusWarning: string;
@@ -1229,7 +1058,6 @@ export interface Dictionary {
     varianceAhead: string;
     varianceBehind: string;
     varianceOnTime: string;
-    posLiveBadge: string;
   };
   kpi: {
     badge: string;
@@ -1239,7 +1067,7 @@ export interface Dictionary {
     targetLabel: string;
     sourceLabel: string;
     sampleSize: string;
-    posLiveNote: string;
+    liveEnrollmentNote: string;
     availability: {
       live: string;
       partial: string;
@@ -1750,10 +1578,7 @@ export interface Dictionary {
       timeOffNone: string;
       payTitle: string;
       hourlyRate: string;
-      tips30: string;
       scheduledHours: string;
-      tipShifts: string;
-      payLink: string;
       recognitionTitle: string;
       recognitionSubtitle: string;
       recognitionEmpty: string;
@@ -2091,13 +1916,11 @@ export interface Dictionary {
     topics: {
       schedule: HelpTopicCopy;
       punch: HelpTopicCopy;
-      tips: HelpTopicCopy;
       training: HelpTopicCopy;
       messages: HelpTopicCopy;
       availability: HelpTopicCopy;
       managerSchedule: HelpTopicCopy;
       weekTemplates: HelpTopicCopy;
-      managerTips: HelpTopicCopy;
       managerSops: HelpTopicCopy;
     };
     faq: Array<{ q: string; a: string }>;

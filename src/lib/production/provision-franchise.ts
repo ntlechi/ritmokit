@@ -1,32 +1,27 @@
 import "server-only";
 
 import type { Prisma } from "@/generated/prisma/client";
-import { BATI_CULTURE_CONSTITUTION } from "@/lib/culture/values";
+import { STUDIO_CULTURE_CONSTITUTION } from "@/lib/culture/values";
 import { prisma } from "@/lib/prisma";
 import {
   AGENT_PLAYBOOK_NAMES,
   DEFAULT_AGENT_PLAYBOOKS,
 } from "@/lib/rsi/playbooks";
+import { DANCE_STATIONS } from "@/lib/stations/dance-defaults";
 
-const STATION_DEFS = [
-  { slug: "entretiens", nameFr: "Entretiens", nameEn: "Maintenance", nameEs: "Mantenimiento", colorHex: "#6B7280", tipPoints: 0.8, sortOrder: 1 },
-  { slug: "cuisine", nameFr: "Cuisine", nameEn: "Kitchen", nameEs: "Cocina", colorHex: "#EF4444", tipPoints: 0.8, sortOrder: 2 },
-  { slug: "services", nameFr: "Services", nameEn: "Services", nameEs: "Servicios", colorHex: "#10B981", tipPoints: 1.2, sortOrder: 3 },
-  { slug: "gerants-jour", nameFr: "Gérants (Jour)", nameEn: "Managers (Day)", nameEs: "Gerentes (Día)", colorHex: "#3B82F6", tipPoints: 1.0, sortOrder: 4 },
-  { slug: "gerants-soir", nameFr: "Gérants (Soir)", nameEn: "Managers (Night)", nameEs: "Gerentes (Noche)", colorHex: "#1E3A8A", tipPoints: 1.0, sortOrder: 5 },
-] as const;
+const STATION_DEFS = DANCE_STATIONS;
 
 const DEFAULT_CHANNELS: Array<{
   slug: string;
   name: string;
   type: "ANNOUNCEMENTS" | "STATION" | "MANAGEMENT";
-  stationSlug?: (typeof STATION_DEFS)[number]["slug"];
+  stationSlug?: string;
   isReadOnly?: boolean;
 }> = [
   { slug: "annonces", name: "Annonces", type: "ANNOUNCEMENTS", isReadOnly: true },
-  { slug: "cuisine", name: "Cuisine", type: "STATION", stationSlug: "cuisine" },
-  { slug: "services", name: "Services", type: "STATION", stationSlug: "services" },
-  { slug: "entretiens", name: "Entretiens", type: "STATION", stationSlug: "entretiens" },
+  { slug: "instructeurs", name: "Instructeurs", type: "STATION", stationSlug: "instructeurs" },
+  { slug: "accueil", name: "Accueil", type: "STATION", stationSlug: "accueil" },
+  { slug: "entretien", name: "Entretien", type: "STATION", stationSlug: "entretien" },
   { slug: "gestion", name: "Gestion", type: "MANAGEMENT" },
 ];
 
@@ -42,7 +37,7 @@ export type ProvisionFranchiseInput = {
   latitude?: number;
   longitude?: number;
   geofenceRadiusMeters?: number;
-  /** Station slug assigned to the owner on the floor roster (default services). */
+  /** Department slug assigned to the owner on the roster (default direction). */
   ownerStationSlug?: string;
 };
 
@@ -65,10 +60,9 @@ function slugify(raw: string): string {
 }
 
 /**
- * Provisionne une franchise Bati de façon transactionnelle et idempotente
- * sur les upserts culture / canaux / playbooks.
+ * Provisionne un studio (organisation + succursale) de façon transactionnelle et idempotente.
  */
-export async function provisionNewBatiFranchise(
+export async function provisionNewStudioFranchise(
   input: ProvisionFranchiseInput,
 ): Promise<ProvisionFranchiseResult> {
   const orgSlug = slugify(input.orgSlug || input.orgName);
@@ -85,7 +79,7 @@ export async function provisionNewBatiFranchise(
 
   const timezone = input.timezone ?? "America/Toronto";
   const geofenceRadiusMeters = input.geofenceRadiusMeters ?? 150;
-  const ownerStationSlug = input.ownerStationSlug ?? "services";
+  const ownerStationSlug = input.ownerStationSlug ?? "direction";
 
   return prisma.$transaction(async (tx) => {
     const organization = await tx.organization.upsert({
@@ -131,7 +125,7 @@ export async function provisionNewBatiFranchise(
           nameEn: def.nameEn,
           nameEs: def.nameEs,
           colorHex: def.colorHex,
-          tipPoints: def.tipPoints,
+          kind: def.kind,
           sortOrder: def.sortOrder,
           isActive: true,
         },
@@ -142,14 +136,16 @@ export async function provisionNewBatiFranchise(
           nameEn: def.nameEn,
           nameEs: def.nameEs,
           colorHex: def.colorHex,
-          tipPoints: def.tipPoints,
+          kind: def.kind,
           sortOrder: def.sortOrder,
+          capacity: def.capacity ?? null,
+          surfaceSqm: def.surfaceSqm ?? null,
         },
       });
       stationIdBySlug[def.slug] = station.id;
     }
 
-    const ownerStationId = stationIdBySlug[ownerStationSlug] ?? stationIdBySlug.services;
+    const ownerStationId = stationIdBySlug[ownerStationSlug] ?? stationIdBySlug.direction;
 
     if (owner.role !== "OWNER" && owner.role !== "ADMIN") {
       await tx.user.update({
@@ -175,7 +171,7 @@ export async function provisionNewBatiFranchise(
     });
 
     let cultureValuesUpserted = 0;
-    for (const val of BATI_CULTURE_CONSTITUTION) {
+    for (const val of STUDIO_CULTURE_CONSTITUTION) {
       await tx.organizationValue.upsert({
         where: {
           organizationId_valueKey: {

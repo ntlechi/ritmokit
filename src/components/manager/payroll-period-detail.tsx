@@ -149,10 +149,6 @@ export function PayrollPeriodDetail({
                 {detail.totals.overtimePay.toFixed(2)}$
               </dd>
             </div>
-            <div className="rounded-xl bg-surface-muted px-3 py-2">
-              <dt className="text-xs text-foreground-muted">{dd.tipsAmount}</dt>
-              <dd className="metric mt-0.5 text-lg font-semibold">{detail.totals.tipsAmount.toFixed(2)}$</dd>
-            </div>
             <div className="rounded-xl bg-accent/10 px-3 py-2">
               <dt className="text-xs text-accent">{dd.grossPay}</dt>
               <dd className="metric mt-0.5 text-lg font-semibold text-accent">
@@ -285,7 +281,6 @@ export function PayrollPeriodDetail({
                     <th className="px-4 py-2.5 text-right font-medium">{dd.colRate}</th>
                     <th className="px-4 py-2.5 text-right font-medium">{dd.colRegular}</th>
                     <th className="px-4 py-2.5 text-right font-medium">{dd.colOvertime}</th>
-                    <th className="px-4 py-2.5 text-right font-medium">{dd.colTips}</th>
                     <th className="px-4 py-2.5 text-right font-medium">{dd.colGross}</th>
                     <th className="px-4 py-2.5 text-right font-medium">{dd.colShifts}</th>
                   </tr>
@@ -300,7 +295,6 @@ export function PayrollPeriodDetail({
                       <td className="px-4 py-2.5 text-right tabular-nums text-warning">
                         {line.overtimeHours > 0 ? line.overtimeHours.toFixed(1) : "—"}
                       </td>
-                      <td className="px-4 py-2.5 text-right tabular-nums">{line.tipsAmount.toFixed(2)}$</td>
                       <td className="px-4 py-2.5 text-right font-semibold tabular-nums">
                         {line.grossPay.toFixed(2)}$
                       </td>

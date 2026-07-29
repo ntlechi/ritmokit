@@ -34,7 +34,7 @@ export type LateArrivalPlaybookSettings = {
   windowAfterHours: number;
 };
 
-/** Autopilot — cible labor cost % (ventes intraday). */
+/** Autopilot — labor cost target (class revenue intraday). */
 export type LaborCostPlaybookSettings = {
   targetLaborPct: number;
   tolerancePct: number;
@@ -42,7 +42,7 @@ export type LaborCostPlaybookSettings = {
   watchHours: number[];
 };
 
-/** Autopilot — prime Code Rouge par défaut + objectif de comblement. */
+/** Autopilot — crisis-shift surge bonus defaults + fill-time target. */
 export type CodeRedSurgePlaybookSettings = {
   defaultSurgeBonus: number;
   targetFillSeconds: number;

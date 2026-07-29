@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
-import MirokLandingPage from "@/components/marketing/landing-page";
+import RitmoKitLandingPage from "@/components/marketing/landing-page";
 import { isLocale } from "@/lib/i18n/config";
 
 export const metadata = {
-  title: "Mirok — Le Franchise OS de la restauration rapide",
+  title: "RitmoKit — Le kit d'opérations pour écoles de danse",
   description:
-    "Le premier système d'exploitation de franchise conçu pour le QSR : Code Rouge, verrous d'horodateur Wi-Fi, conformité CNESST automatisée et culture d'équipe câblée au clock-out.",
+    "Sessions, parité Lead/Follow, salles, Accueil, paie instructeurs et site public — le système d'exploitation pour studios de danse au Québec et en Amérique du Nord.",
 };
 
 export default async function LandingRoute({
@@ -15,5 +15,5 @@ export default async function LandingRoute({
 }) {
   const { lang } = await params;
   if (!isLocale(lang)) notFound();
-  return <MirokLandingPage />;
+  return <RitmoKitLandingPage />;
 }

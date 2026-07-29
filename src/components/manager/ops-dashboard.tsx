@@ -24,8 +24,8 @@ import type { Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { ManagerOpsDashboard } from "@/lib/data/manager-ops-dashboard";
 
-const LaborSalesChart = dynamic(
-  () => import("@/components/manager/labor-sales-chart").then((m) => m.LaborSalesChart),
+const LaborRevenueChart = dynamic(
+  () => import("@/components/manager/labor-revenue-chart").then((m) => m.LaborRevenueChart),
   {
     loading: () => (
       <div className="premium-card h-[320px] animate-pulse bg-zinc-100/80 dark:bg-zinc-800/40" aria-hidden />
@@ -64,19 +64,12 @@ export type OpsDashboardCopy = {
   peakZone: string;
   overstaffed: string;
   understaffed: string;
-  noCrisis: string;
-  crisisTitle: string;
-  crisisVacant: string;
-  crisisNotified: string;
-  crisisSurge: string;
   hoursShort: string;
   toolsTitle: string;
   openSchedule: string;
   openTeam: string;
   openModules: string;
-  toolTips: string;
   toolSops: string;
-  toolPos: string;
   emptyFloor: string;
   noData: string;
   convention: string;
@@ -105,12 +98,6 @@ function stationLabel(
   if (lang === "en") return row.nameEn;
   if (lang === "es") return row.nameEs;
   return row.nameFr;
-}
-
-function crisisStation(crisis: ManagerOpsDashboard["crises"][number], lang: Locale) {
-  if (lang === "en") return crisis.stationNameEn;
-  if (lang === "es") return crisis.stationNameEs;
-  return crisis.stationNameFr;
 }
 
 function formatMoney(value: number, lang: Locale) {
@@ -166,7 +153,7 @@ export function OpsDashboard({ lang, data, copy, dict }: Props) {
 
   const laborPct = data.labor?.liveLaborCostPercentage ?? null;
   const sparkLabor = data.labor?.buckets.slice(6, 23).map((b) => b.laborCost) ?? [];
-  const sparkSales = data.labor?.buckets.slice(6, 23).map((b) => b.actualSales ?? b.projectedSales) ?? [];
+  const sparkSales = data.labor?.buckets.slice(6, 23).map((b) => b.actualClassRevenue ?? b.projectedClassRevenue) ?? [];
   const sparkCulture = [3.8, 4.1, 4.0, 4.4, 4.2, 4.6, data.cultureScore ?? 4.5];
   const sparkCompliance = [92, 94, 95, 96, 97, 97, data.compliancePercent];
   const sparkConvention = [
@@ -279,50 +266,6 @@ export function OpsDashboard({ lang, data, copy, dict }: Props) {
             {copy.conventionAllSigned}
           </div>
         ) : null}
-
-        {data.crises.length > 0 ? (
-          <div className="premium-banner relative overflow-hidden" data-tone="rose">
-            <div className="pointer-events-none absolute -left-10 top-0 h-full w-24 animate-pulse bg-danger/15 blur-2xl" aria-hidden />
-            <div className="relative flex items-start gap-3">
-              <div className="premium-icon" data-tone="rose">
-                <AlertTriangle className="h-5 w-5" aria-hidden />
-              </div>
-              <div className="min-w-0 flex-1 space-y-2">
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-danger">
-                  {copy.crisisTitle}
-                </p>
-                {data.crises.map((crisis) => (
-                  <p key={crisis.shiftId} className="text-sm leading-relaxed text-foreground">
-                    <span className="font-semibold text-danger">
-                      {copy.crisisVacant
-                        .replace("{station}", crisisStation(crisis, lang))
-                        .replace(
-                          "{hours}",
-                          crisis.hoursUntilStart < 1
-                            ? `${Math.round(crisis.hoursUntilStart * 60)} min`
-                            : `${crisis.hoursUntilStart.toFixed(1)}${copy.hoursShort}`,
-                        )}
-                    </span>{" "}
-                    {copy.crisisNotified.replace("{count}", String(crisis.notifiedCount))}
-                    {crisis.surgeBonus != null &&
-                      ` ${copy.crisisSurge.replace("{bonus}", crisis.surgeBonus.toFixed(2))}`}
-                  </p>
-                ))}
-              </div>
-              <Link
-                href={`/${lang}/calendar/week`}
-                className="shrink-0 rounded-full bg-danger px-3 py-1.5 text-xs font-semibold text-white shadow-[0_0_16px_color-mix(in_srgb,var(--danger)_40%,transparent)]"
-              >
-                Code Rouge
-              </Link>
-            </div>
-          </div>
-        ) : (
-          <div className="premium-banner text-sm" data-tone="emerald">
-            <span className="mr-2 inline-flex h-2 w-2 rounded-full bg-success shadow-[0_0_8px_color-mix(in_srgb,var(--success)_60%,transparent)]" />
-            {copy.noCrisis}
-          </div>
-        )}
 
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
           <article className="premium-kpi p-5" data-tone="indigo">
@@ -449,7 +392,7 @@ export function OpsDashboard({ lang, data, copy, dict }: Props) {
         </section>
 
         {data.labor ? (
-          <LaborSalesChart data={data.labor} copy={copy} />
+          <LaborRevenueChart data={data.labor} copy={copy} />
         ) : (
           <div className="premium-card p-8 text-center text-sm text-foreground-muted">
             {copy.noData}
@@ -460,7 +403,7 @@ export function OpsDashboard({ lang, data, copy, dict }: Props) {
           <section className="grid gap-4 sm:grid-cols-3">
             <div className="premium-card p-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground-muted">
-                Labor $
+                {dict.laborKpi.laborCost}
               </p>
               <p className="metric mt-1 text-2xl font-semibold text-foreground">
                 {formatMoney(data.labor.totalLaborCost, lang)}
@@ -468,18 +411,18 @@ export function OpsDashboard({ lang, data, copy, dict }: Props) {
             </div>
             <div className="premium-card p-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground-muted">
-                Sales
+                {dict.laborKpi.projectedClassRevenue}
               </p>
               <p className="metric mt-1 text-2xl font-semibold text-foreground">
-                {formatMoney(data.labor.totalProjectedSales, lang)}
+                {formatMoney(data.labor.totalProjectedClassRevenue, lang)}
               </p>
             </div>
             <div className="premium-card p-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground-muted">
-                SPLH
+                {dict.laborKpi.revenuePerHour}
               </p>
               <p className="metric mt-1 text-2xl font-semibold text-foreground">
-                {formatMoney(data.labor.dailySplh, lang)}
+                {formatMoney(data.labor.dailyRevenuePerLaborHour, lang)}
               </p>
             </div>
           </section>

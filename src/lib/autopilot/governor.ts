@@ -38,29 +38,29 @@ export function trackTokens(ledger: AutopilotBudgetLedger, tokens: number, usdPe
   ledger.costEstimateUsd += (tokens / 1_000_000) * usdPerMillion;
 }
 
-/** Live rush gate — defer heavy Autopilot work during a POS/punch peak. */
+/** Live peak gate — defer heavy Autopilot work during class rush windows. */
 export async function isLocationInRush(locationId: string): Promise<{
   inRush: boolean;
   evidence: Record<string, unknown>;
 }> {
   const report = await calculateLiveLaborKpis({ locationId, targetDate: new Date() });
   const bucket = report.buckets[report.currentHour];
-  const actual = bucket?.actualSales ?? null;
-  const projected = bucket?.projectedSales ?? 0;
+  const actual = bucket?.actualClassRevenue ?? null;
+  const projected = bucket?.projectedClassRevenue ?? 0;
   const salesSurge =
     actual != null && projected > 0 ? actual / projected >= 1.25 : false;
   const pressure =
     report.liveLaborCostStatus === "critical" ||
     (report.liveLaborCostStatus === "warning" && salesSurge);
 
-  const inRush = Boolean(report.isToday && report.hasPosData && pressure);
+  const inRush = Boolean(report.isToday && report.hasLiveRevenueData && pressure);
 
   return {
     inRush,
     evidence: {
       inRush,
       isToday: report.isToday,
-      hasPosData: report.hasPosData,
+      hasLiveRevenueData: report.hasLiveRevenueData,
       currentHour: report.currentHour,
       liveLaborCostStatus: report.liveLaborCostStatus,
       liveLaborCostPct: Math.round(report.liveLaborCostPercentage * 10) / 10,

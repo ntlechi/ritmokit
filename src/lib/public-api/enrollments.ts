@@ -5,9 +5,16 @@ import { z } from "zod";
 import { enqueueAgentTask } from "@/lib/agents/bus";
 import { asPlainNumber } from "@/lib/data/serialize";
 import { evaluateParityEnrollment, isParityAlert } from "@/lib/dance/parity";
+import { tryPromoteWaitlist } from "@/lib/dance/waitlist-promote";
+import {
+  resolveEnrollmentAmountCad,
+  type PricingTier,
+} from "@/lib/dance/pricing";
 import { createEnrollmentCheckout, type PaymentProvider } from "@/lib/public-api/payments";
 import { loadSessionCapacity } from "@/lib/public-api/capacity";
 import { prisma } from "@/lib/prisma";
+
+export { resolveEnrollmentAmountCad } from "@/lib/dance/pricing";
 
 export const publicEnrollSchema = z.object({
   sessionId: z.string().uuid(),
@@ -17,6 +24,7 @@ export const publicEnrollSchema = z.object({
   phone: z.string().max(40).optional().nullable(),
   locale: z.enum(["fr", "en", "es"]).optional().default("fr"),
   allowWaitlist: z.boolean().optional().default(true),
+  pricingTier: z.enum(["REGULAR", "STUDENT", "COUPLE", "UNLIMITED_PASS"]).optional().default("REGULAR"),
   paymentProvider: z.enum(["paypal", "stripe", "none"]).optional(),
   returnUrl: z.string().url().optional().nullable(),
   cancelUrl: z.string().url().optional().nullable(),
@@ -128,32 +136,78 @@ export async function createPublicEnrollment(
   }
 
   const paid = Boolean(input.markPaid);
+  const pricingTier: PricingTier =
+    input.pricingTier === "STUDENT" ||
+    input.pricingTier === "COUPLE" ||
+    input.pricingTier === "UNLIMITED_PASS"
+      ? input.pricingTier
+      : "REGULAR";
+  const amountCad = resolveEnrollmentAmountCad(
+    {
+      priceRegular: asPlainNumber(session.priceRegular),
+      priceCouple: session.priceCouple != null ? asPlainNumber(session.priceCouple) : null,
+      priceStudent: session.priceStudent != null ? asPlainNumber(session.priceStudent) : null,
+    },
+    pricingTier,
+  );
   const enrollment = await prisma.enrollment.create({
     data: {
       sessionId: session.id,
       studentId: student.id,
       danceRole: input.danceRole,
       waitlisted: decision.waitlisted,
+      waitlistedAt: decision.waitlisted ? new Date() : null,
       paid,
+      paymentStatus: paid ? "PAID" : "NONE",
+      paidAt: paid ? new Date() : null,
+      pricingTier,
+      amountCad,
       paymentRef: input.paymentRef ?? null,
     },
   });
 
-  const payment = await createEnrollmentCheckout({
-    provider: (input.paymentProvider as PaymentProvider | undefined) ?? undefined,
-    amountCad: asPlainNumber(session.priceRegular),
-    enrollmentId: enrollment.id,
-    sessionId: session.id,
-    studentEmail: input.email.trim().toLowerCase(),
-    returnUrl: input.returnUrl,
-    cancelUrl: input.cancelUrl,
-  });
+  // Waitlisted seats hold a place in queue — checkout only after promotion.
+  let payment: Awaited<ReturnType<typeof createEnrollmentCheckout>> = {
+    status: "deferred",
+    provider: (input.paymentProvider as PaymentProvider | undefined) ?? "none",
+    checkoutUrl: null,
+    paymentRef: null,
+    message: decision.waitlisted
+      ? "Waitlisted — payment opens when a seat is promoted."
+      : "No checkout required.",
+  };
 
-  if (payment.paymentRef && !paid) {
-    await prisma.enrollment.update({
-      where: { id: enrollment.id },
-      data: { paymentRef: payment.paymentRef },
-    });
+  if (!decision.waitlisted && !paid) {
+    try {
+      payment = await createEnrollmentCheckout({
+        provider: (input.paymentProvider as PaymentProvider | undefined) ?? undefined,
+        amountCad,
+        enrollmentId: enrollment.id,
+        sessionId: session.id,
+        studentEmail: input.email.trim().toLowerCase(),
+        returnUrl: input.returnUrl,
+        cancelUrl: input.cancelUrl,
+      });
+
+      if (payment.paymentRef) {
+        await prisma.enrollment.update({
+          where: { id: enrollment.id },
+          data: {
+            paymentRef: payment.paymentRef,
+            paymentStatus: payment.status === "pending" ? "PENDING" : "NONE",
+          },
+        });
+      }
+    } catch (error) {
+      console.error("[public:enrollments] checkout failed", error);
+      payment = {
+        status: "deferred",
+        provider: (input.paymentProvider as PaymentProvider | undefined) ?? "paypal",
+        checkoutUrl: null,
+        paymentRef: null,
+        message: "Enrollment saved unpaid — checkout provider failed. Retry via /checkout.",
+      };
+    }
   }
 
   const nextCap = {
@@ -192,6 +246,13 @@ export async function createPublicEnrollment(
         capacity: nextCap,
         source: "public_api",
       },
+    });
+  }
+
+  // A newly seated Lead/Follow may unlock the opposite waitlist immediately.
+  if (!decision.waitlisted) {
+    await tryPromoteWaitlist(session.id).catch((error) => {
+      console.error("[public:enrollments] waitlist promote failed", error);
     });
   }
 

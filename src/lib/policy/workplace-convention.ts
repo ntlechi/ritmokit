@@ -1,15 +1,15 @@
-import type { BatiValueKey } from "@/lib/culture/values";
+import type { StudioValueKey } from "@/lib/culture/values";
 import type { Locale } from "@/lib/i18n/config";
 import type { DisciplineStep } from "@/generated/prisma/enums";
 
-/** Version courante de la Convention de travail — plancher Bati. */
+/** Version courante de la convention de travail — équipe studio. */
 export const WORKPLACE_CONVENTION_VERSION = "1.0";
 
 export const DISCIPLINE_WINDOW_MONTHS = 12;
 
 export type ConventionSection = {
   id: string;
-  cultureValueKey?: BatiValueKey;
+  cultureValueKey?: StudioValueKey;
   title: string;
   goldenRule: string;
   expected: string[];
@@ -46,7 +46,7 @@ export type WorkplaceInfractionCode =
 
 export type InfractionDefinition = {
   code: WorkplaceInfractionCode;
-  cultureValueKey: BatiValueKey;
+  cultureValueKey: StudioValueKey;
   isGrossMisconduct: boolean;
   requiresSignatureFromStep: DisciplineStep | null;
   labels: Record<Locale, string>;
@@ -55,14 +55,14 @@ export type InfractionDefinition = {
 
 const CONTENT_FR: ConventionContent = {
   version: WORKPLACE_CONVENTION_VERSION,
-  title: "Convention de travail — Plancher Bati",
+  title: "Convention de travail — Équipe studio",
   preamble:
-    "Cette convention établit les attentes claires pour chaque membre de l'équipe sur le plancher. Les règles protègent le travail de chacun, la sécurité CNESST et l'expérience client — elles ne visent pas à punir, mais à créer une équipe d'élite où tout le monde sait à quoi s'attendre.",
+    "Cette convention établit les attentes claires pour chaque membre de l'équipe sur le studio. Les règles protègent le travail de chacun, la sécurité CNESST et l'expérience élève — elles ne visent pas à punir, mais à créer une équipe d'élite où tout le monde sait à quoi s'attendre.",
   principles: [
     "Clarté avant répression — on explique, on documente, on donne une chance de corriger.",
     "Cohérence entre gérants — les mêmes règles s'appliquent à tous, peu importe le quart.",
-    "Respect du travail de l'équipe — chaque infraction qui ralentit le rush nuit aux collègues.",
-    "Documentation dans Mirok — chaque coaching ou avertissement est archivé.",
+    "Respect du travail de l'équipe — chaque infraction qui ralentit le cours nuit aux collègues.",
+    "Documentation dans RitmoKit — chaque coaching ou avertissement est archivé.",
     "La loi prime — cette convention complète le Code du travail et les normes CNESST.",
   ],
   sections: [
@@ -72,13 +72,13 @@ const CONTENT_FR: ConventionContent = {
       title: "Téléphones cellulaires",
       goldenRule: "Le téléphone reste dans le casier pendant le quart.",
       expected: [
-        "Donner le numéro de la cantine aux proches pour les urgences.",
+        "Donner le numéro du studio aux proches pour les urgences.",
         "Informer le gérant avant le quart si un appel critique est attendu (hôpital, famille).",
         "Exception approuvée : vibration en poche, réponse uniquement en cas d'appel urgent.",
       ],
       prohibited: [
-        "Réseaux sociaux, jeux ou appels personnels en zone client ou en production.",
-        "Photos ou vidéos de clients, cuisine ou caisse sans autorisation.",
+        "Réseaux sociaux, jeux ou appels personnels en zone Accueil ou en production.",
+        "Photos ou vidéos de clients, salles de cours ou Accueil sans autorisation.",
       ],
       disciplineNote: "1er oubli : coaching. Répétition : avertissement écrit.",
     },
@@ -88,7 +88,7 @@ const CONTENT_FR: ConventionContent = {
       title: "Ponctualité et présence",
       goldenRule: "Prêt au poste, en uniforme, à l'heure exacte du début du quart.",
       expected: [
-        "Alerter via Mirok au moins 30 minutes avant si un retard est prévu.",
+        "Alerter via RitmoKit au moins 30 minutes avant si un retard est prévu.",
         "Arriver suffisamment tôt pour être opérationnel à l'heure du shift.",
       ],
       prohibited: [
@@ -101,7 +101,7 @@ const CONTENT_FR: ConventionContent = {
       id: "uniform",
       cultureValueKey: "PROPRETE_SECURITE",
       title: "Uniforme, hygiène et sécurité",
-      goldenRule: "Image de marque et hygiène impeccables avant le pointage.",
+      goldenRule: "Image professionnelle et sécurité impeccables avant le pointage.",
       expected: [
         "Uniforme complet et propre (casquette, t-shirt/tablier fournis).",
         "Chaussures fermées antidérapantes — obligatoire CNESST.",
@@ -109,7 +109,7 @@ const CONTENT_FR: ConventionContent = {
       ],
       prohibited: [
         "Pointer sans uniforme conforme.",
-        "Contourner une procédure sécurité ou hygiène MAPAQ.",
+        "Contourner une procédure sécurité ou normes CNESST.",
       ],
       disciplineNote: "Risque sécurité : avertissement immédiat possible.",
     },
@@ -124,7 +124,7 @@ const CONTENT_FR: ConventionContent = {
         "Prêter main-forte à la station voisine avant de fermer sa zone.",
       ],
       prohibited: [
-        "Baisse de cadence volontaire pendant le rush.",
+        "Baisse de cadence volontaire pendant le cours.",
         "Distractions qui font attendre les collègues ou les clients.",
       ],
       disciplineNote: "Traité comme manque de respect envers l'équipe.",
@@ -151,7 +151,7 @@ const CONTENT_FR: ConventionContent = {
       goldenRule: "Laisser le poste plus propre qu'à l'arrivée pour la prochaine brigade.",
       expected: [
         "Ton professionnel en tout temps, même sous pression du rush.",
-        "Feedback constructif ; inclusion de chaque équipier sur le plancher.",
+        "Feedback constructif ; inclusion de chaque équipier sur le studio.",
       ],
       prohibited: [
         "Harcèlement, intimidation, propos discriminatoires.",
@@ -163,7 +163,7 @@ const CONTENT_FR: ConventionContent = {
       id: "substances-privacy",
       cultureValueKey: "PROPRETE_SECURITE",
       title: "Substances, confidentialité et médias",
-      goldenRule: "Zéro alcool ou drogue sur le plancher ; confidentialité absolue.",
+      goldenRule: "Zéro alcool ou drogue sur le studio ; confidentialité absolue.",
       expected: [
         "Signaler immédiatement tout risque pour la santé ou la sécurité.",
         "Protéger les données clients, ventes et horaires des collègues.",
@@ -181,13 +181,13 @@ const CONTENT_FR: ConventionContent = {
       step: "VERBAL_COACHING",
       label: "Coaching verbal documenté",
       description:
-        "Discussion privée avec le gérant. Note dans Mirok, sans conséquence financière. « Est-ce que tout va bien ? On a besoin de toi au rush. »",
+        "Discussion privée avec le gérant. Note dans RitmoKit, sans conséquence financière. « Est-ce que tout va bien ? On a besoin de toi au rush. »",
     },
     {
       step: "WRITTEN_FIRST",
       label: "1er avertissement écrit",
       description:
-        "Notification écrite détaillant la règle, les faits et les attentes. Signature employé requise dans Mirok.",
+        "Notification écrite détaillant la règle, les faits et les attentes. Signature employé requise dans RitmoKit.",
     },
     {
       step: "WRITTEN_SECOND_SUSPENSION",
@@ -206,13 +206,13 @@ const CONTENT_FR: ConventionContent = {
     "Fraude ou falsification de pointage",
     "Violence physique ou menaces graves",
     "Harcèlement grave ou comportement discriminatoire",
-    "État d'ébriété ou facultés affaiblies sur le plancher",
+    "État d'ébriété ou facultés affaiblies sur le studio",
     "Mise en danger délibérée d'un client ou collègue",
   ],
   legalNote:
     "Cette convention ne remplace pas le Code du travail du Québec, la LNT ni les normes CNESST. En cas de conflit, la loi et les règlements applicables priment.",
   signatureStatement:
-    "Je certifie avoir lu et compris la Convention de travail — Plancher Bati v{version}. Je m'engage à respecter ces règles et à contribuer à une culture d'équipe d'élite.",
+    "Je certifie avoir lu et compris la Convention de travail — Équipe studio v{version}. Je m'engage à respecter ces règles et à contribuer à une culture d'équipe d'élite.",
   goldenRules: [
     "Téléphone au casier — urgence via la cantine.",
     "Prêt au poste à l'heure — aviser 30 min avant si retard.",
@@ -223,20 +223,20 @@ const CONTENT_FR: ConventionContent = {
     "Poste plus propre qu'à l'arrivée.",
     "Ton professionnel en tout temps.",
     "Signaler les risques sécurité immédiatement.",
-    "Documenter dans Mirok — cohérence entre gérants.",
+    "Documenter dans RitmoKit — cohérence entre gérants.",
   ],
 };
 
 const CONTENT_EN: ConventionContent = {
   version: WORKPLACE_CONVENTION_VERSION,
-  title: "Workplace Convention — Bati Floor",
+  title: "Workplace Convention — Studio team",
   preamble:
-    "This convention sets clear expectations for every teammate on the floor. Rules protect each person's work, CNESST safety, and the guest experience — they aim to build an elite team, not to punish.",
+    "This convention sets clear expectations for every teammate on the team. Rules protect each person's work, CNESST safety, and the student experience — they aim to build an elite team, not to punish.",
   principles: [
     "Clarity before punishment — explain, document, give a fair chance to improve.",
     "Consistency across managers — the same rules apply to everyone, every shift.",
-    "Respect for the team's work — anything that slows the rush hurts colleagues.",
-    "Documentation in Mirok — every coaching session or warning is archived.",
+    "Respect for the team's work — anything that slows class time hurts colleagues.",
+    "Documentation in RitmoKit — every coaching session or warning is archived.",
     "Law comes first — this convention supplements Quebec labour law and CNESST standards.",
   ],
   sections: CONTENT_FR.sections.map((s, i) => ({
@@ -257,17 +257,17 @@ const CONTENT_EN: ConventionContent = {
       "If you have time to lean, you have time to clean.",
       "Zero tolerance for theft — full transparency through POS.",
       "Leave the station cleaner than you found it for the next crew.",
-      "Zero alcohol or drugs on the floor; absolute confidentiality.",
+      "Zero alcohol or drugs on the team; absolute confidentiality.",
     ][i],
     expected: s.expected.map((_, j) =>
       [
         [
-          "Give the restaurant number to family for emergencies.",
+          "Give the studio phone number to family for emergencies.",
           "Tell your manager before shift if a critical call is expected.",
           "Approved exception: vibrate in pocket, answer urgent calls only.",
         ],
         [
-          "Alert via Mirok at least 30 minutes before if you'll be late.",
+          "Alert via RitmoKit at least 30 minutes before if you'll be late.",
           "Arrive early enough to be operational at shift start.",
         ],
         [
@@ -286,7 +286,7 @@ const CONTENT_EN: ConventionContent = {
         ],
         [
           "Professional tone at all times, even under rush pressure.",
-          "Constructive feedback; include every teammate on the floor.",
+          "Constructive feedback; include every teammate on the team.",
         ],
         [
           "Report any health or safety risk immediately.",
@@ -298,7 +298,7 @@ const CONTENT_EN: ConventionContent = {
       [
         [
           "Social media, games or personal calls in guest or production zones.",
-          "Photos or videos of guests, kitchen or POS without authorization.",
+          "Photos or videos of guests, classrooms or front desk without authorization.",
         ],
         [
           "More than 5 minutes late without notice — manager must validate punch.",
@@ -306,7 +306,7 @@ const CONTENT_EN: ConventionContent = {
         ],
         [
           "Clocking in without compliant uniform.",
-          "Bypassing a safety or MAPAQ hygiene procedure.",
+          "Bypassing a safety or CNESST safety procedure.",
         ],
         [
           "Voluntary slowdown during rush.",
@@ -342,12 +342,12 @@ const CONTENT_EN: ConventionContent = {
       step: "VERBAL_COACHING",
       label: "Documented verbal coaching",
       description:
-        "Private discussion with manager. Note in Mirok, no financial consequence.",
+        "Private discussion with manager. Note in RitmoKit, no financial consequence.",
     },
     {
       step: "WRITTEN_FIRST",
       label: "First written warning",
-      description: "Written notice detailing rule, facts and expectations. Employee signature required in Mirok.",
+      description: "Written notice detailing rule, facts and expectations. Employee signature required in RitmoKit.",
     },
     {
       step: "WRITTEN_SECOND_SUSPENSION",
@@ -365,15 +365,15 @@ const CONTENT_EN: ConventionContent = {
     "Fraud or falsified time punches",
     "Physical violence or serious threats",
     "Serious harassment or discriminatory behaviour",
-    "Intoxication or impaired faculties on the floor",
+    "Intoxication or impaired faculties on the team",
     "Deliberate endangerment of a guest or colleague",
   ],
   legalNote:
     "This convention does not replace Quebec's Labour Code, labour standards or CNESST rules. Where they conflict, applicable law prevails.",
   signatureStatement:
-    "I certify that I have read and understood the Workplace Convention — Bati Floor v{version}. I agree to follow these rules and contribute to an elite team culture.",
+    "I certify that I have read and understood the Workplace Convention — Studio team v{version}. I agree to follow these rules and contribute to an elite team culture.",
   goldenRules: [
-    "Phone in locker — emergencies via restaurant line.",
+    "Phone in locker — emergencies via studio line.",
     "Ready at station on time — notify 30 min before if late.",
     "Full uniform before clock-in.",
     "Rush = total production focus.",
@@ -382,20 +382,20 @@ const CONTENT_EN: ConventionContent = {
     "Station cleaner than you found it.",
     "Professional tone at all times.",
     "Report safety risks immediately.",
-    "Document in Mirok — consistency across managers.",
+    "Document in RitmoKit — consistency across managers.",
   ],
 };
 
 const CONTENT_ES: ConventionContent = {
   version: WORKPLACE_CONVENTION_VERSION,
-  title: "Convención de trabajo — Piso Bati",
+  title: "Convención de trabajo — Equipo del estudio",
   preamble:
-    "Esta convención establece expectativas claras para cada miembro del equipo en el piso. Las reglas protegen el trabajo de todos, la seguridad CNESST y la experiencia del cliente — buscan formar un equipo de élite, no castigar.",
+    "Esta convención establece expectativas claras para cada miembro del equipo en el equipo. Las reglas protegen el trabajo de todos, la seguridad CNESST y la experiencia del alumno — buscan formar un equipo de élite, no castigar.",
   principles: [
     "Claridad antes que sanción — explicar, documentar, dar oportunidad de mejorar.",
     "Coherencia entre gerentes — las mismas reglas para todos, en cada turno.",
-    "Respeto al trabajo del equipo — lo que frena el rush perjudica a los compañeros.",
-    "Documentación en Mirok — cada coaching o advertencia queda archivado.",
+    "Respeto al trabajo del equipo — lo que frena la clase perjudica a los compañeros.",
+    "Documentación en RitmoKit — cada coaching o advertencia queda archivado.",
     "La ley prevalece — esta convención complementa la ley laboral de Quebec y CNESST.",
   ],
   sections: CONTENT_FR.sections.map((s, i) => ({
@@ -416,17 +416,17 @@ const CONTENT_ES: ConventionContent = {
       "Si tienes tiempo de apoyarte, tienes tiempo de limpiar.",
       "Tolerancia cero al robo — transparencia total vía POS.",
       "Dejar el puesto más limpio que al llegar.",
-      "Cero alcohol o drogas en el piso; confidencialidad absoluta.",
+      "Cero alcohol o drogas en el equipo; confidencialidad absoluta.",
     ][i],
     expected: s.expected.map((_, j) =>
       [
         [
-          "Dar el número del restaurante a familiares para emergencias.",
+          "Dar el número del estudio a familiares para emergencias.",
           "Avisar al gerente antes del turno si espera una llamada crítica.",
           "Excepción aprobada: vibración en el bolsillo, solo llamadas urgentes.",
         ],
         [
-          "Alertar por Mirok al menos 30 min antes si habrá retraso.",
+          "Alertar por RitmoKit al menos 30 min antes si habrá retraso.",
           "Llegar con tiempo para estar operativo al inicio.",
         ],
         [
@@ -444,8 +444,8 @@ const CONTENT_ES: ConventionContent = {
           "Toda comida, merma o muestra registrada en POS.",
         ],
         [
-          "Tono profesional siempre, incluso bajo presión del rush.",
-          "Feedback constructivo; incluir a cada compañero en el piso.",
+          "Tono profesional siempre, incluso bajo presión dla clase.",
+          "Feedback constructivo; incluir a cada compañero en el equipo.",
         ],
         [
           "Reportar de inmediato cualquier riesgo de salud o seguridad.",
@@ -457,7 +457,7 @@ const CONTENT_ES: ConventionContent = {
       [
         [
           "Redes sociales, juegos o llamadas personales en zona cliente o producción.",
-          "Fotos o videos de clientes, cocina o caja sin autorización.",
+          "Fotos o videos de clientes, salas o recepción sin autorización.",
         ],
         [
           "Más de 5 min de retraso sin aviso — fichaje requiere validación del gerente.",
@@ -465,7 +465,7 @@ const CONTENT_ES: ConventionContent = {
         ],
         [
           "Fichar sin uniforme conforme.",
-          "Saltarse un procedimiento de seguridad o higiene MAPAQ.",
+          "Saltarse un procedimiento de seguridad o seguridad CNESST.",
         ],
         [
           "Bajar el ritmo voluntariamente en rush.",
@@ -500,12 +500,12 @@ const CONTENT_ES: ConventionContent = {
     {
       step: "VERBAL_COACHING",
       label: "Coaching verbal documentado",
-      description: "Conversación privada con el gerente. Nota en Mirok, sin consecuencia financiera.",
+      description: "Conversación privada con el gerente. Nota en RitmoKit, sin consecuencia financiera.",
     },
     {
       step: "WRITTEN_FIRST",
       label: "1.ª advertencia escrita",
-      description: "Aviso escrito con regla, hechos y expectativas. Firma del empleado en Mirok.",
+      description: "Aviso escrito con regla, hechos y expectativas. Firma del empleado en RitmoKit.",
     },
     {
       step: "WRITTEN_SECOND_SUSPENSION",
@@ -523,16 +523,16 @@ const CONTENT_ES: ConventionContent = {
     "Fraude o fichaje falsificado",
     "Violencia física o amenazas graves",
     "Acoso grave o conducta discriminatoria",
-    "Intoxicación o facultades alteradas en el piso",
+    "Intoxicación o facultades alteradas en el equipo",
     "Poner en peligro deliberadamente a cliente o compañero",
   ],
   legalNote:
     "Esta convención no reemplaza el Código de trabajo de Quebec, las normas laborales ni CNESST. En caso de conflicto, prevalece la ley aplicable.",
   signatureStatement:
-    "Certifico haber leído y comprendido la Convención de trabajo — Piso Bati v{version}. Me comprometo a respetar estas reglas y contribuir a una cultura de equipo de élite.",
+    "Certifico haber leído y comprendido la Convención de trabajo — Equipo del estudio v{version}. Me comprometo a respetar estas reglas y contribuir a una cultura de equipo de élite.",
   goldenRules: CONTENT_EN.goldenRules.map((_, i) =>
     [
-      "Teléfono en casillero — emergencias vía restaurante.",
+      "Teléfono en casillero — emergencias vía estudio.",
       "Listo en puesto a tiempo — avisar 30 min antes si hay retraso.",
       "Uniforme completo antes de fichar.",
       "Rush = enfoque total en producción.",
@@ -541,7 +541,7 @@ const CONTENT_ES: ConventionContent = {
       "Puesto más limpio que al llegar.",
       "Tono profesional siempre.",
       "Reportar riesgos de seguridad de inmediato.",
-      "Documentar en Mirok — coherencia entre gerentes.",
+      "Documentar en RitmoKit — coherencia entre gerentes.",
     ][i],
   ),
 };
@@ -555,16 +555,16 @@ export const INFRACTION_DEFINITIONS: InfractionDefinition[] = [
     labels: { fr: "Usage du cellulaire", en: "Cell phone use", es: "Uso del celular" },
     managerScripts: {
       fr: [
-        "J'ai remarqué que tu as utilisé ton téléphone en zone client. On a besoin de ton focus au rush — le cellulaire reste au casier. Est-ce que tout va bien?",
-        "C'est la deuxième fois ce mois-ci. Voici ton premier avertissement écrit — signe dans Mirok pour confirmer.",
+        "J'ai remarqué que tu as utilisé ton téléphone en zone Accueil. On a besoin de ton focus au rush — le cellulaire reste au casier. Est-ce que tout va bien?",
+        "C'est la deuxième fois ce mois-ci. Voici ton premier avertissement écrit — signe dans RitmoKit pour confirmer.",
       ],
       en: [
         "I noticed you used your phone in the guest area. We need your focus at rush — phone stays in the locker. Is everything okay?",
-        "This is the second time this month. Here is your first written warning — sign in Mirok to confirm.",
+        "This is the second time this month. Here is your first written warning — sign in RitmoKit to confirm.",
       ],
       es: [
         "Noté que usaste el teléfono en zona cliente. Necesitamos tu enfoque en rush — el celular queda en casillero. ¿Todo bien?",
-        "Es la segunda vez este mes. Aquí está tu primera advertencia escrita — firma en Mirok.",
+        "Es la segunda vez este mes. Aquí está tu primera advertencia escrita — firma en RitmoKit.",
       ],
     },
   },
@@ -576,15 +576,15 @@ export const INFRACTION_DEFINITIONS: InfractionDefinition[] = [
     labels: { fr: "Retard sans avis", en: "Unnotified lateness", es: "Retraso sin aviso" },
     managerScripts: {
       fr: [
-        "Tu es arrivé(e) en retard sans prévenir l'équipe. On a besoin de toi à l'heure pour le rush — utilise Mirok 30 min avant si tu sais que tu seras en retard.",
+        "Tu es arrivé(e) en retard sans prévenir l'équipe. On a besoin de toi à l'heure pour le cours — utilise RitmoKit 30 min avant si tu sais que tu seras en retard.",
         "Le retard se répète. Premier avertissement écrit — la prochaine étape inclut une suspension.",
       ],
       en: [
-        "You arrived late without notifying the team. We need you on time for rush — use Mirok 30 min ahead if you know you'll be late.",
+        "You arrived late without notifying the team. We need you on time for class — use RitmoKit 30 min ahead if you know you'll be late.",
         "Lateness is repeating. First written warning — next step includes a suspension.",
       ],
       es: [
-        "Llegaste tarde sin avisar al equipo. Te necesitamos a tiempo para el rush — usa Mirok 30 min antes si sabes que llegarás tarde.",
+        "Llegaste tarde sin avisar al equipo. Te necesitamos a tiempo para la clase — usa RitmoKit 30 min antes si sabes que llegarás tarde.",
         "El retraso se repite. Primera advertencia escrita — el siguiente paso incluye suspensión.",
       ],
     },
@@ -609,13 +609,13 @@ export const INFRACTION_DEFINITIONS: InfractionDefinition[] = [
     labels: { fr: "Uniforme non conforme", en: "Uniform non-compliance", es: "Uniforme no conforme" },
     managerScripts: {
       fr: [
-        "Tu n'étais pas en uniforme complet au pointage. L'image Bati et la sécurité CNESST exigent la tenue complète avant de commencer.",
+        "Tu n'étais pas en uniforme complet au pointage. L'image du studio et la sécurité CNESST exigent la tenue complète avant de commencer.",
       ],
       en: [
-        "You weren't in full uniform at clock-in. Bati image and CNESST safety require complete attire before starting.",
+        "You weren't in full uniform at clock-in. Studio image and CNESST safety require complete attire before starting.",
       ],
       es: [
-        "No estabas con uniforme completo al fichar. La imagen Bati y seguridad CNESST exigen tenida completa antes de empezar.",
+        "No estabas con uniforme completo al fichar. La imagen el estudio y seguridad CNESST exigen tenida completa antes de empezar.",
       ],
     },
   },
@@ -627,13 +627,13 @@ export const INFRACTION_DEFINITIONS: InfractionDefinition[] = [
     labels: { fr: "Perte de focus au rush", en: "Loss of focus at rush", es: "Pérdida de enfoque en rush" },
     managerScripts: {
       fr: [
-        "Pendant le rush, l'équipe a besoin de 100 % de focus. La camaraderie c'est bien en période calme — pas quand les clients attendent.",
+        "Pendant le cours, l'équipe a besoin de 100 % de focus. La camaraderie c'est bien en période calme — pas quand les clients attendent.",
       ],
       en: [
         "During rush, the team needs 100% focus. Camaraderie is fine when it's calm — not when guests are waiting.",
       ],
       es: [
-        "Durante el rush, el equipo necesita 100 % de enfoque. La camaradería está bien en calma — no cuando los clientes esperan.",
+        "Durante la clase, el equipo necesita 100 % de enfoque. La camaradería está bien en calma — no cuando los clientes esperan.",
       ],
     },
   },
@@ -644,9 +644,9 @@ export const INFRACTION_DEFINITIONS: InfractionDefinition[] = [
     requiresSignatureFromStep: "WRITTEN_FIRST",
     labels: { fr: "Manque de respect", en: "Disrespect", es: "Falta de respeto" },
     managerScripts: {
-      fr: ["Le ton envers un collègue ou un client n'était pas professionnel. On corrige ça maintenant — le respect est non négociable chez Bati."],
-      en: ["The tone toward a colleague or guest wasn't professional. We fix this now — respect is non-negotiable at Bati."],
-      es: ["El tono hacia un compañero o cliente no fue profesional. Lo corregimos ahora — el respeto no es negociable en Bati."],
+      fr: ["Le ton envers un collègue ou un client n'était pas professionnel. On corrige ça maintenant — le respect est non négociable au studio."],
+      en: ["The tone toward a colleague or guest wasn't professional. We fix this now — respect is non-negotiable at the studio."],
+      es: ["El tono hacia un compañero o cliente no fue profesional. Lo corregimos ahora — el respeto no es negociable en el estudio."],
     },
   },
   {
@@ -668,9 +668,9 @@ export const INFRACTION_DEFINITIONS: InfractionDefinition[] = [
     requiresSignatureFromStep: "WRITTEN_FIRST",
     labels: { fr: "Bris de confidentialité", en: "Confidentiality breach", es: "Violación de confidencialidad" },
     managerScripts: {
-      fr: ["Des informations confidentielles ont été partagées hors des outils Mirok. Ça ne peut pas se reproduire."],
-      en: ["Confidential information was shared outside Mirok tools. This cannot happen again."],
-      es: ["Se compartió información confidencial fuera de las herramientas Mirok. No puede repetirse."],
+      fr: ["Des informations confidentielles ont été partagées hors des outils RitmoKit. Ça ne peut pas se reproduire."],
+      en: ["Confidential information was shared outside RitmoKit tools. This cannot happen again."],
+      es: ["Se compartió información confidencial fuera de las herramientas RitmoKit. No puede repetirse."],
     },
   },
   {
@@ -704,9 +704,9 @@ export const INFRACTION_DEFINITIONS: InfractionDefinition[] = [
     requiresSignatureFromStep: null,
     labels: { fr: "Substances / intoxication", en: "Substances / intoxication", es: "Sustancias / intoxicación" },
     managerScripts: {
-      fr: ["Présence d'alcool ou de drogue sur le plancher. Mise en sécurité immédiate — faute grave."],
-      en: ["Alcohol or drugs on the floor. Immediate safety protocol — gross misconduct."],
-      es: ["Alcohol o drogas en el piso. Protocolo de seguridad inmediato — falta grave."],
+      fr: ["Présence d'alcool ou de drogue sur le studio. Mise en sécurité immédiate — faute grave."],
+      en: ["Alcohol or drugs on the team. Immediate safety protocol — gross misconduct."],
+      es: ["Alcohol o drogas en el equipo. Protocolo de seguridad inmediato — falta grave."],
     },
   },
   {

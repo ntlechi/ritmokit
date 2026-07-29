@@ -5,7 +5,7 @@ import { intervalsOverlap } from "@/lib/time/cnesst-week";
 
 /**
  * True if `userId` already has a non-REJECTED shift overlapping [startsAt, endsAt).
- * Shared by Code Rouge eligibility, drag-drop reassignment, and template apply.
+ * Shared by crisis-shift eligibility, drag-drop reassignment, and template apply.
  */
 export async function hasEmployeeShiftConflict(
   userId: string,

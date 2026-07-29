@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 function resolveError(dict: Dictionary, code: string) {
   const map: Record<string, string> = {
     unauthorized: dict.manager.staffing.errors.unauthorized,
-    invalid_splh: dict.manager.staffing.errors.invalidSplh,
+    invalid_students_per_hour: dict.manager.staffing.errors.invalidStudentsPerHour,
     invalid_share: dict.manager.staffing.errors.invalidShare,
     invalid_headcount: dict.manager.staffing.errors.invalidHeadcount,
     database_error: dict.manager.staffing.errors.databaseError,
@@ -34,8 +34,8 @@ function StationRow({
 }) {
   const router = useRouter();
   const [values, setValues] = useState({
-    targetSplh: String(profile.targetSplh),
-    salesSharePercent: String(profile.salesSharePercent),
+    studentsPerHour: String(profile.studentsPerHour),
+    classMixSharePercent: String(profile.classMixSharePercent),
     minHeadcount: String(profile.minHeadcount),
     maxHeadcount: String(profile.maxHeadcount),
   });
@@ -47,8 +47,8 @@ function StationRow({
     startTransition(async () => {
       const result = await updateStaffingProfileAction({
         stationId: station.id,
-        targetSplh: Number(values.targetSplh),
-        salesSharePercent: Number(values.salesSharePercent),
+        studentsPerHour: Number(values.studentsPerHour),
+        classMixSharePercent: Number(values.classMixSharePercent),
         minHeadcount: Number(values.minHeadcount),
         maxHeadcount: Number(values.maxHeadcount),
       });
@@ -66,25 +66,25 @@ function StationRow({
       <h3 className="text-sm font-semibold">{stationLabel(station, locale)}</h3>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <label className="flex flex-col gap-1 text-xs text-foreground-muted">
-          {dict.manager.staffing.targetSplh}
+          {dict.manager.staffing.studentsPerHour}
           <input
             type="number"
             min={1}
             step="0.5"
-            value={values.targetSplh}
-            onChange={(e) => setValues((v) => ({ ...v, targetSplh: e.target.value }))}
+            value={values.studentsPerHour}
+            onChange={(e) => setValues((v) => ({ ...v, studentsPerHour: e.target.value }))}
             className="rounded-lg border border-border bg-background px-2 py-1.5 text-sm text-foreground"
           />
         </label>
         <label className="flex flex-col gap-1 text-xs text-foreground-muted">
-          {dict.manager.staffing.salesShare}
+          {dict.manager.staffing.classMixShare}
           <input
             type="number"
             min={0}
             max={100}
             step="1"
-            value={values.salesSharePercent}
-            onChange={(e) => setValues((v) => ({ ...v, salesSharePercent: e.target.value }))}
+            value={values.classMixSharePercent}
+            onChange={(e) => setValues((v) => ({ ...v, classMixSharePercent: e.target.value }))}
             className="rounded-lg border border-border bg-background px-2 py-1.5 text-sm text-foreground"
           />
         </label>
@@ -111,7 +111,7 @@ function StationRow({
           />
         </label>
       </div>
-      <p className="text-xs text-foreground-muted">{dict.manager.staffing.targetSplhHint}</p>
+      <p className="text-xs text-foreground-muted">{dict.manager.staffing.studentsPerHourHint}</p>
       <div className="flex items-center gap-2">
         <button
           type="button"

@@ -3,7 +3,7 @@ import "server-only";
 import type { ShiftStatus } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
 import { asPlainNumber } from "@/lib/data/serialize";
-import { calculatePunchedWorkedHours, getTorontoDayBounds } from "@/lib/finance/tips";
+import { calculatePunchedWorkedHours, getTorontoDayBounds } from "@/lib/finance/business-date";
 
 /** Seuil hebdomadaire CNESST (LNT art. 52) au-delà duquel le 1.5x s'applique. */
 const CNESST_WEEKLY_HOURS_CAP = 40;
@@ -33,7 +33,6 @@ export type PayrollEmployeeLine = {
   overtimeHours: number;
   regularPay: number;
   overtimePay: number;
-  tipsAmount: number;
   grossPay: number;
   shiftCount: number;
   incompletePunchCount: number;
@@ -101,7 +100,7 @@ function round2(value: number): number {
 type PayrollShiftRow = {
   id: string;
   stationId: string;
-  station: { tipPoints: { toString(): string } };
+  station: { nameFr: string };
   startsAt: Date;
   status: ShiftStatus;
   actualStartsAt: Date | null;
@@ -117,14 +116,12 @@ type PayrollShiftRow = {
     hrProfile: { payrollEmployeeCode: string | null } | null;
     locationMembers: Array<{ stationId: string; station: { nameFr: string } }>;
   } | null;
-  tipEarned: { amountPaid: unknown } | null;
 };
 
 /**
  * Calcule la paie d'une succursale pour une période — heures régulières et
  * supplémentaires par employé (calculées semaine CNESST par semaine CNESST,
- * jamais sur la période complète), et les pourboires carte réellement reçus
- * (déjà distribués via `ShiftTipEarned`, voir `src/lib/finance/tips.ts`).
+ * jamais sur la période complète).
  *
  * N'utilise QUE les pointages réels (`actualStartsAt`/`actualEndsAt`) comme
  * source de vérité des heures — jamais l'horaire planifié — pour garantir
@@ -152,7 +149,7 @@ export async function calculatePayrollForPeriod(input: {
       startsAt: { gte: periodStart, lt: periodEnd },
     },
     include: {
-      station: { select: { tipPoints: true } },
+      station: { select: { nameFr: true } },
       employee: {
         include: {
           employeeProfile: true,
@@ -164,7 +161,6 @@ export async function calculatePayrollForPeriod(input: {
           },
         },
       },
-      tipEarned: { select: { amountPaid: true } },
     },
     orderBy: { startsAt: "asc" },
   })) as unknown as PayrollShiftRow[];
@@ -179,7 +175,6 @@ export async function calculatePayrollForPeriod(input: {
     stationNameFr: string;
     hourlyRate: number;
     weeklyHours: number[];
-    tipsAmount: number;
     shiftCount: number;
     incompletePunchCount: number;
   };
@@ -214,15 +209,10 @@ export async function calculatePayrollForPeriod(input: {
         stationNameFr: membership?.station.nameFr ?? "Station",
         hourlyRate,
         weeklyHours: new Array(weekCount).fill(0),
-        tipsAmount: 0,
         shiftCount: 0,
         incompletePunchCount: 0,
       };
       employees.set(shift.employeeId, accumulator);
-    }
-
-    if (shift.tipEarned) {
-      accumulator.tipsAmount += asPlainNumber(shift.tipEarned.amountPaid);
     }
 
     if (!shift.actualStartsAt || !shift.actualEndsAt) {
@@ -269,8 +259,7 @@ export async function calculatePayrollForPeriod(input: {
         overtimeHours: round2(overtimeHours),
         regularPay: round2(regularPay),
         overtimePay: round2(overtimePay),
-        tipsAmount: round2(employee.tipsAmount),
-        grossPay: round2(regularPay + overtimePay + employee.tipsAmount),
+        grossPay: round2(regularPay + overtimePay),
         shiftCount: employee.shiftCount,
         incompletePunchCount: employee.incompletePunchCount,
       };

@@ -30,15 +30,10 @@ function isPrismaClientReady(client: PrismaClient) {
     "employeeHrProfile",
     "formationModule",
     "employeeFormationProgress",
-    "staffingProfile",
     "stationShoutOut",
     "organizationValue",
     "pulseResponse",
     "pulseReceipt",
-    "tipPoolConfig",
-    "tipPoolVote",
-    "emergencyBid",
-    "jobApplication",
   ] as const;
   return requiredDelegates.every((key) => typeof probe[key] !== "undefined");
 }

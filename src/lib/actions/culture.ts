@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { canAccessManagerSettings, getSessionUser } from "@/lib/auth/session";
-import { BATI_CULTURE_CONSTITUTION } from "@/lib/culture/values";
+import { STUDIO_CULTURE_CONSTITUTION } from "@/lib/culture/values";
 import { prisma } from "@/lib/prisma";
 import { actionDatabaseError } from "@/lib/actions/result";
 
@@ -12,10 +12,10 @@ const CULTURE_PATH = "/[lang]/settings/manager/culture";
 const MANAGER_PATH = "/[lang]/settings/manager";
 
 /**
- * Initialise (ou met à jour) la Culture Constitution Bati pour une organisation.
+ * Initialise (ou met à jour) la constitution culture studio pour une organisation.
  * Upsert idempotent — safe à relancer.
  */
-export async function initializeBatiCultureConstitutionAction(
+export async function initializeStudioCultureConstitutionAction(
   organizationId?: string,
 ): Promise<CultureActionResult> {
   try {
@@ -46,7 +46,7 @@ export async function initializeBatiCultureConstitutionAction(
     }
 
     await prisma.$transaction(
-      BATI_CULTURE_CONSTITUTION.map((val) =>
+      STUDIO_CULTURE_CONSTITUTION.map((val) =>
         prisma.organizationValue.upsert({
           where: {
             organizationId_valueKey: {

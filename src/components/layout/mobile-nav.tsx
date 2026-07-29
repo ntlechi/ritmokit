@@ -10,11 +10,12 @@ import {
   Users,
   Music2,
   DoorOpen,
+  ClipboardCheck,
 } from "lucide-react";
 import type { Locale } from "@/lib/i18n/config";
 import type { ShellCopy } from "@/lib/i18n/shell-copy";
 import type { Role } from "@/generated/prisma/enums";
-import { canAccessManagerSettings } from "@/lib/auth/session-client";
+import { canAccessAccueil, canAccessManagerSettings } from "@/lib/auth/session-client";
 import { cn } from "@/lib/utils";
 
 export function MobileNav({
@@ -28,24 +29,33 @@ export function MobileNav({
 }) {
   const pathname = usePathname();
   const isManagement = canAccessManagerSettings(role);
+  const showAccueil = canAccessAccueil(role);
 
   const items = isManagement
     ? ([
-        { key: "calendar", href: "/calendar/week", icon: Calendar, label: shell.nav.calendar },
+        { key: "accueil", href: "/accueil", icon: ClipboardCheck, label: shell.nav.accueil },
         { key: "cockpit", href: "/dashboard", icon: LayoutDashboard, label: shell.nav.cockpit },
         { key: "sessions", href: "/sessions", icon: Music2, label: shell.nav.sessions },
         { key: "rooms", href: "/rooms", icon: DoorOpen, label: shell.nav.rooms },
         { key: "team", href: "/team", icon: Users, label: shell.nav.team },
         { key: "settings", href: "/settings", icon: Settings, label: shell.nav.settings },
       ] as const)
-    : ([
-        { key: "calendar", href: "/calendar/week", icon: Calendar, label: shell.nav.calendar },
-        { key: "sessions", href: "/sessions", icon: Music2, label: shell.nav.sessions },
-        { key: "messages", href: "/messages", icon: MessagesSquare, label: shell.nav.messages },
-        { key: "rooms", href: "/rooms", icon: DoorOpen, label: shell.nav.rooms },
-        { key: "team", href: "/team", icon: Users, label: shell.nav.team },
-        { key: "settings", href: "/settings", icon: Settings, label: shell.nav.settings },
-      ] as const);
+    : showAccueil
+      ? ([
+          { key: "accueil", href: "/accueil", icon: ClipboardCheck, label: shell.nav.accueil },
+          { key: "calendar", href: "/calendar/week", icon: Calendar, label: shell.nav.calendar },
+          { key: "messages", href: "/messages", icon: MessagesSquare, label: shell.nav.messages },
+          { key: "team", href: "/team", icon: Users, label: shell.nav.team },
+          { key: "settings", href: "/settings", icon: Settings, label: shell.nav.settings },
+        ] as const)
+      : ([
+          { key: "calendar", href: "/calendar/week", icon: Calendar, label: shell.nav.calendar },
+          { key: "sessions", href: "/sessions", icon: Music2, label: shell.nav.sessions },
+          { key: "messages", href: "/messages", icon: MessagesSquare, label: shell.nav.messages },
+          { key: "rooms", href: "/rooms", icon: DoorOpen, label: shell.nav.rooms },
+          { key: "team", href: "/team", icon: Users, label: shell.nav.team },
+          { key: "settings", href: "/settings", icon: Settings, label: shell.nav.settings },
+        ] as const);
 
   return (
     <nav

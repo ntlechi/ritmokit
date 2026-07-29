@@ -6,7 +6,7 @@ import { DbErrorBanner } from "@/components/db-error-banner";
 import { canAccessManagerSettings, getSessionUser } from "@/lib/auth/session";
 import { formatWeekRangeLabel } from "@/lib/calendar/format";
 import { getWeekDays, getWeekRange, parseDateParam } from "@/lib/calendar/grid";
-import { WEEK_START_COOKIE, parseWeekStart } from "@/lib/calendar/week-start";
+import { WEEK_START_COOKIE, LEGACY_WEEK_START_COOKIE, readWeekStartCookie } from "@/lib/calendar/week-start";
 import { getEmployeeRoster } from "@/lib/data/employees";
 import { getManagerSchedulePayload } from "@/lib/data/manager-schedule";
 import { getScheduleTemplatesForLocation } from "@/lib/data/schedule-templates";
@@ -37,7 +37,10 @@ export default async function ManagerSchedulePage({
   }
 
   const cookieStore = await cookies();
-  const weekStart = parseWeekStart(cookieStore.get(WEEK_START_COOKIE)?.value);
+  const weekStart = readWeekStartCookie(
+    cookieStore.get(WEEK_START_COOKIE)?.value,
+    cookieStore.get(LEGACY_WEEK_START_COOKIE)?.value,
+  );
   const days = getWeekDays(anchor, weekStart);
   const { start, end } = getWeekRange(anchor, weekStart);
 

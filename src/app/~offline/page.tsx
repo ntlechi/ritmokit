@@ -19,7 +19,7 @@ export default function OfflinePage() {
         }}
       >
         <div style={{ fontSize: "2rem", fontWeight: 600, letterSpacing: "-0.025em" }}>
-          Mirok
+          RitmoKit
         </div>
         <p style={{ fontSize: "1rem", color: "#a1a1aa", maxWidth: 360 }}>
           Vous êtes hors ligne. Vos derniers horaires consultés restent

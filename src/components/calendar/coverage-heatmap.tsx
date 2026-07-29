@@ -50,8 +50,8 @@ function HeatmapCell({
           .replace("{station}", stationLabelText)
           .replace("{scheduled}", String(coverage.scheduledHeadcount))
           .replace(
-            "{splh}",
-            financial?.splh != null ? formatCurrency(financial.splh, locale) : "—",
+            "{revenuePerHour}",
+            financial?.revenuePerHour != null ? formatCurrency(financial.revenuePerHour, locale) : "—",
           );
 
   return (
@@ -80,7 +80,7 @@ function HeatmapCell({
           </p>
           {financial && (
             <p className="mt-0.5 text-foreground-muted">
-              {dict.schedule.splh}: {financial.splh != null ? formatCurrency(financial.splh, locale) : "—"}
+              {dict.schedule.revenuePerHour}: {financial.revenuePerHour != null ? formatCurrency(financial.revenuePerHour, locale) : "—"}
               {financial.isCritical && (
                 <span className="ml-1 font-medium text-orange-600">· {dict.schedule.laborCostCritical}</span>
               )}
@@ -102,8 +102,8 @@ export function CoverageHeatmap({
   hourly: StationHourCoverage[];
   laborBuckets: Array<{
     hour: number;
-    projectedSales: number;
-    actualSales: number | null;
+    projectedClassRevenue: number;
+    actualClassRevenue: number | null;
     laborHours: number;
     laborCost: number;
   }>;

@@ -1,4 +1,4 @@
-import { AlertTriangle, Clock3, DollarSign, Gauge, Radio, TrendingUp } from "lucide-react";
+import { AlertTriangle, Clock3, DollarSign, Gauge, TrendingUp } from "lucide-react";
 import {
   LABOR_COST_TARGET_MAX,
   LABOR_COST_TARGET_MIN,
@@ -48,17 +48,10 @@ function LaborCostGauge({ dict, report }: { dict: Dictionary; report: LiveLaborK
       </div>
 
       <p className="metric text-3xl font-semibold">
-        {report.hasSalesData ? `${report.liveLaborCostPercentage}%` : "—"}
+        {report.hasClassRevenueData ? `${report.liveLaborCostPercentage}%` : "—"}
       </p>
 
-      {report.hasPosData && (
-        <span className="inline-flex w-fit items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-success">
-          <Radio className="h-2.5 w-2.5" aria-hidden />
-          {dict.laborKpi.posLiveBadge}
-        </span>
-      )}
-
-      {report.hasSalesData ? (
+      {report.hasClassRevenueData ? (
         <>
           <div className="relative h-1.5 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
             <div
@@ -81,25 +74,25 @@ function LaborCostGauge({ dict, report }: { dict: Dictionary; report: LiveLaborK
           </p>
         </>
       ) : (
-        <p className="text-xs text-foreground-muted">{dict.laborKpi.noSalesData}</p>
+        <p className="text-xs text-foreground-muted">{dict.laborKpi.noClassRevenueData}</p>
       )}
     </div>
   );
 }
 
-function SplhCard({ dict, report }: { dict: Dictionary; report: LiveLaborKpiReport }) {
+function RevenuePerHourCard({ dict, report }: { dict: Dictionary; report: LiveLaborKpiReport }) {
   return (
     <div className="flex min-w-[180px] flex-1 flex-col gap-2 rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-xs dark:border-white/10 dark:bg-zinc-900/60">
       <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-foreground-muted">
         <TrendingUp className="h-3.5 w-3.5" aria-hidden />
-        {dict.laborKpi.splh}
+        {dict.laborKpi.revenuePerHour}
       </div>
       <p className="metric text-3xl font-semibold">
-        {report.currentHourSplh !== null ? formatCurrency(report.currentHourSplh) : "—"}
+        {report.currentHourRevenuePerLaborHour !== null ? formatCurrency(report.currentHourRevenuePerLaborHour) : "—"}
       </p>
       <p className="text-xs text-foreground-muted">
-        {report.isToday ? dict.laborKpi.splhCurrentHour : dict.laborKpi.splhDaily} ·{" "}
-        {dict.laborKpi.splhDaily}: {formatCurrency(report.dailySplh)}
+        {report.isToday ? dict.laborKpi.revenuePerHourCurrent : dict.laborKpi.revenuePerHourDaily} ·{" "}
+        {dict.laborKpi.revenuePerHourDaily}: {formatCurrency(report.dailyRevenuePerLaborHour)}
       </p>
     </div>
   );
@@ -183,7 +176,7 @@ export function LaborKpiBar({ dict, report }: { dict: Dictionary; report: LiveLa
       </div>
       <div className="flex flex-wrap gap-3">
         <LaborCostGauge dict={dict} report={report} />
-        <SplhCard dict={dict} report={report} />
+        <RevenuePerHourCard dict={dict} report={report} />
         <OvertimeRiskCard dict={dict} report={report} />
         <LaborVarianceCard dict={dict} report={report} />
       </div>

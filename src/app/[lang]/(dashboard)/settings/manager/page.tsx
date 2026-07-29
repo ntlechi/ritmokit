@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { Users, Scale, ClipboardList, BookOpen, FileSpreadsheet, ShieldCheck, Library, UserPlus, Award, ClipboardCheck, Gift, Activity, Shield, FileText, Tablet, Palette, Clock, Music2, DoorOpen } from "lucide-react";
+import { Users, Scale, ClipboardList, BookOpen, FileSpreadsheet, UserPlus, Award, ClipboardCheck, Gift, Activity, Shield, FileText, Tablet, Palette, Clock, Music2, DoorOpen } from "lucide-react";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { isLocale } from "@/lib/i18n/config";
 import { canAccessManagerSettings, getSessionUser } from "@/lib/auth/session";
@@ -153,9 +153,9 @@ export default async function ManagerSettingsPage({
             className="premium-card card-lift p-5 transition-colors hover:border-accent/30"
           >
             <Tablet className="h-5 w-5 text-accent" aria-hidden />
-            <h2 className="mt-3 text-base font-semibold">Tablette plancher</h2>
+            <h2 className="mt-3 text-base font-semibold">Tablette studio</h2>
             <p className="mt-1 text-sm text-foreground-muted">
-              Plancher, coaching, formations, alertes et NIP
+              Accueil, coaching, formations, alertes et NIP pointeuse
             </p>
           </Link>
 
@@ -211,24 +211,6 @@ export default async function ManagerSettingsPage({
             <FileSpreadsheet className="h-5 w-5 text-accent" aria-hidden />
             <h2 className="mt-3 text-base font-semibold">{dict.manager.payroll.title}</h2>
             <p className="mt-1 text-sm text-foreground-muted">{dict.manager.payroll.subtitle}</p>
-          </Link>
-
-          <Link
-            href={`/${lang}/settings/manager/audit`}
-            className="premium-card card-lift p-5 transition-colors hover:border-accent/30"
-          >
-            <ShieldCheck className="h-5 w-5 text-accent" aria-hidden />
-            <h2 className="mt-3 text-base font-semibold">{dict.manager.audit.title}</h2>
-            <p className="mt-1 text-sm text-foreground-muted">{dict.manager.audit.subtitle}</p>
-          </Link>
-
-          <Link
-            href={`/${lang}/settings/manager/arsi`}
-            className="premium-card card-lift p-5 transition-colors hover:border-accent/30"
-          >
-            <Library className="h-5 w-5 text-accent" aria-hidden />
-            <h2 className="mt-3 text-base font-semibold">{dict.manager.arsi.title}</h2>
-            <p className="mt-1 text-sm text-foreground-muted">{dict.manager.arsi.subtitle}</p>
           </Link>
 
           {items.filter(({ key }) => key !== "stations").map(({ key, icon: Icon }) => (

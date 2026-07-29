@@ -4,7 +4,6 @@ import { memo, useCallback, useEffect, useMemo, useState, useTransition } from "
 import { format } from "date-fns";
 import { fr, enUS, es } from "date-fns/locale";
 import { ShiftChip } from "@/components/calendar/shift-chip";
-import { CodeRedTrigger } from "@/components/calendar/code-red-trigger";
 import { ReplacementFinderTrigger } from "@/components/calendar/replacement-finder-trigger";
 import { ReportSicknessTrigger } from "@/components/calendar/report-sickness-trigger";
 import type { SicknessFlowResult } from "@/components/calendar/report-sickness-trigger";
@@ -586,7 +585,6 @@ const WeekShiftBlock = memo(function WeekShiftBlock({
         draggableHint={draggable}
         onDelete={shift.status === "DRAFT" ? () => onDeleteDraft(shift.id) : undefined}
       />
-      <CodeRedTrigger shift={shift} dict={dict} lang={locale} fullWidth />
       {onOpenReplacement && (
         <ReplacementFinderTrigger shift={shift} dict={dict} onOpen={onOpenReplacement} fullWidth />
       )}

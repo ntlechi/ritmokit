@@ -1,32 +1,30 @@
 import type { CSSProperties } from "react";
 
 /**
- * Renders the Mirok wordmark for use with `next/og` ImageResponse.
- * Kept deliberately minimal (Apple/Linear aesthetic): a single glyph
- * on a high-contrast rounded surface, no external image assets.
+ * RitmoKit app icon glyph for `next/og` ImageResponse routes.
  */
-export function MirokMark({ size }: { size: number }) {
+export function RitmoKitMark({ size }: { size: number }) {
   const containerStyle: CSSProperties = {
     width: size,
     height: size,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    background: "#0b0b0c",
+    background: "linear-gradient(145deg, #e11d48 0%, #7c3aed 55%, #0ea5e9 100%)",
     borderRadius: size * 0.22,
   };
 
   const glyphStyle: CSSProperties = {
     color: "#ffffff",
-    fontSize: size * 0.56,
-    fontWeight: 700,
+    fontSize: size * 0.44,
+    fontWeight: 800,
     fontFamily: "Helvetica, Arial, sans-serif",
-    letterSpacing: -size * 0.02,
+    letterSpacing: -size * 0.03,
   };
 
   return (
     <div style={containerStyle}>
-      <span style={glyphStyle}>M</span>
+      <span style={glyphStyle}>RK</span>
     </div>
   );
 }

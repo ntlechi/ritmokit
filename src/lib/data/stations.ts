@@ -1,8 +1,8 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
+import type { StationKindValue } from "@/lib/stations/dance-defaults";
 import type { StationRecord } from "@/lib/stations/display";
-import { asPlainNumber } from "@/lib/data/serialize";
 
 function mapStation(row: {
   id: string;
@@ -13,7 +13,7 @@ function mapStation(row: {
   colorHex: string;
   slug: string | null;
   sortOrder: number;
-  tipPoints: { toString(): string };
+  kind: StationKindValue;
   isActive: boolean;
   capacity: number | null;
   surfaceSqm: number | null;
@@ -27,7 +27,7 @@ function mapStation(row: {
     colorHex: row.colorHex,
     slug: row.slug,
     sortOrder: row.sortOrder,
-    tipPoints: asPlainNumber(row.tipPoints),
+    kind: row.kind,
     isActive: row.isActive,
     capacity: row.capacity,
     surfaceSqm: row.surfaceSqm,
@@ -36,12 +36,13 @@ function mapStation(row: {
 
 export async function getStationsForLocation(
   locationId: string,
-  { activeOnly = true }: { activeOnly?: boolean } = {},
+  { activeOnly = true, kind }: { activeOnly?: boolean; kind?: StationKindValue } = {},
 ): Promise<StationRecord[]> {
   const rows = await prisma.station.findMany({
     where: {
       locationId,
       ...(activeOnly ? { isActive: true } : {}),
+      ...(kind ? { kind } : {}),
     },
     orderBy: [{ sortOrder: "asc" }, { nameFr: "asc" }],
   });
@@ -64,7 +65,7 @@ export async function getPrimaryLocationIdForUser(userId: string): Promise<strin
 
 export async function getStationsForUser(
   userId: string,
-  options?: { activeOnly?: boolean },
+  options?: { activeOnly?: boolean; kind?: StationKindValue },
 ): Promise<{ locationId: string; stations: StationRecord[] } | null> {
   const locationId = await getPrimaryLocationIdForUser(userId);
   if (!locationId) return null;

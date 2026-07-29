@@ -16,11 +16,11 @@ export type StationHourCoverage = {
 
 export type HourFinancialSnapshot = {
   hour: number;
-  sales: number;
+  classRevenue: number;
   laborHours: number;
   laborCost: number;
   laborCostPct: number;
-  splh: number | null;
+  revenuePerHour: number | null;
   isCritical: boolean;
   isWarning: boolean;
 };
@@ -61,13 +61,13 @@ export function computeScheduledHeadcountFromShifts(
 }
 
 export function buildHourlyCoverage(input: {
-  salesByHour: number[];
+  classRevenueByHour: number[];
   stationIds: string[];
   profiles: Record<string, StaffingProfileSnapshot>;
   scheduledByStation: Record<string, number[]>;
 }): StationHourCoverage[] {
   const requiredByStation = computeRequiredHeadcountCurve(
-    input.salesByHour,
+    input.classRevenueByHour,
     input.stationIds,
     input.profiles,
   );
@@ -75,12 +75,12 @@ export function buildHourlyCoverage(input: {
 
   for (const stationId of input.stationIds) {
     for (let hour = 0; hour < 24; hour += 1) {
-      const sales = input.salesByHour[hour] ?? 0;
+      const classRevenue = input.classRevenueByHour[hour] ?? 0;
       const requiredHeadcount = requiredByStation[stationId]?.[hour] ?? 0;
       const scheduledHeadcount = input.scheduledByStation[stationId]?.[hour] ?? 0;
       const gap = scheduledHeadcount - requiredHeadcount;
       let status: StationHourCoverage["status"] = "closed";
-      if (sales > 0) {
+      if (classRevenue > 0) {
         status = gap < 0 ? "understaffed" : gap > 0 ? "overstaffed" : "ok";
       }
       hourly.push({ stationId, hour, requiredHeadcount, scheduledHeadcount, gap, status });
@@ -93,25 +93,25 @@ export function buildHourlyCoverage(input: {
 export function buildFinancialSnapshots(
   buckets: Array<{
     hour: number;
-    projectedSales: number;
-    actualSales: number | null;
+    projectedClassRevenue: number;
+    actualClassRevenue: number | null;
     laborHours: number;
     laborCost: number;
   }>,
 ): HourFinancialSnapshot[] {
   return buckets.map((bucket) => {
-    const sales = bucket.actualSales ?? bucket.projectedSales;
-    const splh = bucket.laborHours > 0 ? sales / bucket.laborHours : null;
-    const laborCostPct = sales > 0 ? (bucket.laborCost / sales) * 100 : 0;
+    const classRevenue = bucket.actualClassRevenue ?? bucket.projectedClassRevenue;
+    const revenuePerHour = bucket.laborHours > 0 ? classRevenue / bucket.laborHours : null;
+    const laborCostPct = classRevenue > 0 ? (bucket.laborCost / classRevenue) * 100 : 0;
     return {
       hour: bucket.hour,
-      sales,
+      classRevenue,
       laborHours: bucket.laborHours,
       laborCost: bucket.laborCost,
       laborCostPct,
-      splh,
-      isCritical: sales > 0 && laborCostPct >= LABOR_COST_CRITICAL_THRESHOLD,
-      isWarning: sales > 0 && laborCostPct > LABOR_COST_TARGET_MAX,
+      revenuePerHour,
+      isCritical: classRevenue > 0 && laborCostPct >= LABOR_COST_CRITICAL_THRESHOLD,
+      isWarning: classRevenue > 0 && laborCostPct > LABOR_COST_TARGET_MAX,
     };
   });
 }

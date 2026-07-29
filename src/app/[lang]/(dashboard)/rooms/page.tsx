@@ -1,9 +1,9 @@
 import { notFound, redirect } from "next/navigation";
 import { DoorOpen } from "lucide-react";
-import { StationsDashboard } from "@/components/manager/stations-dashboard";
+import { RoomsDashboard } from "@/components/rooms/rooms-dashboard";
 import { DbErrorBanner } from "@/components/db-error-banner";
 import { canAccessManagerSettings, getSessionUser } from "@/lib/auth/session";
-import { getStationsForUser } from "@/lib/data/stations";
+import { getRoomsOverviewForUser } from "@/lib/data/rooms-overview";
 import { safeQuery } from "@/lib/data/safe";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { isLocale } from "@/lib/i18n/config";
@@ -22,8 +22,8 @@ export default async function RoomsPage({
   if (!user) redirect(`/${lang}/login`);
   if (!canAccessManagerSettings(user.role)) redirect(`/${lang}/dashboard`);
 
-  const { data: result, dbError } = await safeQuery(
-    () => getStationsForUser(user.id, { activeOnly: false }),
+  const { data: overview, dbError } = await safeQuery(
+    () => getRoomsOverviewForUser(user.id, { activeOnly: false }),
     null,
   );
 
@@ -41,15 +41,7 @@ export default async function RoomsPage({
 
       <div className="flex flex-1 flex-col gap-4 px-4 py-6 sm:px-6">
         {dbError && <DbErrorBanner label={dict.manager.stations.errors.databaseError} />}
-        {result && (
-          <StationsDashboard
-            locationId={result.locationId}
-            stations={result.stations}
-            dict={dict}
-            locale={lang}
-            lang={lang}
-          />
-        )}
+        {overview && <RoomsDashboard overview={overview} lang={lang} dict={dict} />}
       </div>
     </div>
   );

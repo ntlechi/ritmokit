@@ -48,7 +48,7 @@ function revalidateConventionPaths() {
 }
 
 function resolveAppUrl() {
-  return process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "https://mirok.vercel.app";
+  return process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "https://ritmokit.com";
 }
 
 function profileLocaleToUi(locale: "FR" | "EN" | "ES" | undefined, fallback: Locale): Locale {

@@ -21,11 +21,16 @@ import {
   PanelLeftOpen,
   Music2,
   DoorOpen,
+  ClipboardCheck,
 } from "lucide-react";
 import type { Locale } from "@/lib/i18n/config";
 import type { ShellCopy } from "@/lib/i18n/shell-copy";
 import type { Role } from "@/generated/prisma/enums";
-import { canAccessAdminSettings, canAccessManagerSettings } from "@/lib/auth/session-client";
+import {
+  canAccessAccueil,
+  canAccessAdminSettings,
+  canAccessManagerSettings,
+} from "@/lib/auth/session-client";
 import { cn } from "@/lib/utils";
 
 const STORAGE_COLLAPSED = "ritmokit-sidebar-collapsed";
@@ -38,6 +43,7 @@ const DEFAULT_WIDTH = 240;
 
 const navItems = [
   { key: "calendar" as const, href: "/calendar/week", icon: Calendar },
+  { key: "accueil" as const, href: "/accueil", icon: ClipboardCheck, accueilOnly: true },
   { key: "sessions" as const, href: "/sessions", icon: Music2 },
   { key: "rooms" as const, href: "/rooms", icon: DoorOpen },
   { key: "messages" as const, href: "/messages", icon: MessagesSquare },
@@ -116,6 +122,7 @@ export function Sidebar({
   const pathname = usePathname();
   const isManagement = canAccessManagerSettings(role);
   const isAdmin = canAccessAdminSettings(role);
+  const showAccueil = canAccessAccueil(role);
   const cockpitHref = `/${lang}/dashboard`;
   const cockpitActive =
     pathname?.startsWith(cockpitHref) || pathname?.startsWith(`/${lang}/settings/manager`);
@@ -226,31 +233,33 @@ export function Sidebar({
           </button>
         )}
 
-        {navItems.map(({ key, href, icon: Icon }) => {
-          const fullHref = `/${lang}${href}`;
-          const active = pathname?.startsWith(fullHref);
-          const label = shell.nav[key];
+        {navItems
+          .filter((item) => !("accueilOnly" in item && item.accueilOnly) || showAccueil)
+          .map(({ key, href, icon: Icon }) => {
+            const fullHref = `/${lang}${href}`;
+            const active = pathname?.startsWith(fullHref);
+            const label = shell.nav[key];
 
-          return (
-            <Link
-              key={key}
-              href={fullHref}
-              data-interactive
-              aria-current={active ? "page" : undefined}
-              title={collapsed ? label : undefined}
-              className={cn(
-                "relative flex items-center rounded-xl text-sm font-medium",
-                collapsed ? "h-10 justify-center px-0" : "gap-3 px-3 py-2.5",
-                active
-                  ? "bg-zinc-900 text-white shadow-xs dark:bg-white dark:text-zinc-900"
-                  : "text-foreground-muted hover:bg-zinc-100 hover:text-foreground dark:hover:bg-white/5",
-              )}
-            >
-              <Icon className="h-4 w-4 shrink-0" aria-hidden />
-              {!collapsed && <span className="truncate">{label}</span>}
-            </Link>
-          );
-        })}
+            return (
+              <Link
+                key={key}
+                href={fullHref}
+                data-interactive
+                aria-current={active ? "page" : undefined}
+                title={collapsed ? label : undefined}
+                className={cn(
+                  "relative flex items-center rounded-xl text-sm font-medium",
+                  collapsed ? "h-10 justify-center px-0" : "gap-3 px-3 py-2.5",
+                  active
+                    ? "bg-zinc-900 text-white shadow-xs dark:bg-white dark:text-zinc-900"
+                    : "text-foreground-muted hover:bg-zinc-100 hover:text-foreground dark:hover:bg-white/5",
+                )}
+              >
+                <Icon className="h-4 w-4 shrink-0" aria-hidden />
+                {!collapsed && <span className="truncate">{label}</span>}
+              </Link>
+            );
+          })}
 
         {isManagement && (
           <div

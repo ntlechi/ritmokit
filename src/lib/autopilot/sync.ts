@@ -28,7 +28,6 @@ import { prisma } from "@/lib/prisma";
 import { getPulseWeekBounds, getPulseWeekParts } from "@/lib/pulse/week";
 import {
   getAgentPlaybookSettings,
-  type CodeRedSurgePlaybookSettings,
   type LaborCostPlaybookSettings,
   type PulseCulturePlaybookSettings,
 } from "@/lib/rsi/playbooks";
@@ -63,7 +62,7 @@ export async function runLaborCostLoop(
   const slowHours = settings.watchHours.filter((hour) => {
     const bucket = report.buckets[hour];
     if (!bucket) return false;
-    const sales = bucket.actualSales ?? bucket.projectedSales;
+    const sales = bucket.actualClassRevenue ?? bucket.projectedClassRevenue;
     if (sales <= 0) return bucket.laborHours > 0;
     const pct = (bucket.laborCost / sales) * 100;
     return pct > target + settings.tolerancePct;
@@ -128,152 +127,6 @@ export async function runLaborCostLoop(
   }
 
   return null;
-}
-
-/** Boucle B — Code Rouge : apprendre la prime minimale pour comblement rapide. */
-export async function runCodeRedSurgeLoop(
-  locationId: string,
-  year: number,
-  weekNumber: number,
-): Promise<PlaybookCandidate | null> {
-  const settings = await getAgentPlaybookSettings(locationId, "CODE_RED_SURGE");
-  const { start, end } = getPulseWeekBounds();
-
-  const codeRedShifts = await prisma.shift.findMany({
-    where: {
-      locationId,
-      urgency: "CODE_RED",
-      codeRedAt: { gte: start, lt: end },
-    },
-    select: {
-      id: true,
-      codeRedAt: true,
-      surgeBonus: true,
-      employeeId: true,
-      emergencyBids: {
-        where: { status: "ACCEPTED" },
-        select: { respondedAt: true, createdAt: true },
-        take: 1,
-      },
-    },
-  });
-
-  const fills = codeRedShifts
-    .map((shift) => {
-      const bid = shift.emergencyBids[0];
-      if (!shift.codeRedAt || !bid?.respondedAt) return null;
-      const fillSeconds = (bid.respondedAt.getTime() - shift.codeRedAt.getTime()) / 1000;
-      return {
-        fillSeconds,
-        surgeBonus: shift.surgeBonus ? Number(shift.surgeBonus) : settings.defaultSurgeBonus,
-        filled: Boolean(shift.employeeId),
-      };
-    })
-    .filter(Boolean) as { fillSeconds: number; surgeBonus: number; filled: boolean }[];
-
-  const avgFill =
-    fills.length > 0 ? fills.reduce((s, f) => s + f.fillSeconds, 0) / fills.length : null;
-
-  const evidence = {
-    codeRedEvents: codeRedShifts.length,
-    fillsMeasured: fills.length,
-    avgFillSeconds: avgFill != null ? Math.round(avgFill) : null,
-    targetFillSeconds: settings.targetFillSeconds,
-    weekNumber,
-    year,
-  };
-
-  if (fills.length < 2) {
-    await recordLoopRun({
-      locationId,
-      loopKind: "CODE_RED_SURGE",
-      year,
-      weekNumber,
-      metricName: "avgFillSeconds",
-      metricValue: avgFill,
-      targetValue: settings.targetFillSeconds,
-      deltaValue: avgFill != null ? avgFill - settings.targetFillSeconds : null,
-      outcome: "NO_ACTION",
-      evidence,
-    });
-    return null;
-  }
-
-  const slowFills = fills.filter((f) => f.fillSeconds > settings.targetFillSeconds);
-  const fastFills = fills.filter((f) => f.fillSeconds <= settings.targetFillSeconds);
-
-  if (slowFills.length === 0) {
-    await recordLoopRun({
-      locationId,
-      loopKind: "CODE_RED_SURGE",
-      year,
-      weekNumber,
-      metricName: "avgFillSeconds",
-      metricValue: avgFill,
-      targetValue: settings.targetFillSeconds,
-      deltaValue: (avgFill ?? 0) - settings.targetFillSeconds,
-      outcome: "NO_ACTION",
-      evidence,
-    });
-    return null;
-  }
-
-  const avgSlowSurge =
-    slowFills.reduce((s, f) => s + f.surgeBonus, 0) / Math.max(1, slowFills.length);
-  const avgFastSurge =
-    fastFills.length > 0
-      ? fastFills.reduce((s, f) => s + f.surgeBonus, 0) / fastFills.length
-      : settings.defaultSurgeBonus;
-
-  const proposedBonus = Math.min(
-    settings.maxSurgeBonus,
-    Math.round((Math.max(avgSlowSurge, avgFastSurge) + 0.5) * 100) / 100,
-  );
-
-  if (proposedBonus <= settings.defaultSurgeBonus) {
-    await recordLoopRun({
-      locationId,
-      loopKind: "CODE_RED_SURGE",
-      year,
-      weekNumber,
-      metricName: "avgFillSeconds",
-      metricValue: avgFill,
-      targetValue: settings.targetFillSeconds,
-      deltaValue: (avgFill ?? 0) - settings.targetFillSeconds,
-      outcome: "MEASURED",
-      evidence,
-    });
-    return null;
-  }
-
-  const proposed: CodeRedSurgePlaybookSettings = {
-    ...settings,
-    defaultSurgeBonus: proposedBonus,
-  };
-
-  await recordLoopRun({
-    locationId,
-    loopKind: "CODE_RED_SURGE",
-    year,
-    weekNumber,
-    metricName: "avgFillSeconds",
-    metricValue: avgFill,
-    targetValue: settings.targetFillSeconds,
-    deltaValue: (avgFill ?? 0) - settings.targetFillSeconds,
-    outcome: "PROPOSED",
-    evidence: { ...evidence, proposedBonus },
-  });
-
-  return {
-    agentName: "CODE_RED_SURGE",
-    fingerprint: weekFingerprint("CODE_RED_SURGE", year, weekNumber, "SURGE_BONUS"),
-    currentConfig: { ...settings },
-    proposedConfig: { ...proposed },
-    evidence: { ...evidence, proposedBonus },
-    rationaleFr: `${slowFills.length} Code Rouge comblés en > ${settings.targetFillSeconds}s cette semaine (moy. ${Math.round(avgFill ?? 0)}s). Autopilot propose une prime par défaut de ${proposedBonus.toFixed(2)} $/h (actuellement ${settings.defaultSurgeBonus.toFixed(2)} $/h).`,
-    rationaleEn: `${slowFills.length} Code Red fills took > ${settings.targetFillSeconds}s this week (avg ${Math.round(avgFill ?? 0)}s). Autopilot proposes default surge ${proposedBonus.toFixed(2)}/hr (currently ${settings.defaultSurgeBonus.toFixed(2)}/hr).`,
-    rationaleEs: `${slowFills.length} Code Rouge cubiertos en > ${settings.targetFillSeconds}s esta semana (prom. ${Math.round(avgFill ?? 0)}s). Autopilot propone prima ${proposedBonus.toFixed(2)} $/h (actual ${settings.defaultSurgeBonus.toFixed(2)} $/h).`,
-  };
 }
 
 /** Boucle C — Pulse culture : cible score moyen + coaching station. */
@@ -383,7 +236,6 @@ export async function syncWeeklyAutopilotLoops(locationId: string): Promise<numb
 
   const runners: LoopRunner[] = [
     { kind: "LABOR_COST", run: () => runLaborCostLoop(locationId, year, weekNumber) },
-    { kind: "CODE_RED_SURGE", run: () => runCodeRedSurgeLoop(locationId, year, weekNumber) },
     { kind: "PULSE_CULTURE", run: () => runPulseCultureLoop(locationId, year, weekNumber) },
     { kind: "ASSIDUITY", run: () => runAssiduityLoop(locationId, year, weekNumber, ledger) },
   ];
@@ -404,7 +256,7 @@ export async function syncWeeklyAutopilotLoops(locationId: string): Promise<numb
       if (Array.isArray(result)) candidates.push(...result);
       else candidates.push(result);
     } catch (error) {
-      console.error("[mirok:autopilot]", locationId, runner.kind, error);
+      console.error("[ritmokit:autopilot]", locationId, runner.kind, error);
       await markLoopFailed(locationId, runner.kind, year, weekNumber, error);
       ledger.breakerTrips.push(runner.kind);
     }
@@ -426,7 +278,7 @@ export async function syncWeeklyAutopilotLoops(locationId: string): Promise<numb
       }
     }
   } catch (error) {
-    console.error("[mirok:autopilot]", locationId, "DRIFT_GUARD", error);
+    console.error("[ritmokit:autopilot]", locationId, "DRIFT_GUARD", error);
     await markLoopFailed(locationId, "DRIFT_GUARD", year, weekNumber, error);
     ledger.breakerTrips.push("DRIFT_GUARD");
   }
@@ -452,7 +304,7 @@ export async function syncWeeklyAutopilotLoops(locationId: string): Promise<numb
       proposals += 1;
     }
   } catch (error) {
-    console.error("[mirok:autopilot]", locationId, "TOKEN_SAFEGUARD", error);
+    console.error("[ritmokit:autopilot]", locationId, "TOKEN_SAFEGUARD", error);
     await markLoopFailed(locationId, "TOKEN_SAFEGUARD", year, weekNumber, error);
   }
 
@@ -477,7 +329,7 @@ export async function syncAutopilotForAllLocations(): Promise<{
         `location:${loc.id}`,
       );
     } catch (error) {
-      console.error("[mirok:autopilot:location]", loc.id, error);
+      console.error("[ritmokit:autopilot:location]", loc.id, error);
       return 0;
     }
   });
@@ -518,9 +370,9 @@ export function autopilotLoopLabel(kind: AutopilotLoopKind, lang: Locale): strin
       es: "Costo laboral",
     },
     CODE_RED_SURGE: {
-      fr: "Code Rouge · prime",
-      en: "Code Red · surge",
-      es: "Code Rouge · prima",
+      fr: "Autopilot (archivé)",
+      en: "Autopilot (archived)",
+      es: "Autopilot (archivado)",
     },
     PULSE_CULTURE: {
       fr: "Pulse · culture",

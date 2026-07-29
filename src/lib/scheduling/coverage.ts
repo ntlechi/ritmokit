@@ -25,8 +25,8 @@ const COVERAGE_SHIFT_STATUSES: ShiftStatus[] = [
   "CONFIRMED",
 ];
 
-/** SPLH composite (pondéré par part de vente) sous ce ratio du cible = alerte. */
-const SPLH_ALERT_RATIO = 0.7;
+/** Weighted students/hour target — alert when revenue per labor hour falls below this ratio. */
+const REVENUE_PER_HOUR_ALERT_RATIO = 0.7;
 
 export type StationHourCoverage = {
   stationId: string;
@@ -37,7 +37,7 @@ export type StationHourCoverage = {
   status: "understaffed" | "overstaffed" | "ok";
 };
 
-export type CoverageAlertKind = "understaffed" | "overstaffed" | "labor_cost_critical" | "splh_low";
+export type CoverageAlertKind = "understaffed" | "overstaffed" | "labor_cost_critical" | "revenue_per_hour_low";
 
 export type CoverageAlert = {
   kind: CoverageAlertKind;
@@ -54,7 +54,7 @@ export type CoverageScoreReport = {
   hourly: StationHourCoverage[];
   alerts: CoverageAlert[];
   laborBuckets: HourlyLaborBucket[];
-  targetCompositeSplh: number;
+  targetCompositeStudentsPerHour: number;
   profiles: Record<string, StaffingProfileSnapshot>;
 };
 
@@ -81,8 +81,8 @@ export async function calculateCoverageScore(input: {
   ]);
 
   const stationIds = stations.map((s) => s.id);
-  const salesByHour = laborKpis.buckets.map((bucket) => bucket.actualSales ?? bucket.projectedSales);
-  const requiredByStation = computeRequiredHeadcountCurve(salesByHour, stationIds, profiles);
+  const classRevenueByHour = laborKpis.buckets.map((bucket) => bucket.actualClassRevenue ?? bucket.projectedClassRevenue);
+  const requiredByStation = computeRequiredHeadcountCurve(classRevenueByHour, stationIds, profiles);
   const scheduledByStation = computeScheduledHeadcountCurve(shifts, stationIds, dayStart, dayEnd);
 
   const hourly: StationHourCoverage[] = [];
@@ -102,8 +102,8 @@ export async function calculateCoverageScore(input: {
     }
   }
 
-  const targetCompositeSplh = computeCompositeTargetSplh(stationIds, profiles);
-  const alerts = buildCoverageAlerts(hourly, stationIds, laborKpis.buckets, targetCompositeSplh);
+  const targetCompositeStudentsPerHour = computeCompositeTargetStudentsPerHour(stationIds, profiles);
+  const alerts = buildCoverageAlerts(hourly, stationIds, laborKpis.buckets, targetCompositeStudentsPerHour);
 
   return {
     locationId,
@@ -112,7 +112,7 @@ export async function calculateCoverageScore(input: {
     hourly,
     alerts,
     laborBuckets: laborKpis.buckets,
-    targetCompositeSplh,
+    targetCompositeStudentsPerHour,
     profiles,
   };
 }
@@ -145,15 +145,15 @@ function computeScheduledHeadcountCurve(
   return result;
 }
 
-function computeCompositeTargetSplh(
+function computeCompositeTargetStudentsPerHour(
   stationIds: string[],
   profiles: Record<string, StaffingProfileSnapshot>,
 ): number {
-  const totalShare = stationIds.reduce((sum, id) => sum + (profiles[id]?.salesSharePercent ?? 0), 0);
+  const totalShare = stationIds.reduce((sum, id) => sum + (profiles[id]?.classMixSharePercent ?? 0), 0);
   if (totalShare <= 0) return 0;
   const weighted = stationIds.reduce(
     (sum, id) =>
-      sum + (profiles[id]?.targetSplh ?? 0) * (profiles[id]?.salesSharePercent ?? 0),
+      sum + (profiles[id]?.studentsPerHour ?? 0) * (profiles[id]?.classMixSharePercent ?? 0),
     0,
   );
   return weighted / totalShare;
@@ -163,7 +163,7 @@ function buildCoverageAlerts(
   hourly: StationHourCoverage[],
   stationIds: string[],
   laborBuckets: HourlyLaborBucket[],
-  targetCompositeSplh: number,
+  targetCompositeStudentsPerHour: number,
 ): CoverageAlert[] {
   const alerts: CoverageAlert[] = [];
 
@@ -177,18 +177,18 @@ function buildCoverageAlerts(
   }
 
   const financialRows = laborBuckets.map((bucket) => {
-    const sales = bucket.actualSales ?? bucket.projectedSales;
-    const splh = bucket.laborHours > 0 ? sales / bucket.laborHours : null;
-    const laborCostPct = sales > 0 ? (bucket.laborCost / sales) * 100 : 0;
+    const classRevenue = bucket.actualClassRevenue ?? bucket.projectedClassRevenue;
+    const revenuePerHour = bucket.laborHours > 0 ? classRevenue / bucket.laborHours : null;
+    const laborCostPct = classRevenue > 0 ? (bucket.laborCost / classRevenue) * 100 : 0;
     return {
       hour: bucket.hour,
-      isCritical: sales > 0 && laborCostPct >= LABOR_COST_CRITICAL_THRESHOLD,
-      isWarning: sales > 0 && laborCostPct > LABOR_COST_TARGET_MAX,
-      isSplhLow:
-        sales > 0 &&
-        splh !== null &&
-        targetCompositeSplh > 0 &&
-        splh < targetCompositeSplh * SPLH_ALERT_RATIO,
+      isCritical: classRevenue > 0 && laborCostPct >= LABOR_COST_CRITICAL_THRESHOLD,
+      isWarning: classRevenue > 0 && laborCostPct > LABOR_COST_TARGET_MAX,
+      isRevenuePerHourLow:
+        classRevenue > 0 &&
+        revenuePerHour !== null &&
+        targetCompositeStudentsPerHour > 0 &&
+        revenuePerHour < targetCompositeStudentsPerHour * REVENUE_PER_HOUR_ALERT_RATIO,
     };
   });
 
@@ -202,8 +202,8 @@ function buildCoverageAlerts(
   alerts.push(
     ...groupContiguousGeneric(
       financialRows,
-      (row) => row.isSplhLow,
-      () => ({ kind: "splh_low" as const, stationId: null }),
+      (row) => row.isRevenuePerHourLow,
+      () => ({ kind: "revenue_per_hour_low" as const, stationId: null }),
     ),
   );
 

@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Loader2, Shield } from "lucide-react";
-import { initializeBatiCultureConstitutionAction } from "@/lib/actions/culture";
+import { initializeStudioCultureConstitutionAction } from "@/lib/actions/culture";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { Button } from "@/components/ui/button";
 
@@ -27,7 +27,7 @@ export function InitCultureConstitutionButton({
         onClick={() => {
           setError(null);
           startTransition(async () => {
-            const result = await initializeBatiCultureConstitutionAction(organizationId);
+            const result = await initializeStudioCultureConstitutionAction(organizationId);
             if (!result.ok) {
               const map: Record<string, string> = {
                 unauthorized: dict.culture.errors.unauthorized,

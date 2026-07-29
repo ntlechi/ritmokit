@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getSessionUser } from "@/lib/auth/session";
-import { BATI_VALUE_KEYS } from "@/lib/culture/values";
+import { STUDIO_VALUE_KEYS } from "@/lib/culture/values";
 import { prisma } from "@/lib/prisma";
 import { actionDatabaseError } from "@/lib/actions/result";
 
@@ -11,7 +11,7 @@ export type ShoutOutActionResult =
   | { ok: false; error: string };
 
 function isValueKey(value: string): boolean {
-  return (BATI_VALUE_KEYS as readonly string[]).includes(value);
+  return (STUDIO_VALUE_KEYS as readonly string[]).includes(value);
 }
 
 /**

@@ -101,9 +101,8 @@ export async function generateDraftScheduleForWeek(input: {
   const windowStart = addDays(weekStartAtMidnight, -3);
   const windowEnd = addDays(weekEnd, 3);
 
-  const [{ stations, profiles }, projections, members, existingShifts] = await Promise.all([
+  const [{ stations, profiles }, members, existingShifts] = await Promise.all([
     getStaffingProfilesForLocation(locationId),
-    prisma.hourlySalesProjection.findMany({ where: { locationId } }),
     prisma.locationMember.findMany({
       where: { locationId, user: { role: "EMPLOYEE" } },
       include: {
@@ -132,10 +131,6 @@ export async function generateDraftScheduleForWeek(input: {
   ]);
 
   const stationIds = stations.map((s) => s.id);
-  const projectionByDayHour = new Map<string, number>();
-  for (const row of projections) {
-    projectionByDayHour.set(`${row.dayOfWeek}-${row.hour}`, asPlainNumber(row.amount));
-  }
 
   const membersByStation = new Map<string, CandidateMember[]>();
   for (const stationId of stationIds) membersByStation.set(stationId, []);
@@ -176,8 +171,8 @@ export async function generateDraftScheduleForWeek(input: {
   for (let dayOffset = 0; dayOffset < 7; dayOffset += 1) {
     const dayDate = addDays(weekStartAtMidnight, dayOffset);
     const dayOfWeek = dayDate.getDay();
-    const salesByHour = Array.from({ length: 24 }, (_, h) => projectionByDayHour.get(`${dayOfWeek}-${h}`) ?? 0);
-    const requiredByStation = computeRequiredHeadcountCurve(salesByHour, stationIds, profiles);
+    const classRevenueByHour = new Array<number>(24).fill(0);
+    const requiredByStation = computeRequiredHeadcountCurve(classRevenueByHour, stationIds, profiles);
 
     for (const stationId of stationIds) {
       const blocks = generateShiftBlocksFromCurve(requiredByStation[stationId] ?? []);

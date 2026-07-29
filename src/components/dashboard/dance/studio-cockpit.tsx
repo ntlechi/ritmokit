@@ -7,6 +7,7 @@ import { ParityRadar } from "@/components/dashboard/dance/parity-radar";
 import { ProfitMatrix } from "@/components/dashboard/dance/profit-matrix";
 import { ProgressionFunnel } from "@/components/dashboard/dance/progression-funnel";
 import { RoomHeatmap } from "@/components/dashboard/dance/room-heatmap";
+import { StudioPulse } from "@/components/dashboard/dance/studio-pulse";
 import type { StudioCockpitData } from "@/lib/data/studio-cockpit";
 import type { Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
@@ -68,6 +69,8 @@ export function StudioCockpit({
           </Link>
         </div>
       </header>
+
+      <StudioPulse analytics={analytics} lang={lang} dict={dict} />
 
       <KpiCommandCenter snapshot={kpiSnapshot} dict={dict} lang={lang} />
 

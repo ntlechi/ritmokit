@@ -5,6 +5,7 @@ import type { OnboardingStatus } from "@/generated/prisma/enums";
 import { canAccessManagerSettings } from "@/lib/auth/session-client";
 import { getTeamOnboardingSummaries } from "@/lib/data/hr-onboarding";
 import { prisma } from "@/lib/prisma";
+import type { StationKindValue } from "@/lib/stations/dance-defaults";
 import type { StationRecord } from "@/lib/stations/display";
 import { asPlainNumber } from "./serialize";
 
@@ -33,11 +34,16 @@ export type TeamMemberEntry = {
   hourlyRate: number | null;
   maxHoursPerWeek: number | null;
   onboarding: TeamMemberOnboarding | null;
+  /** Dance styles this person actually teaches, from their scheduled classes. */
+  danceStyles: string[];
+  /** Weekly class count driving `danceStyles`. */
+  weeklyClassCount: number;
 };
 
 export type TeamRoster = {
   locationId: string;
   locationName: string;
+  /** Departments (roster grouping) — rooms live on the Salles page. */
   stations: StationRecord[];
   members: TeamMemberEntry[];
 };
@@ -51,7 +57,7 @@ function mapStation(row: {
   colorHex: string;
   slug: string | null;
   sortOrder: number;
-  tipPoints: { toString(): string };
+  kind: StationKindValue;
   isActive: boolean;
   capacity: number | null;
   surfaceSqm: number | null;
@@ -65,11 +71,39 @@ function mapStation(row: {
     colorHex: row.colorHex,
     slug: row.slug,
     sortOrder: row.sortOrder,
-    tipPoints: asPlainNumber(row.tipPoints),
+    kind: row.kind,
     isActive: row.isActive,
     capacity: row.capacity,
     surfaceSqm: row.surfaceSqm,
   };
+}
+
+/**
+ * Styles taught per instructor, from the classes they're scheduled on at this
+ * location. Falls back to `User.specialties` for staff with no class yet.
+ */
+async function getInstructorStyles(
+  locationId: string,
+  userIds: string[],
+): Promise<Map<string, { styles: string[]; classCount: number }>> {
+  const result = new Map<string, { styles: string[]; classCount: number }>();
+  if (userIds.length === 0) return result;
+
+  const sessions = await prisma.classSession.findMany({
+    where: { instructorId: { in: userIds }, room: { locationId } },
+    select: { instructorId: true, course: { select: { style: true } } },
+  });
+
+  for (const session of sessions) {
+    const entry = result.get(session.instructorId) ?? { styles: [], classCount: 0 };
+    entry.classCount += 1;
+    const style = session.course.style.trim();
+    if (style && !entry.styles.includes(style)) entry.styles.push(style);
+    result.set(session.instructorId, entry);
+  }
+
+  for (const entry of result.values()) entry.styles.sort((a, b) => a.localeCompare(b));
+  return result;
 }
 
 export async function getTeamRosterForUser(
@@ -101,13 +135,19 @@ export async function getTeamRosterForUser(
       orderBy: [{ user: { role: "asc" } }, { user: { fullName: "asc" } }],
     }),
     prisma.station.findMany({
-      where: { locationId: membership.locationId, isActive: true },
+      where: { locationId: membership.locationId, isActive: true, kind: "DEPARTMENT" },
       orderBy: [{ sortOrder: "asc" }, { nameFr: "asc" }],
     }),
   ]);
 
   const employeeIds = rows.filter((row) => row.user.role === "EMPLOYEE").map((row) => row.userId);
-  const onboardingSummaries = await getTeamOnboardingSummaries(employeeIds);
+  const [onboardingSummaries, styleMap] = await Promise.all([
+    getTeamOnboardingSummaries(employeeIds),
+    getInstructorStyles(
+      membership.locationId,
+      rows.map((row) => row.userId),
+    ),
+  ]);
   const stations = stationRows.map(mapStation);
 
   return {
@@ -145,6 +185,8 @@ export async function getTeamRosterForUser(
               step3Complete: false,
             })
           : null,
+      danceStyles: styleMap.get(row.userId)?.styles ?? row.user.specialties ?? [],
+      weeklyClassCount: styleMap.get(row.userId)?.classCount ?? 0,
     })),
   };
 }

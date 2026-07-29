@@ -10,7 +10,6 @@ import { safeQuery } from "@/lib/data/safe";
 import { getShoutOutComposerContext } from "@/lib/data/shoutouts";
 import { getEmployeeSkillProgress } from "@/lib/data/skills";
 import { getTimeOffHistoryForUser } from "@/lib/data/timeoff";
-import { getEmployeeTipsSummary } from "@/lib/data/tips";
 import { getFormationCatalogForUser } from "@/lib/data/training";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { isLocale } from "@/lib/i18n/config";
@@ -28,7 +27,7 @@ export default async function ProfileSettingsPage({
   const [dict, user] = await Promise.all([getDictionary(lang), getSessionUser()]);
   if (!user) redirect(`/${lang}/login`);
 
-  const [core, training, skills, career, recognition, availability, timeOff, tips] =
+  const [core, training, skills, career, recognition, availability, timeOff] =
     await Promise.all([
       safeQuery(() => getProfileDossierCore(user.id), null),
       safeQuery(() => getFormationCatalogForUser(user.id), null),
@@ -37,7 +36,6 @@ export default async function ProfileSettingsPage({
       safeQuery(() => getShoutOutComposerContext(user.id, lang), null),
       safeQuery(() => getWeeklyAvailabilityForUser(user.id), null),
       safeQuery(() => getTimeOffHistoryForUser(user.id), []),
-      safeQuery(() => getEmployeeTipsSummary(user.id), null),
     ]);
 
   if (!core.data) {
@@ -63,7 +61,6 @@ export default async function ProfileSettingsPage({
         recognition: recognition.data,
         availability: availability.data,
         timeOff: timeOff.data ?? [],
-        tips: tips.data,
       }}
     />
   );

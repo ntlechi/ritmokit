@@ -5,7 +5,7 @@ import { PeriodNav } from "@/components/calendar/period-nav";
 import { DbErrorBanner } from "@/components/db-error-banner";
 import { getPrimaryMembership, getSessionUser } from "@/lib/auth/session";
 import { getMonthGridDays, getMonthRange, parseDateParam } from "@/lib/calendar/grid";
-import { WEEK_START_COOKIE, parseWeekStart } from "@/lib/calendar/week-start";
+import { WEEK_START_COOKIE, LEGACY_WEEK_START_COOKIE, readWeekStartCookie } from "@/lib/calendar/week-start";
 import { formatMonthLabel } from "@/lib/calendar/format";
 import { getShiftsInRange } from "@/lib/data/shifts";
 import { safeQuery } from "@/lib/data/safe";
@@ -35,7 +35,10 @@ export default async function MonthPage({
     cookiePromise,
     user ? getPrimaryMembership(user.id) : Promise.resolve(null),
   ]);
-  const weekStart = parseWeekStart(cookieStore.get(WEEK_START_COOKIE)?.value);
+  const weekStart = readWeekStartCookie(
+    cookieStore.get(WEEK_START_COOKIE)?.value,
+    cookieStore.get(LEGACY_WEEK_START_COOKIE)?.value,
+  );
   const days = getMonthGridDays(anchor, weekStart);
   const { start, end } = getMonthRange(anchor, weekStart);
   const locationId = membership?.locationId;

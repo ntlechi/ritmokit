@@ -6,9 +6,10 @@
 
 export type WeekStartDay = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
-export const WEEK_START_COOKIE = "mirok-week-start";
+export const WEEK_START_COOKIE = "ritmokit-week-start";
+export const LEGACY_WEEK_START_COOKIE = "mirok-week-start";
 
-/** Sunday — matches the CNESST week and the historical Mirok default. */
+/** Sunday — matches the CNESST payroll week. */
 export const DEFAULT_WEEK_START: WeekStartDay = 0;
 
 export function parseWeekStart(value: string | null | undefined): WeekStartDay {
@@ -18,4 +19,12 @@ export function parseWeekStart(value: string | null | undefined): WeekStartDay {
     return parsed as WeekStartDay;
   }
   return DEFAULT_WEEK_START;
+}
+
+/** Reads ritmokit-week-start with fallback to legacy mirok-week-start. */
+export function readWeekStartCookie(
+  primary: string | null | undefined,
+  legacy: string | null | undefined,
+): WeekStartDay {
+  return parseWeekStart(primary ?? legacy);
 }

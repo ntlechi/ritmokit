@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { AlertTriangle, Radar } from "lucide-react";
+import { DivergingBar } from "@/components/charts/primitives";
 import type { ParitySnapshot } from "@/lib/dance/analytics";
 import type { Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
@@ -19,12 +20,6 @@ function statusTone(status: ParitySnapshot["status"]) {
   if (status === "balanced") return "border-success/40 bg-success/10 text-success";
   if (status === "warning") return "border-warning/40 bg-warning/10 text-warning";
   return "border-danger/40 bg-danger/10 text-danger";
-}
-
-function gaugeFill(leads: number, follows: number, maxLeads: number, maxFollows: number) {
-  const leadPct = maxLeads > 0 ? Math.min(100, (leads / maxLeads) * 100) : 0;
-  const followPct = maxFollows > 0 ? Math.min(100, (follows / maxFollows) * 100) : 0;
-  return { leadPct, followPct };
 }
 
 export function ParityRadar({
@@ -62,10 +57,20 @@ export function ParityRadar({
         </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-2 text-[10px] font-semibold uppercase tracking-wide">
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-wide">
         <span className="rounded-full bg-success/15 px-2 py-0.5 text-success">{c.parity.balanced}</span>
         <span className="rounded-full bg-warning/15 px-2 py-0.5 text-warning">{c.parity.warning}</span>
         <span className="rounded-full bg-danger/15 px-2 py-0.5 text-danger">{c.parity.blocked}</span>
+        <span className="ml-auto flex items-center gap-2 normal-case tracking-normal text-foreground-muted">
+          <span className="flex items-center gap-1">
+            <span className="h-2 w-2 rounded-full bg-sky-500" aria-hidden />
+            {c.parity.leads}
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="h-2 w-2 rounded-full bg-rose-500" aria-hidden />
+            {c.parity.follows}
+          </span>
+        </span>
       </div>
 
       {active.length === 0 ? (
@@ -73,12 +78,6 @@ export function ParityRadar({
       ) : (
         <ul className="mt-4 max-h-[22rem] flex-1 space-y-2 overflow-y-auto pr-1">
           {active.map((row) => {
-            const { leadPct, followPct } = gaugeFill(
-              row.leadsFilled,
-              row.followsFilled,
-              row.maxLeads,
-              row.maxFollows,
-            );
             return (
               <li
                 key={row.sessionId}
@@ -106,26 +105,17 @@ export function ParityRadar({
                     Δ{row.imbalance}
                   </span>
                 </div>
-                <div className="mt-2 grid grid-cols-2 gap-2">
-                  <div>
-                    <p className="mb-1 text-[10px] text-foreground-muted">{c.parity.leads}</p>
-                    <div className="h-1.5 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
-                      <div
-                        className="h-full rounded-full bg-sky-500 transition-all"
-                        style={{ width: `${leadPct}%` }}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <p className="mb-1 text-[10px] text-foreground-muted">{c.parity.follows}</p>
-                    <div className="h-1.5 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
-                      <div
-                        className="h-full rounded-full bg-rose-500 transition-all"
-                        style={{ width: `${followPct}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
+                <DivergingBar
+                  className="mt-2.5"
+                  leftValue={row.leadsFilled}
+                  leftMax={row.maxLeads}
+                  leftLabel={c.parity.leads}
+                  rightValue={row.followsFilled}
+                  rightMax={row.maxFollows}
+                  rightLabel={c.parity.follows}
+                  leftColor="#0EA5E9"
+                  rightColor="#F43F5E"
+                />
                 {row.blockedRevenue > 0 && (
                   <p className="mt-2 text-[11px] text-danger">
                     {c.parity.blockedForClass}: {money(row.blockedRevenue, lang)}

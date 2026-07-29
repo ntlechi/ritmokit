@@ -235,7 +235,7 @@ function SearchHero({
 
   return (
     <section className="relative overflow-hidden rounded-3xl bg-zinc-950 px-6 py-8 text-white sm:px-10 sm:py-10">
-      {/* Éclat froid en coin — la palette Mirok est encre, pas néon. */}
+      {/* Éclat froid en coin — la palette RitmoKit est encre, pas néon. */}
       <span
         aria-hidden
         className="pointer-events-none absolute -right-24 -top-40 h-[26rem] w-[26rem] rounded-full"

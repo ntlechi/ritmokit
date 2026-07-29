@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { isLocale } from "@/lib/i18n/config";
 
-/** SPLH / sales staffing curves retired in RitmoKit — redirect to manager hub. */
+/** Staffing targets by department — redirect to manager hub (studio defaults in schedule sidebar). */
 export default async function RetiredStaffingPage({
   params,
 }: {

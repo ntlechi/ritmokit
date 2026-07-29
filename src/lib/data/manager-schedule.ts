@@ -10,11 +10,11 @@ import type { StationRecord } from "@/lib/stations/display";
 
 export type ManagerScheduleDayPayload = {
   date: string;
-  salesByHour: number[];
+  classRevenueByHour: number[];
   laborBuckets: Array<{
     hour: number;
-    projectedSales: number;
-    actualSales: number | null;
+    projectedClassRevenue: number;
+    actualClassRevenue: number | null;
     laborHours: number;
     laborCost: number;
   }>;
@@ -57,11 +57,11 @@ export async function getManagerSchedulePayload(
     profiles,
     days: dayReports.map((report) => ({
       date: report.targetDate,
-      salesByHour: report.laborBuckets.map((b) => b.actualSales ?? b.projectedSales),
+      classRevenueByHour: report.laborBuckets.map((b) => b.actualClassRevenue ?? b.projectedClassRevenue),
       laborBuckets: report.laborBuckets.map((b) => ({
         hour: b.hour,
-        projectedSales: b.projectedSales,
-        actualSales: b.actualSales,
+        projectedClassRevenue: b.projectedClassRevenue,
+        actualClassRevenue: b.actualClassRevenue,
         laborHours: b.laborHours,
         laborCost: b.laborCost,
       })),
