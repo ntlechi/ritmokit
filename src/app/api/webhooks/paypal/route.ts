@@ -1,19 +1,74 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import {
+  getPayPalCredentialsForEnrollment,
+  listPayPalWebhookCandidates,
+} from "@/lib/integrations/resolver";
 import { markEnrollmentPaid } from "@/lib/payments/mark-enrollment-paid";
 import {
+  allowPayPalStub,
   capturePayPalOrder,
   extractPayPalWebhookRefs,
   getPayPalOrder,
   isPayPalCaptureComplete,
+  type PayPalCredentials,
   verifyPayPalWebhook,
 } from "@/lib/payments/paypal";
 
 export const runtime = "nodejs";
 
+type VerifyResult =
+  | { ok: true; credentials: PayPalCredentials | null }
+  | { ok: false };
+
+async function verifyIncomingWebhook(input: {
+  headers: {
+    transmissionId: string;
+    transmissionTime: string;
+    certUrl: string;
+    authAlgo: string;
+    transmissionSig: string;
+  };
+  event: unknown;
+  enrollmentId: string | null;
+}): Promise<VerifyResult> {
+  if (input.enrollmentId) {
+    const forEnrollment = await getPayPalCredentialsForEnrollment(input.enrollmentId);
+    if (forEnrollment) {
+      const ok = await verifyPayPalWebhook({
+        headers: input.headers,
+        webhookEvent: input.event,
+        credentials: forEnrollment,
+      });
+      if (ok) return { ok: true, credentials: forEnrollment };
+    }
+  }
+
+  const candidates = await listPayPalWebhookCandidates();
+  for (const candidate of candidates) {
+    const ok = await verifyPayPalWebhook({
+      headers: input.headers,
+      webhookEvent: input.event,
+      credentials: candidate,
+    });
+    if (ok) return { ok: true, credentials: candidate };
+  }
+
+  if (allowPayPalStub()) {
+    const stubOk = await verifyPayPalWebhook({
+      headers: input.headers,
+      webhookEvent: input.event,
+      credentials: null,
+    });
+    if (stubOk) return { ok: true, credentials: null };
+  }
+
+  return { ok: false };
+}
+
 /**
  * POST /api/webhooks/paypal
- * Idempotent PayPal listener — verify → capture (if needed) → mark PAID → promote waitlist.
+ * Idempotent PayPal listener — verify (per-org hub) → capture → mark PAID → promote waitlist.
  */
 export async function POST(request: NextRequest) {
   let event: {
@@ -36,18 +91,20 @@ export async function POST(request: NextRequest) {
     transmissionSig: request.headers.get("paypal-transmission-sig") ?? "",
   };
 
-  const verified = await verifyPayPalWebhook({
+  const refs = extractPayPalWebhookRefs(event);
+  const verified = await verifyIncomingWebhook({
     headers,
-    webhookEvent: event,
+    event,
+    enrollmentId: refs.enrollmentId,
   });
-  if (!verified) {
+
+  if (!verified.ok) {
     return NextResponse.json({ error: "invalid_signature" }, { status: 401 });
   }
 
-  const refs = extractPayPalWebhookRefs(event);
+  const credentials = verified.credentials;
   const eventType = refs.eventType;
 
-  // Ignore noise; acknowledge so PayPal stops retrying.
   const actionable =
     eventType === "CHECKOUT.ORDER.APPROVED" ||
     eventType === "CHECKOUT.ORDER.COMPLETED" ||
@@ -62,24 +119,21 @@ export async function POST(request: NextRequest) {
     let enrollmentId = refs.enrollmentId;
     let captureId = refs.captureId;
     let amountCad: number | null = null;
-
     let orderStatus = "";
 
     if (eventType === "CHECKOUT.ORDER.APPROVED" && orderId) {
-      const captured = await capturePayPalOrder(orderId);
+      const captured = await capturePayPalOrder(orderId, credentials);
       enrollmentId = enrollmentId ?? captured.enrollmentId;
       captureId = captured.captureId ?? captureId;
       amountCad = captured.amountCad;
       orderStatus = captured.status;
-      if (!orderId) orderId = refs.orderId;
     } else if (orderId) {
-      const order = await getPayPalOrder(orderId);
+      const order = await getPayPalOrder(orderId, credentials);
       enrollmentId = enrollmentId ?? order.enrollmentId;
       captureId = order.captureId ?? captureId;
       amountCad = order.amountCad;
       orderStatus = order.status;
     } else if (eventType === "PAYMENT.CAPTURE.COMPLETED" && captureId) {
-      // Capture-only event — treat as settled when we have a capture id.
       orderStatus = "COMPLETED";
     }
 

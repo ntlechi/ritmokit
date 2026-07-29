@@ -30,6 +30,9 @@ $ORIGIN = "https://salsa-attitude.vercel.app"
 
 ## 0. Preflight — env & PayPal (15 min)
 
+> **Preferred (Integration Hub):** Manager → Integrations → paste sandbox PayPal + origins → Test connection → status `TESTING`.  
+> Platform still needs `RITMOKIT_FIELD_ENCRYPTION_KEY` (+ Resend). Legacy `PAYPAL_*` env remains a fallback — see `docs/INTEGRATION_HUB_SPEC.md`.
+
 ### 0.1 Vercel ↔ `.env.production.template` checklist
 
 | Variable | Sandbox UAT value | ☐ |

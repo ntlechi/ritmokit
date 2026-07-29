@@ -86,6 +86,21 @@ enum PaymentProvider {
   STRIPE
 }
 
+/// External connectors managed in Integration Hub (per organization).
+enum IntegrationProvider {
+  PAYPAL
+  STRIPE
+  RESEND
+  SQUARE
+}
+
+enum IntegrationStatus {
+  DISCONNECTED
+  TESTING
+  CONNECTED
+  ERROR
+}
+
 enum Locale {
   FR
   EN
@@ -277,8 +292,40 @@ model Organization {
   cultureValues      OrganizationValue[]
   productExperiments ProductExperiment[]
   courses            Course[]
+  integrations       OrganizationIntegration[]
 
   @@map("organizations")
+}
+
+/// Per-studio connector credentials (PayPal, Stripe, …) — encrypted at rest.
+/// Platform env holds only RitmoKit infra + optional Phase A PayPal fallback.
+model OrganizationIntegration {
+  id             String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String              @map("organization_id") @db.Uuid
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  /// Optional location override; null = org-wide default.
+  locationId     String?             @map("location_id") @db.Uuid
+  location       Location?           @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  provider IntegrationProvider
+  status   IntegrationStatus @default(DISCONNECTED)
+
+  /// AES-256-GCM JSON blob (`enc:v1:…`) — never return decrypted secret to clients.
+  encryptedConfig String  @map("encrypted_config") @db.Text
+  /// Optional dedicated webhook signing secret (provider-specific).
+  webhookSecret   String? @map("webhook_secret") @db.Text
+  /// Browser origins allowed to call /api/public/* for this studio.
+  allowedOrigins  String[] @default([]) @map("allowed_origins")
+  /// Last test/connect error message (safe for manager UI).
+  lastError       String?  @map("last_error") @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([organizationId, provider])
+  @@index([organizationId])
+  @@index([provider, status])
+  @@map("organization_integrations")
 }
 
 model Location {
@@ -322,6 +369,7 @@ model Location {
   agentPlaybookProposals AgentPlaybookProposal[]
   agentConfigs           LocationAgentConfig[]
   autopilotLoopRuns      AutopilotLoopRun[]
+  integrations           OrganizationIntegration[]
   experimentAllocations  ExperimentAllocation[]
   scheduleTemplates      ScheduleTemplate[]
   disciplinaryRecords    DisciplinaryRecord[]

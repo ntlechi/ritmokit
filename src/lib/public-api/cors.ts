@@ -1,10 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { getHubAllowedOrigins } from "@/lib/integrations/resolver";
 
 /**
- * Allowed browser origins for `/api/public/*` (Salsa Attitude + RitmoKit sites).
- * Set `RITMOKIT_PUBLIC_ORIGINS` as a comma-separated list.
+ * Allowed browser origins for `/api/public/*`.
+ * Platform env `RITMOKIT_PUBLIC_ORIGINS` ∪ Integration Hub `allowedOrigins` ∪ localhost.
  */
-export function getPublicAllowedOrigins(): string[] {
+export function getEnvPublicAllowedOrigins(): string[] {
   const raw = process.env.RITMOKIT_PUBLIC_ORIGINS ?? "";
   const fromEnv = raw
     .split(",")
@@ -23,16 +24,32 @@ export function getPublicAllowedOrigins(): string[] {
   return Array.from(new Set([...fromEnv, ...defaults]));
 }
 
-export function resolveCorsOrigin(request: NextRequest): string | null {
+/** Sync helper — env only (tests / edge cases). Prefer `resolveCorsOrigin`. */
+export function getPublicAllowedOrigins(): string[] {
+  return getEnvPublicAllowedOrigins();
+}
+
+export async function getPublicAllowedOriginsAsync(): Promise<string[]> {
+  const fromHub = await getHubAllowedOrigins().catch((error) => {
+    console.error("[cors] hub origins load failed", error);
+    return [] as string[];
+  });
+  return Array.from(new Set([...getEnvPublicAllowedOrigins(), ...fromHub]));
+}
+
+export async function resolveCorsOrigin(request: NextRequest): Promise<string | null> {
   const origin = request.headers.get("origin");
   if (!origin) return null;
-  const allowed = getPublicAllowedOrigins();
+  const allowed = await getPublicAllowedOriginsAsync();
   if (allowed.includes("*")) return origin;
   return allowed.includes(origin) ? origin : null;
 }
 
-export function withPublicCors(request: NextRequest, response: NextResponse): NextResponse {
-  const origin = resolveCorsOrigin(request);
+export async function withPublicCors(
+  request: NextRequest,
+  response: NextResponse,
+): Promise<NextResponse> {
+  const origin = await resolveCorsOrigin(request);
   if (origin) {
     response.headers.set("Access-Control-Allow-Origin", origin);
     response.headers.set("Vary", "Origin");
@@ -47,19 +64,19 @@ export function withPublicCors(request: NextRequest, response: NextResponse): Ne
   return response;
 }
 
-export function publicCorsPreflight(request: NextRequest): NextResponse {
-  const origin = resolveCorsOrigin(request);
+export async function publicCorsPreflight(request: NextRequest): Promise<NextResponse> {
+  const origin = await resolveCorsOrigin(request);
   if (request.headers.get("origin") && !origin) {
     return NextResponse.json({ error: "cors_origin_denied" }, { status: 403 });
   }
   return withPublicCors(request, new NextResponse(null, { status: 204 }));
 }
 
-export function publicJson(
+export async function publicJson(
   request: NextRequest,
   body: unknown,
   init?: { status?: number },
-): NextResponse {
+): Promise<NextResponse> {
   return withPublicCors(
     request,
     NextResponse.json(body, { status: init?.status ?? 200 }),

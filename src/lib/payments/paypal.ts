@@ -1,54 +1,74 @@
 /**
  * PayPal Orders v2 + webhook verification for public enrollments (Phase A1b).
- * Uses REST fetch — no SDK dependency.
+ * Credentials come from Integration Hub (preferred) or platform env fallback.
  */
 import "server-only";
 
+import type { PayPalIntegrationConfig } from "@/lib/integrations/types";
+
 export type PayPalMode = "sandbox" | "live";
+
+export type PayPalCredentials = PayPalIntegrationConfig;
 
 export type PayPalOrderResult = {
   orderId: string;
   approveUrl: string;
 };
 
-function paypalMode(): PayPalMode {
-  const raw = (process.env.PAYPAL_MODE ?? "sandbox").toLowerCase();
-  return raw === "live" ? "live" : "sandbox";
-}
-
-export function paypalApiBase(): string {
-  return paypalMode() === "live"
+export function paypalApiBase(mode: PayPalMode): string {
+  return mode === "live"
     ? "https://api-m.paypal.com"
     : "https://api-m.sandbox.paypal.com";
 }
 
-export function isPayPalConfigured(): boolean {
-  return Boolean(
-    process.env.PAYPAL_CLIENT_ID?.trim() && process.env.PAYPAL_CLIENT_SECRET?.trim(),
-  );
+export function envPayPalCredentials(): PayPalCredentials | null {
+  const clientId = process.env.PAYPAL_CLIENT_ID?.trim();
+  const clientSecret = process.env.PAYPAL_CLIENT_SECRET?.trim();
+  if (!clientId || !clientSecret) return null;
+  const mode =
+    (process.env.PAYPAL_MODE ?? "sandbox").toLowerCase() === "live"
+      ? "live"
+      : "sandbox";
+  return {
+    clientId,
+    clientSecret,
+    webhookId: process.env.PAYPAL_WEBHOOK_ID?.trim() ?? "",
+    mode,
+  };
+}
+
+export function isPayPalConfigured(creds?: PayPalCredentials | null): boolean {
+  if (creds) return Boolean(creds.clientId && creds.clientSecret);
+  return Boolean(envPayPalCredentials());
 }
 
 export function allowPayPalStub(): boolean {
   return process.env.PAYPAL_ALLOW_STUB === "1";
 }
 
-type TokenCache = { accessToken: string; expiresAt: number };
-let tokenCache: TokenCache | null = null;
+type TokenCache = { key: string; accessToken: string; expiresAt: number };
+const tokenCaches = new Map<string, TokenCache>();
 
-async function getAccessToken(): Promise<string> {
-  const clientId = process.env.PAYPAL_CLIENT_ID?.trim();
-  const clientSecret = process.env.PAYPAL_CLIENT_SECRET?.trim();
+function cacheKey(creds: PayPalCredentials): string {
+  return `${creds.mode}:${creds.clientId}`;
+}
+
+export async function getPayPalAccessToken(creds: PayPalCredentials): Promise<string> {
+  const clientId = creds.clientId.trim();
+  const clientSecret = creds.clientSecret.trim();
   if (!clientId || !clientSecret) {
     throw new Error("paypal_not_configured");
   }
 
+  const key = cacheKey(creds);
   const now = Date.now();
-  if (tokenCache && tokenCache.expiresAt > now + 30_000) {
-    return tokenCache.accessToken;
+  const cached = tokenCaches.get(key);
+  if (cached && cached.expiresAt > now + 30_000) {
+    return cached.accessToken;
   }
 
   const auth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
-  const res = await fetch(`${paypalApiBase()}/v1/oauth2/token`, {
+  const res = await fetch(`${paypalApiBase(creds.mode)}/v1/oauth2/token`, {
     method: "POST",
     headers: {
       Authorization: `Basic ${auth}`,
@@ -65,11 +85,25 @@ async function getAccessToken(): Promise<string> {
   }
 
   const data = (await res.json()) as { access_token: string; expires_in: number };
-  tokenCache = {
+  tokenCaches.set(key, {
+    key,
     accessToken: data.access_token,
     expiresAt: now + data.expires_in * 1000,
-  };
+  });
   return data.access_token;
+}
+
+/** Smoke-test credentials without creating an order. */
+export async function testPayPalConnection(
+  creds: PayPalCredentials,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    await getPayPalAccessToken(creds);
+    return { ok: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "paypal_token_failed";
+    return { ok: false, error: message };
+  }
 }
 
 function formatCad(amount: number): string {
@@ -81,6 +115,12 @@ function pickApproveUrl(links: Array<{ rel?: string; href?: string }> | undefine
   return approve?.href ?? null;
 }
 
+function requireCreds(creds?: PayPalCredentials | null): PayPalCredentials {
+  const resolved = creds ?? envPayPalCredentials();
+  if (!resolved) throw new Error("paypal_not_configured");
+  return resolved;
+}
+
 export async function createPayPalOrder(input: {
   amountCad: number;
   enrollmentId: string;
@@ -89,11 +129,13 @@ export async function createPayPalOrder(input: {
   description?: string;
   returnUrl: string;
   cancelUrl: string;
+  credentials?: PayPalCredentials | null;
 }): Promise<PayPalOrderResult> {
-  const token = await getAccessToken();
+  const creds = requireCreds(input.credentials);
+  const token = await getPayPalAccessToken(creds);
   const value = formatCad(input.amountCad);
 
-  const res = await fetch(`${paypalApiBase()}/v2/checkout/orders`, {
+  const res = await fetch(`${paypalApiBase(creds.mode)}/v2/checkout/orders`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -147,15 +189,19 @@ export async function createPayPalOrder(input: {
   return { orderId: order.id, approveUrl };
 }
 
-export async function capturePayPalOrder(orderId: string): Promise<{
+export async function capturePayPalOrder(
+  orderId: string,
+  credentials?: PayPalCredentials | null,
+): Promise<{
   captureId: string | null;
   status: string;
   enrollmentId: string | null;
   amountCad: number | null;
   raw: unknown;
 }> {
-  const token = await getAccessToken();
-  const res = await fetch(`${paypalApiBase()}/v2/checkout/orders/${orderId}/capture`, {
+  const creds = requireCreds(credentials);
+  const token = await getPayPalAccessToken(creds);
+  const res = await fetch(`${paypalApiBase(creds.mode)}/v2/checkout/orders/${orderId}/capture`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -168,11 +214,9 @@ export async function capturePayPalOrder(orderId: string): Promise<{
 
   const raw = await res.json().catch(() => ({}));
   if (!res.ok) {
-    // Only already-captured is a safe success path — never treat generic
-    // UNPROCESSABLE_ENTITY as paid (that can include failed captures).
     const name = (raw as { name?: string }).name;
     if (name === "ORDER_ALREADY_CAPTURED") {
-      return getPayPalOrder(orderId);
+      return getPayPalOrder(orderId, creds);
     }
     console.error("[paypal] capture failed", res.status, JSON.stringify(raw).slice(0, 600));
     throw new Error("paypal_capture_failed");
@@ -190,15 +234,19 @@ export function isPayPalCaptureComplete(order: {
   return status === "COMPLETED" || (status === "APPROVED" && Boolean(order.captureId));
 }
 
-export async function getPayPalOrder(orderId: string): Promise<{
+export async function getPayPalOrder(
+  orderId: string,
+  credentials?: PayPalCredentials | null,
+): Promise<{
   captureId: string | null;
   status: string;
   enrollmentId: string | null;
   amountCad: number | null;
   raw: unknown;
 }> {
-  const token = await getAccessToken();
-  const res = await fetch(`${paypalApiBase()}/v2/checkout/orders/${orderId}`, {
+  const creds = requireCreds(credentials);
+  const token = await getPayPalAccessToken(creds);
+  const res = await fetch(`${paypalApiBase(creds.mode)}/v2/checkout/orders/${orderId}`, {
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
@@ -254,14 +302,17 @@ export type PayPalWebhookHeaders = {
 };
 
 /**
- * Verify webhook authenticity with PayPal.
- * When PAYPAL_WEBHOOK_ID is unset, verification is skipped only if PAYPAL_ALLOW_STUB=1.
+ * Verify webhook authenticity with PayPal for a specific merchant.
+ * Stub skip only when PAYPAL_ALLOW_STUB=1 and no webhookId on credentials.
  */
 export async function verifyPayPalWebhook(input: {
   headers: PayPalWebhookHeaders;
   webhookEvent: unknown;
+  credentials?: PayPalCredentials | null;
 }): Promise<boolean> {
-  const webhookId = process.env.PAYPAL_WEBHOOK_ID?.trim();
+  const creds = input.credentials ?? envPayPalCredentials();
+  const webhookId = creds?.webhookId?.trim();
+
   if (!webhookId) {
     if (allowPayPalStub()) {
       console.warn("[paypal] webhook verify skipped (PAYPAL_ALLOW_STUB=1, no WEBHOOK_ID)");
@@ -271,26 +322,29 @@ export async function verifyPayPalWebhook(input: {
     return false;
   }
 
-  if (!isPayPalConfigured()) return false;
+  if (!creds || !isPayPalConfigured(creds)) return false;
 
-  const token = await getAccessToken();
-  const res = await fetch(`${paypalApiBase()}/v1/notifications/verify-webhook-signature`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
+  const token = await getPayPalAccessToken(creds);
+  const res = await fetch(
+    `${paypalApiBase(creds.mode)}/v1/notifications/verify-webhook-signature`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        auth_algo: input.headers.authAlgo,
+        cert_url: input.headers.certUrl,
+        transmission_id: input.headers.transmissionId,
+        transmission_sig: input.headers.transmissionSig,
+        transmission_time: input.headers.transmissionTime,
+        webhook_id: webhookId,
+        webhook_event: input.webhookEvent,
+      }),
+      cache: "no-store",
     },
-    body: JSON.stringify({
-      auth_algo: input.headers.authAlgo,
-      cert_url: input.headers.certUrl,
-      transmission_id: input.headers.transmissionId,
-      transmission_sig: input.headers.transmissionSig,
-      transmission_time: input.headers.transmissionTime,
-      webhook_id: webhookId,
-      webhook_event: input.webhookEvent,
-    }),
-    cache: "no-store",
-  });
+  );
 
   if (!res.ok) {
     const body = await res.text();

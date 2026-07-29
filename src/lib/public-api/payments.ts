@@ -1,10 +1,15 @@
 /**
  * Payment provider abstraction for public enrollments.
- * Salsa Attitude pilot → PayPal; RitmoKit SaaS billing stays on Stripe separately.
+ * Credentials resolve from Integration Hub per organization (env fallback).
  */
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
+import {
+  getPayPalCredentialsForEnrollment,
+  getPayPalCredentialsForSession,
+  preferredPublicPaymentProvider,
+} from "@/lib/integrations/resolver";
 import {
   allowPayPalStub,
   createPayPalOrder,
@@ -23,6 +28,8 @@ export type PaymentCheckoutRequest = {
   description?: string;
   returnUrl?: string | null;
   cancelUrl?: string | null;
+  /** Optional — resolved from enrollment/session when omitted. */
+  organizationId?: string | null;
 };
 
 export type PaymentCheckoutResult = {
@@ -34,7 +41,7 @@ export type PaymentCheckoutResult = {
   message: string;
 };
 
-function defaultProvider(): PaymentProvider {
+function envDefaultProvider(): PaymentProvider {
   const raw = (process.env.RITMOKIT_PUBLIC_PAYMENT_PROVIDER ?? "none").toLowerCase();
   if (raw === "paypal" || raw === "stripe" || raw === "none") return raw;
   return "none";
@@ -66,7 +73,14 @@ function withEnrollmentId(url: string, enrollmentId: string): string {
 export async function createEnrollmentCheckout(
   input: PaymentCheckoutRequest,
 ): Promise<PaymentCheckoutResult> {
-  const provider = input.provider ?? defaultProvider();
+  const creds =
+    (await getPayPalCredentialsForEnrollment(input.enrollmentId)) ??
+    (await getPayPalCredentialsForSession(input.sessionId));
+
+  const hubPreferred = preferredPublicPaymentProvider(creds?.status ?? null);
+  const provider =
+    input.provider ??
+    (hubPreferred === "paypal" ? "paypal" : envDefaultProvider());
 
   if (provider === "none") {
     return {
@@ -74,7 +88,7 @@ export async function createEnrollmentCheckout(
       provider: "none",
       checkoutUrl: null,
       paymentRef: null,
-      message: "Enrollment recorded unpaid — collect payment offline or enable PayPal.",
+      message: "Enrollment recorded unpaid — collect payment offline or connect PayPal in Integrations.",
     };
   }
 
@@ -91,7 +105,7 @@ export async function createEnrollmentCheckout(
   );
 
   if (provider === "paypal") {
-    if (!isPayPalConfigured()) {
+    if (!isPayPalConfigured(creds)) {
       if (!allowPayPalStub()) {
         return {
           status: "deferred",
@@ -99,7 +113,7 @@ export async function createEnrollmentCheckout(
           checkoutUrl: null,
           paymentRef: null,
           message:
-            "PayPal credentials missing — set PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET (or PAYPAL_ALLOW_STUB=1 for local).",
+            "PayPal not connected — open Settings → Integrations (or set PAYPAL_* env fallback / PAYPAL_ALLOW_STUB=1 for local).",
         };
       }
 
@@ -121,6 +135,7 @@ export async function createEnrollmentCheckout(
       description: input.description,
       returnUrl,
       cancelUrl,
+      credentials: creds,
     });
 
     await prisma.paymentEvent
@@ -134,6 +149,8 @@ export async function createEnrollmentCheckout(
             amountCad: input.amountCad,
             approveUrl: order.approveUrl,
             sessionId: input.sessionId,
+            credentialSource: creds?.source ?? "unknown",
+            organizationId: creds?.organizationId ?? null,
           },
         },
       })
@@ -151,7 +168,6 @@ export async function createEnrollmentCheckout(
     };
   }
 
-  // Stripe reserved for later — keep stub unless credentials land.
   const paymentRef = `stripe_${input.enrollmentId.slice(0, 8)}_${Date.now()}`;
   return {
     status: "pending",

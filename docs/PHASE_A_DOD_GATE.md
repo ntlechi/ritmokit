@@ -32,12 +32,16 @@
 
 ### Vercel / PayPal config (must verify in dashboard)
 
+**Preferred:** Manager → Integrations (encrypted per-org PayPal). Platform only needs `RITMOKIT_FIELD_ENCRYPTION_KEY` + Resend. See `docs/INTEGRATION_HUB_SPEC.md`.
+
 | Variable | Required |
 |----------|----------|
-| `RITMOKIT_PUBLIC_PAYMENT_PROVIDER=paypal` | Yes (default `none` = no checkout) |
-| `PAYPAL_CLIENT_ID` / `PAYPAL_CLIENT_SECRET` | Yes |
-| `PAYPAL_WEBHOOK_ID` | Yes |
-| `PAYPAL_MODE=live` | Yes for Steve |
+| `RITMOKIT_FIELD_ENCRYPTION_KEY` | Yes (Integration Hub + HR encryption) |
+| Hub PayPal CONNECTED/TESTING | Yes (Steve self-serve) **or** legacy env below |
+| `RITMOKIT_PUBLIC_PAYMENT_PROVIDER=paypal` | Legacy default if hub empty |
+| `PAYPAL_CLIENT_ID` / `PAYPAL_CLIENT_SECRET` | Legacy fallback only |
+| `PAYPAL_WEBHOOK_ID` | Legacy fallback only |
+| `PAYPAL_MODE=live` | Legacy / hub mode field for Steve |
 | `NEXT_PUBLIC_APP_URL` | Yes |
 | `RITMOKIT_PUBLIC_ORIGINS` | Yes (Salsa Attitude / salsaquebec.com) |
 | `PAYPAL_ALLOW_STUB` | **Unset** in production |
