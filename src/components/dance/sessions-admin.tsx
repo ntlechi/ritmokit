@@ -4,6 +4,8 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarRange, Loader2, Plus, Trash2 } from "lucide-react";
 import { SessionEditDrawer } from "@/components/dance/session-edit-drawer";
+import { SessionsInstructorGrid } from "@/components/dance/sessions-instructor-grid";
+import { SessionsRoomGrid } from "@/components/dance/sessions-room-grid";
 import { SessionsWeekGrid } from "@/components/dance/sessions-week-grid";
 import { dna } from "@/lib/design/dna";
 import {
@@ -21,6 +23,8 @@ import { cn } from "@/lib/utils";
 
 const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
 
+type ScheduleView = "rooms" | "days" | "instructors";
+
 export function SessionsAdmin({
   data,
   dict,
@@ -35,6 +39,7 @@ export function SessionsAdmin({
   const [selectedSeasonId, setSelectedSeasonId] = useState<string | "all">(
     data.seasons.find((s) => s.status === "ACTIVE")?.id ?? data.seasons[0]?.id ?? "all",
   );
+  const [scheduleView, setScheduleView] = useState<ScheduleView>("rooms");
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -178,16 +183,61 @@ export function SessionsAdmin({
             <h2 className="text-sm font-semibold">{d.classesTitle}</h2>
             <p className="mt-0.5 text-xs text-foreground-muted">{d.gridHint}</p>
           </div>
-          <p className="text-xs tabular-nums text-foreground-muted">
-            <span className="font-semibold text-foreground">{filteredClasses.length}</span>{" "}
-            {d.classesCount}
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className={dna.pillTrack}>
+              {(
+                [
+                  { id: "rooms" as const, label: d.viewRooms },
+                  { id: "days" as const, label: d.viewDays },
+                  { id: "instructors" as const, label: d.viewInstructors },
+                ] as const
+              ).map((view) => (
+                <button
+                  key={view.id}
+                  type="button"
+                  onClick={() => setScheduleView(view.id)}
+                  className={cn(
+                    "px-3 py-1.5 text-xs font-semibold",
+                    scheduleView === view.id ? dna.pillActive : dna.pillIdle,
+                  )}
+                >
+                  {view.label}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs tabular-nums text-foreground-muted">
+              <span className="font-semibold text-foreground">{filteredClasses.length}</span>{" "}
+              {d.classesCount}
+            </p>
+          </div>
         </div>
 
         {filteredClasses.length === 0 ? (
           <p className="rounded-2xl border border-dashed border-border bg-surface-muted/40 px-4 py-12 text-center text-sm text-foreground-muted">
             {d.emptyClasses}
           </p>
+        ) : scheduleView === "rooms" ? (
+          <SessionsRoomGrid
+            classes={filteredClasses}
+            rooms={data.rooms}
+            selectedId={selectedClassId}
+            onSelect={(id) => {
+              setSelectedClassId(id);
+              setDrawerOpen(true);
+            }}
+            dict={dict}
+          />
+        ) : scheduleView === "instructors" ? (
+          <SessionsInstructorGrid
+            classes={filteredClasses}
+            instructors={data.instructors}
+            selectedId={selectedClassId}
+            onSelect={(id) => {
+              setSelectedClassId(id);
+              setDrawerOpen(true);
+            }}
+            dict={dict}
+          />
         ) : (
           <SessionsWeekGrid
             classes={filteredClasses}

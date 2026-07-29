@@ -1,9 +1,10 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { useEffect, useState, useTransition } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Loader2, Trash2, X } from "lucide-react";
+import { Check, ClipboardCheck, Loader2, Trash2, X } from "lucide-react";
 import { closeButtonClass, overlayClass, sheetContentClass } from "@/components/ui/modal-chrome";
 import { dna } from "@/lib/design/dna";
 import {
@@ -12,6 +13,11 @@ import {
 } from "@/lib/actions/class-sessions";
 import { enrollStudentAction, markAttendanceAction } from "@/lib/actions/enrollments";
 import type { DanceAdminBundle, DanceClassRow } from "@/lib/data/dance-admin";
+import {
+  findSessionConflicts,
+  hasInstructorConflict,
+  hasRoomConflict,
+} from "@/lib/dance/session-conflicts";
 import { styleColors } from "@/lib/dance/style-colors";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { cn } from "@/lib/utils";
@@ -82,6 +88,10 @@ function SessionDrawerBody({
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const conflicts = useMemo(() => findSessionConflicts(data.classes), [data.classes]);
+  const instructorClash = hasInstructorConflict(conflicts, cls.id);
+  const roomClash = hasRoomConflict(conflicts, cls.id);
 
   const [instructorId, setInstructorId] = useState(cls.instructorId);
   const [roomId, setRoomId] = useState(cls.roomId);
@@ -162,6 +172,21 @@ function SessionDrawerBody({
             {error ?? message}
           </p>
         )}
+
+        {(instructorClash || roomClash) && (
+          <div className="rounded-xl border border-margin-alert/30 bg-margin-alert/10 px-3 py-2 text-xs font-medium text-margin-alert">
+            {instructorClash && <p>{d.conflictInstructorDetail}</p>}
+            {roomClash && <p>{d.conflictRoomDetail}</p>}
+          </div>
+        )}
+
+        <Link
+          href={`/${lang}/accueil`}
+          className={cn(dna.ctaGhost, "w-full text-sm")}
+        >
+          <ClipboardCheck className="h-4 w-4 text-accent" aria-hidden />
+          {d.openAccueilRoster}
+        </Link>
 
         <section className="space-y-3">
           <h3 className="text-xs font-bold uppercase tracking-[0.12em] text-foreground-muted">

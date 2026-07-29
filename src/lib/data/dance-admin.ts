@@ -144,7 +144,7 @@ export async function getDanceAdminBundle(
       orderBy: [{ style: "asc" }, { level: "asc" }, { title: "asc" }],
     }),
     prisma.station.findMany({
-      where: { locationId, isActive: true },
+      where: { locationId, isActive: true, kind: "ROOM" },
       orderBy: [{ sortOrder: "asc" }, { nameFr: "asc" }],
     }),
     prisma.user.findMany({
