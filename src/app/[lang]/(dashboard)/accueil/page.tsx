@@ -1,10 +1,12 @@
 import { notFound, redirect } from "next/navigation";
 import { ClipboardCheck } from "lucide-react";
 import { AccueilRosterView } from "@/components/accueil/accueil-roster";
+import { AgentActionRail } from "@/components/accueil/agent-action-rail";
 import { DbErrorBanner } from "@/components/db-error-banner";
 import { dna } from "@/lib/design/dna";
 import { canAccessAccueil, getSessionUser } from "@/lib/auth/session";
 import { getAccueilRosterForUser } from "@/lib/data/accueil-roster";
+import { getOpenDanceAgentActionsForLocation } from "@/lib/dance/agent-actions";
 import { safeQuery } from "@/lib/data/safe";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { isLocale } from "@/lib/i18n/config";
@@ -28,6 +30,18 @@ export default async function AccueilPage({
     null,
   );
 
+  const sessionIds = roster?.classes.map((c) => c.sessionId) ?? [];
+  const { data: agentActions } = await safeQuery(
+    async () => {
+      if (!roster) return [];
+      return getOpenDanceAgentActionsForLocation(roster.locationId, {
+        sessionIds,
+        limit: 20,
+      });
+    },
+    [],
+  );
+
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-background">
       <header className="sticky top-0 z-10 border-b border-border bg-surface/90 px-4 py-4 backdrop-blur-xl sm:px-6">
@@ -49,7 +63,23 @@ export default async function AccueilPage({
 
       <div className="flex flex-1 flex-col gap-4 px-4 py-4 sm:px-6 sm:py-5">
         {dbError && <DbErrorBanner label={dict.manager.stations.errors.databaseError} />}
-        {roster && <AccueilRosterView initial={roster} lang={lang} dict={dict} />}
+        {agentActions && agentActions.length > 0 && (
+          <AgentActionRail actions={agentActions} lang={lang} dict={dict} />
+        )}
+        {roster && (
+          <AccueilRosterView
+            initial={roster}
+            lang={lang}
+            dict={dict}
+            prioritizeUnpaid={
+              Boolean(agentActions?.some((a) => a.uiKind === "unpaid_promote")) ||
+              (roster.classes.some((c) => c.unpaidCount > 0) &&
+                roster.classes.some((c) =>
+                  c.roster.some((r) => r.promotedUnpaid),
+                ))
+            }
+          />
+        )}
       </div>
     </div>
   );

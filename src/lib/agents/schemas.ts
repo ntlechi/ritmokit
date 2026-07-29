@@ -26,6 +26,7 @@ export const AGENT_EVENT_TYPES = [
   "enrollment.parity_alert",
   "enrollment.paid",
   "enrollment.waitlist_promoted",
+  "enrollment.unpaid_promote_chase",
   "instructor.payroll_calculated",
   "churn.risk_detected",
 ] as const;

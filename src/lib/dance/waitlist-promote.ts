@@ -6,7 +6,7 @@
 import "server-only";
 
 import { Prisma } from "@/generated/prisma/client";
-import { enqueueAgentTask } from "@/lib/agents/bus";
+import { enqueueAndRunDanceAgent } from "@/lib/agents/dance-enqueue";
 import { evaluateParityEnrollment, type RoleCapacity } from "@/lib/dance/parity";
 import { sendEnrollmentEmail } from "@/lib/notifications/email";
 import { createEnrollmentCheckout } from "@/lib/public-api/payments";
@@ -267,8 +267,7 @@ async function promoteOne(sessionId: string): Promise<PromoteResult | null> {
     });
   }
 
-  await enqueueAgentTask({
-    channel: "agent:dance",
+  await enqueueAndRunDanceAgent({
     eventType: "enrollment.waitlist_promoted",
     payload: {
       enrollmentId: locked.enrollmentId,

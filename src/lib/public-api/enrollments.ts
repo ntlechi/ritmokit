@@ -2,7 +2,7 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { enqueueAgentTask } from "@/lib/agents/bus";
+import { enqueueAndRunDanceAgent } from "@/lib/agents/dance-enqueue";
 import { asPlainNumber } from "@/lib/data/serialize";
 import { evaluateParityEnrollment, isParityAlert } from "@/lib/dance/parity";
 import { tryPromoteWaitlist } from "@/lib/dance/waitlist-promote";
@@ -218,8 +218,7 @@ export async function createPublicEnrollment(
       capacity.filledFollows + (input.danceRole === "FOLLOW" && !decision.waitlisted ? 1 : 0),
   };
 
-  await enqueueAgentTask({
-    channel: "agent:dance",
+  await enqueueAndRunDanceAgent({
     eventType: "enrollment.created",
     payload: {
       sessionId: session.id,
@@ -234,8 +233,7 @@ export async function createPublicEnrollment(
   });
 
   if (isParityAlert(nextCap) || decision.waitlisted) {
-    await enqueueAgentTask({
-      channel: "agent:dance",
+    await enqueueAndRunDanceAgent({
       eventType: "enrollment.parity_alert",
       payload: {
         sessionId: session.id,

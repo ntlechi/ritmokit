@@ -7,7 +7,10 @@ import { CheckInRow } from "@/components/accueil/check-in-row";
 import { ClassTimeline } from "@/components/accueil/class-timeline";
 import { RoleMeters } from "@/components/accueil/role-meters";
 import { dna } from "@/lib/design/dna";
-import { markAttendanceAction } from "@/lib/actions/enrollments";
+import {
+  markAttendanceAction,
+  releaseEnrollmentSeatAction,
+} from "@/lib/actions/enrollments";
 import type { AccueilClassCard, AccueilRoster, AccueilRosterRow } from "@/lib/data/accueil-roster";
 import type { Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
@@ -62,7 +65,9 @@ function applyOptimistic(
 function filterRows(rows: AccueilRosterRow[], filter: FilterKey): AccueilRosterRow[] {
   switch (filter) {
     case "unpaid":
-      return rows.filter((r) => !r.waitlisted && !r.paid);
+      return rows
+        .filter((r) => !r.waitlisted && !r.paid)
+        .sort((a, b) => Number(b.promotedUnpaid) - Number(a.promotedUnpaid));
     case "waitlist":
       return rows.filter((r) => r.waitlisted);
     case "pending":
@@ -76,10 +81,12 @@ export function AccueilRosterView({
   initial,
   lang,
   dict,
+  prioritizeUnpaid = false,
 }: {
   initial: AccueilRoster;
   lang: Locale;
   dict: Dictionary;
+  prioritizeUnpaid?: boolean;
 }) {
   const router = useRouter();
   const a = dict.accueil;
@@ -87,7 +94,7 @@ export function AccueilRosterView({
   const [selectedId, setSelectedId] = useState<string | null>(() =>
     pickDefaultSession(initial.classes),
   );
-  const [filter, setFilter] = useState<FilterKey>("all");
+  const [filter, setFilter] = useState<FilterKey>(prioritizeUnpaid ? "unpaid" : "all");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, startRefresh] = useTransition();
@@ -98,6 +105,7 @@ export function AccueilRosterView({
       if (prev && initial.classes.some((c) => c.sessionId === prev)) return prev;
       return pickDefaultSession(initial.classes);
     });
+    if (prioritizeUnpaid) setFilter("unpaid");
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional resync on server snapshot
   }, [initial.generatedAt]);
 
@@ -135,6 +143,27 @@ export function AccueilRosterView({
       router.refresh();
     } catch {
       setClasses(snapshot);
+      setError(dict.dance.errors.generic);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function onReleaseSeat(enrollmentId: string) {
+    setError(null);
+    setBusyId(enrollmentId);
+    try {
+      const result = await releaseEnrollmentSeatAction({
+        enrollmentId,
+        lang,
+        reason: "no_show",
+      });
+      if (!result.ok) {
+        setError(dict.dance.errors.generic);
+        return;
+      }
+      router.refresh();
+    } catch {
       setError(dict.dance.errors.generic);
     } finally {
       setBusyId(null);
@@ -321,6 +350,7 @@ export function AccueilRosterView({
                             dict={a}
                             busy={busyId === row.enrollmentId}
                             onToggle={onToggle}
+                            onReleaseSeat={onReleaseSeat}
                           />
                         ))}
                       </ul>

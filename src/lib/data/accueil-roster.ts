@@ -12,6 +12,8 @@ export type AccueilRosterRow = {
   paid: boolean;
   waitlisted: boolean;
   attended: boolean;
+  /** Waitlist promote unpaid chase priority. */
+  promotedUnpaid: boolean;
   pricingTier: "REGULAR" | "STUDENT" | "COUPLE" | "UNLIMITED_PASS";
 };
 
@@ -175,6 +177,7 @@ export async function getAccueilRosterForUser(
           student: { select: { fullName: true, email: true } },
         },
         orderBy: [{ waitlisted: "asc" }, { createdAt: "asc" }],
+        // promotedAt used for Accueil unpaid priority (agent chase).
       },
     },
   });
@@ -244,13 +247,15 @@ export async function getAccueilRosterForUser(
         paid: e.paid,
         waitlisted: e.waitlisted,
         attended: e.attended,
+        promotedUnpaid: Boolean(e.promotedAt) && !e.paid && !e.waitlisted,
         pricingTier: e.pricingTier,
       };
     });
 
-    // Active seats first, then waitlist (already mostly ordered).
+    // Active seats first; unpaid promoted next; then pending check-in.
     roster.sort((a, b) => {
       if (a.waitlisted !== b.waitlisted) return a.waitlisted ? 1 : -1;
+      if (a.promotedUnpaid !== b.promotedUnpaid) return a.promotedUnpaid ? -1 : 1;
       if (a.attended !== b.attended) return a.attended ? 1 : -1;
       return a.studentName.localeCompare(b.studentName, locale);
     });

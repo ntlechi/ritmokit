@@ -2,10 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { enqueueAgentTask } from "@/lib/agents/bus";
+import { enqueueAndRunDanceAgent } from "@/lib/agents/dance-enqueue";
 import { evaluateParityEnrollment, isParityAlert, type RoleCapacity } from "@/lib/dance/parity";
+import { tryPromoteWaitlist } from "@/lib/dance/waitlist-promote";
 import { actionDatabaseError, type SimpleActionResult } from "@/lib/actions/result";
-import { canAccessAccueil, getSessionUser } from "@/lib/auth/session";
+import { canAccessAccueil, canAccessManagerSettings, getSessionUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { resolveEnrollmentAmountCad } from "@/lib/public-api/enrollments";
 
@@ -113,8 +114,7 @@ export async function enrollStudentAction(input: z.infer<typeof enrollSchema>): 
     };
 
     if (isParityAlert(nextCap) || decision.waitlisted) {
-      await enqueueAgentTask({
-        channel: "agent:dance",
+      await enqueueAndRunDanceAgent({
         eventType: "enrollment.parity_alert",
         payload: {
           sessionId,
@@ -127,7 +127,15 @@ export async function enrollStudentAction(input: z.infer<typeof enrollSchema>): 
       });
     }
 
+    // Seating someone may unlock the opposite waitlist.
+    if (!decision.waitlisted) {
+      await tryPromoteWaitlist(sessionId).catch((error) => {
+        console.error("[enrollStudent] promote failed", error);
+      });
+    }
+
     revalidatePath(`/${lang}/sessions`, "page");
+    revalidatePath(`/${lang}/accueil`, "page");
     return { ok: true, enrollmentId: enrollment.id, waitlisted: decision.waitlisted };
   } catch (error) {
     return actionDatabaseError("enrollStudent", error) as EnrollResult;
@@ -160,5 +168,54 @@ export async function markAttendanceAction(input: {
     return { ok: true };
   } catch (error) {
     return actionDatabaseError("markAttendance", error);
+  }
+}
+
+/**
+ * Accueil / manager: release a seated enrollment (cancel or no-show)
+ * so waitlist promote can fill the seat.
+ */
+export async function releaseEnrollmentSeatAction(input: {
+  enrollmentId: string;
+  lang: string;
+  reason?: "cancel" | "no_show";
+}): Promise<SimpleActionResult> {
+  const user = await getSessionUser();
+  if (!user) return { ok: false, error: "unauthorized" };
+  if (!canAccessAccueil(user.role) && !canAccessManagerSettings(user.role)) {
+    return { ok: false, error: "forbidden" };
+  }
+
+  try {
+    const enrollment = await prisma.enrollment.findUnique({
+      where: { id: input.enrollmentId },
+      select: { id: true, sessionId: true, waitlisted: true },
+    });
+    if (!enrollment) return { ok: false, error: "not_found" };
+
+    const sessionId = enrollment.sessionId;
+    await prisma.enrollment.delete({ where: { id: enrollment.id } });
+
+    await tryPromoteWaitlist(sessionId).catch((error) => {
+      console.error("[releaseSeat] promote failed", error);
+    });
+
+    if (!enrollment.waitlisted) {
+      await enqueueAndRunDanceAgent({
+        eventType: "enrollment.parity_alert",
+        payload: {
+          sessionId,
+          enrollmentId: enrollment.id,
+          reason: input.reason ?? "cancel",
+          released: true,
+        },
+      }).catch(() => undefined);
+    }
+
+    revalidatePath(`/${input.lang}/sessions`, "page");
+    revalidatePath(`/${input.lang}/accueil`, "page");
+    return { ok: true };
+  } catch (error) {
+    return actionDatabaseError("releaseEnrollmentSeat", error);
   }
 }

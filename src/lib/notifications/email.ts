@@ -7,7 +7,8 @@ import "server-only";
 export type EnrollmentEmailKind =
   | "payment_confirmed"
   | "waitlist_promoted_pay"
-  | "waitlist_promoted_confirmed";
+  | "waitlist_promoted_confirmed"
+  | "waitlist_promoted_pay_reminder";
 
 export async function sendEnrollmentEmail(input: {
   to: string;

@@ -1,6 +1,10 @@
 import "server-only";
 
 import { asPlainNumber } from "@/lib/data/serialize";
+import {
+  countActionsBySession,
+  getOpenDanceAgentActionsForLocation,
+} from "@/lib/dance/agent-actions";
 import { getClassAvailability, type RoleCapacity } from "@/lib/dance/parity";
 import { prisma } from "@/lib/prisma";
 import { stationLabel } from "@/lib/stations/display";
@@ -42,6 +46,8 @@ export type DanceClassRow = {
   followsFilled: number;
   waitlistedCount: number;
   imbalance: number;
+  /** Open dance-agent action cards for this session. */
+  openAgentActions: number;
   enrollments: DanceEnrollmentRow[];
 };
 
@@ -189,6 +195,13 @@ export async function getDanceAdminBundle(
     });
   }
 
+  const sessionIds = classRows.map((r) => r.id);
+  const agentActions = await getOpenDanceAgentActionsForLocation(locationId, {
+    sessionIds,
+    limit: 80,
+  });
+  const actionCounts = countActionsBySession(agentActions);
+
   const classes: DanceClassRow[] = classRows.map((row) => {
     let filledLeads = 0;
     let filledFollows = 0;
@@ -234,6 +247,7 @@ export async function getDanceAdminBundle(
       followsFilled: filledFollows,
       waitlistedCount,
       imbalance: availability.imbalance,
+      openAgentActions: actionCounts.get(row.id) ?? 0,
       enrollments: row.enrollments.map((e) => ({
         id: e.id,
         studentId: e.studentId,

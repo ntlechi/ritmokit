@@ -4,7 +4,7 @@
  */
 import "server-only";
 
-import { enqueueAgentTask } from "@/lib/agents/bus";
+import { enqueueAndRunDanceAgent } from "@/lib/agents/dance-enqueue";
 import { tryPromoteWaitlist } from "@/lib/dance/waitlist-promote";
 import { sendEnrollmentEmail } from "@/lib/notifications/email";
 import { prisma } from "@/lib/prisma";
@@ -148,8 +148,7 @@ export async function markEnrollmentPaid(input: MarkPaidInput): Promise<MarkPaid
       },
     });
 
-    await enqueueAgentTask({
-      channel: "agent:dance",
+    await enqueueAndRunDanceAgent({
       eventType: "enrollment.paid",
       payload: {
         enrollmentId: row.id,

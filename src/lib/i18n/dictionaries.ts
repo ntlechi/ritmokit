@@ -55,6 +55,14 @@ export interface Dictionary {
     refresh: string;
     classesToday: string;
     toCheckIn: string;
+    agentRailTitle: string;
+    agentRailSubtitle: string;
+    agentSoftOpen: string;
+    agentDismiss: string;
+    agentError: string;
+    agentChurnHint: string;
+    releaseSeat: string;
+    promotedUnpaid: string;
   };
   opsDashboard: {
     title: string;
@@ -2021,6 +2029,7 @@ export interface Dictionary {
     parityNeedsLeads: string;
     parityNeedsFollows: string;
     parityWaitlist: string;
+    agentChip: string;
     conflictInstructor: string;
     conflictRoom: string;
     conflictInstructorDetail: string;

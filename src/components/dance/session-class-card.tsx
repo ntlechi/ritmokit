@@ -195,7 +195,7 @@ export function SessionClassCard({
         />
       </div>
 
-      <div className="mt-2">
+      <div className="mt-2 flex flex-wrap items-center gap-1.5">
         <span
           className={cn(
             "inline-flex rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide",
@@ -204,6 +204,11 @@ export function SessionClassCard({
         >
           {chip.label}
         </span>
+        {cls.openAgentActions > 0 && (
+          <span className="inline-flex rounded-full bg-accent/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-accent">
+            {d.agentChip.replace("{count}", String(cls.openAgentActions))}
+          </span>
+        )}
       </div>
     </button>
   );

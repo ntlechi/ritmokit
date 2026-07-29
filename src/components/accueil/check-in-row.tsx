@@ -11,11 +11,13 @@ export function CheckInRow({
   dict,
   busy,
   onToggle,
+  onReleaseSeat,
 }: {
   row: AccueilRosterRow;
   dict: Dictionary["accueil"];
   busy: boolean;
   onToggle: (enrollmentId: string, nextAttended: boolean) => void;
+  onReleaseSeat?: (enrollmentId: string) => void;
 }) {
   const waitlisted = row.waitlisted;
   const attended = row.attended;
@@ -32,7 +34,8 @@ export function CheckInRow({
         "flex items-center gap-3 rounded-2xl border px-3 py-3 sm:gap-4 sm:px-4 sm:py-3.5",
         waitlisted && "border-border-subtle bg-surface-muted/50",
         !waitlisted && attended && "border-yield/35 bg-yield/8",
-        !waitlisted && !attended && "border-border bg-surface",
+        !waitlisted && !attended && row.promotedUnpaid && "border-warning/45 bg-warning/10",
+        !waitlisted && !attended && !row.promotedUnpaid && "border-border bg-surface",
       )}
     >
       <div className="min-w-0 flex-1">
@@ -43,6 +46,8 @@ export function CheckInRow({
           <RoleChip role={row.danceRole} label={roleLabel} />
           {waitlisted ? (
             <StatusBadge tone="waitlist">{dict.badgeWaitlist}</StatusBadge>
+          ) : row.promotedUnpaid ? (
+            <StatusBadge tone="pending">{dict.promotedUnpaid}</StatusBadge>
           ) : row.paid ? (
             <StatusBadge tone="paid">{dict.badgePaid}</StatusBadge>
           ) : (
@@ -52,6 +57,17 @@ export function CheckInRow({
         <p className="mt-0.5 truncate text-xs text-foreground-muted sm:text-sm">
           {row.studentEmail}
         </p>
+        {!waitlisted && !attended && onReleaseSeat ? (
+          <button
+            type="button"
+            data-interactive
+            disabled={busy}
+            onClick={() => onReleaseSeat(row.enrollmentId)}
+            className="mt-1.5 text-xs font-semibold text-foreground-muted underline-offset-2 hover:text-margin-alert hover:underline"
+          >
+            {dict.releaseSeat}
+          </button>
+        ) : null}
       </div>
 
       {waitlisted ? (
@@ -123,7 +139,7 @@ function StatusBadge({
         "rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide",
         tone === "paid" && "bg-yield/15 text-yield",
         tone === "pending" && "bg-warning/15 text-warning",
-        tone === "waitlist" && "border border-border bg-surface-muted text-foreground-muted",
+        tone === "waitlist" && "bg-surface-muted text-foreground-muted",
       )}
     >
       {children}

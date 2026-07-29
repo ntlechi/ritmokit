@@ -77,7 +77,11 @@ async function dispatch(log: AgentLogRow): Promise<Record<string, unknown>> {
       return runLateArrivalAgent(log);
     case "session.created":
     case "session.season_published":
+    case "enrollment.created":
     case "enrollment.parity_alert":
+    case "enrollment.paid":
+    case "enrollment.waitlist_promoted":
+    case "enrollment.unpaid_promote_chase":
     case "instructor.payroll_calculated":
     case "churn.risk_detected":
       return runDanceAgent(log);
