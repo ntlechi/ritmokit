@@ -68,6 +68,7 @@ export function MobileNav({
           const active =
             key === "cockpit"
               ? pathname?.startsWith(`/${lang}/dashboard`) ||
+                pathname?.startsWith(`/${lang}/cockpit`) ||
                 pathname?.startsWith(`/${lang}/settings/manager`)
               : pathname?.startsWith(fullHref);
 

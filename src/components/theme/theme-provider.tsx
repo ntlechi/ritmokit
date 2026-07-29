@@ -21,11 +21,11 @@ const THEME_STORAGE_KEY = "ritmokit-theme";
 const LEGACY_THEME_STORAGE_KEY = "mirok-theme";
 
 function readStoredTheme(): Theme {
-  if (typeof window === "undefined") return "light";
+  if (typeof window === "undefined") return "dark";
   return (
     (localStorage.getItem(THEME_STORAGE_KEY) as Theme | null) ??
     (localStorage.getItem(LEGACY_THEME_STORAGE_KEY) as Theme | null) ??
-    "light"
+    "dark"
   );
 }
 
@@ -38,10 +38,10 @@ function applyTheme(resolved: "light" | "dark") {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  // Démarre à "light" pour matcher le HTML serveur (zéro mismatch d'hydratation) ;
+  // Démarre à "dark" pour matcher le HTML serveur (zéro mismatch d'hydratation) ;
   // le vrai thème est appliqué avant peinture par next/script (beforeInteractive),
   // puis synchronisé ici après montage.
-  const [theme, setThemeState] = useState<Theme>("light");
+  const [theme, setThemeState] = useState<Theme>("dark");
   const resolved = useMemo(() => resolveTheme(theme), [theme]);
 
   useEffect(() => {

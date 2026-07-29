@@ -16,10 +16,13 @@ function money(value: number, lang: Locale) {
   }).format(value);
 }
 
+const LEAD_COLOR = "var(--role-lead)";
+const FOLLOW_COLOR = "var(--role-follow)";
+
 function statusTone(status: ParitySnapshot["status"]) {
   if (status === "balanced") return "border-success/40 bg-success/10 text-success";
   if (status === "warning") return "border-warning/40 bg-warning/10 text-warning";
-  return "border-danger/40 bg-danger/10 text-danger";
+  return "border-margin-alert/40 bg-margin-alert/10 text-margin-alert";
 }
 
 export function ParityRadar({
@@ -40,7 +43,7 @@ export function ParityRadar({
   });
 
   return (
-    <section className="flex h-full flex-col rounded-2xl border border-border bg-surface p-5 shadow-sm">
+    <section className="flex h-full flex-col rounded-2xl border border-border bg-surface p-5 shadow-sm ring-1 ring-accent/10">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2">
           <Radar className="h-4 w-4 text-accent" aria-hidden />
@@ -49,25 +52,27 @@ export function ParityRadar({
             <p className="text-xs text-foreground-muted">{c.parity.subtitle}</p>
           </div>
         </div>
-        <div className="rounded-xl border border-border bg-background px-3 py-2 text-right">
+        <div className="rounded-xl border border-margin-alert/30 bg-margin-alert/5 px-3 py-2 text-right">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">
             {c.parity.blockedRevenue}
           </p>
-          <p className="metric text-lg font-bold text-danger">{money(blockedRevenue, lang)}</p>
+          <p className="metric text-lg font-bold text-margin-alert">{money(blockedRevenue, lang)}</p>
         </div>
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-wide">
         <span className="rounded-full bg-success/15 px-2 py-0.5 text-success">{c.parity.balanced}</span>
         <span className="rounded-full bg-warning/15 px-2 py-0.5 text-warning">{c.parity.warning}</span>
-        <span className="rounded-full bg-danger/15 px-2 py-0.5 text-danger">{c.parity.blocked}</span>
+        <span className="rounded-full bg-margin-alert/15 px-2 py-0.5 text-margin-alert">
+          {c.parity.blocked}
+        </span>
         <span className="ml-auto flex items-center gap-2 normal-case tracking-normal text-foreground-muted">
           <span className="flex items-center gap-1">
-            <span className="h-2 w-2 rounded-full bg-sky-500" aria-hidden />
+            <span className="h-2 w-2 rounded-full bg-role-lead" aria-hidden />
             {c.parity.leads}
           </span>
           <span className="flex items-center gap-1">
-            <span className="h-2 w-2 rounded-full bg-rose-500" aria-hidden />
+            <span className="h-2 w-2 rounded-full bg-role-follow" aria-hidden />
             {c.parity.follows}
           </span>
         </span>
@@ -113,11 +118,11 @@ export function ParityRadar({
                   rightValue={row.followsFilled}
                   rightMax={row.maxFollows}
                   rightLabel={c.parity.follows}
-                  leftColor="#0EA5E9"
-                  rightColor="#F43F5E"
+                  leftColor={LEAD_COLOR}
+                  rightColor={FOLLOW_COLOR}
                 />
                 {row.blockedRevenue > 0 && (
-                  <p className="mt-2 text-[11px] text-danger">
+                  <p className="mt-2 text-[11px] text-margin-alert">
                     {c.parity.blockedForClass}: {money(row.blockedRevenue, lang)}
                   </p>
                 )}

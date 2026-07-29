@@ -34,6 +34,8 @@ export type DanceClassRow = {
   maxLeads: number;
   maxFollows: number;
   priceRegular: number;
+  priceCouple: number | null;
+  priceStudent: number | null;
   leadsFilled: number;
   followsFilled: number;
   waitlistedCount: number;
@@ -221,6 +223,8 @@ export async function getDanceAdminBundle(
       maxLeads: row.maxLeads,
       maxFollows: row.maxFollows,
       priceRegular: asPlainNumber(row.priceRegular),
+      priceCouple: row.priceCouple != null ? asPlainNumber(row.priceCouple) : null,
+      priceStudent: row.priceStudent != null ? asPlainNumber(row.priceStudent) : null,
       leadsFilled: filledLeads,
       followsFilled: filledFollows,
       waitlistedCount,

@@ -69,7 +69,7 @@ export async function generateStaticParams() {
  * Applique le thème stocké AVANT la première peinture — élimine le flash
  * clair→sombre et les rendus hybrides. Doit rester du JS ES5 inline minimal.
  */
-const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("ritmokit-theme")||localStorage.getItem("mirok-theme")||"light";var r=t==="system"?(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"):t;document.documentElement.setAttribute("data-theme",r==="dark"?"dark":"light");}catch(e){}})();`;
+const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("ritmokit-theme")||localStorage.getItem("mirok-theme")||"dark";var r=t==="system"?(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"):t;document.documentElement.setAttribute("data-theme",r==="dark"?"dark":"light");}catch(e){}})();`;
 
 export default async function RootLayout({
   children,
@@ -84,7 +84,7 @@ export default async function RootLayout({
   return (
     <html
       lang={lang}
-      data-theme="light"
+      data-theme="dark"
       className={`${geistSans.variable} ${geistMono.variable} h-full`}
       suppressHydrationWarning
     >

@@ -17,6 +17,10 @@ export type RoomUsage = {
   netMargin: number;
   /** Net profit per m² — the room-allocation signal. */
   yieldPerSqm: number | null;
+  /** Sum of class hours booked in this room. */
+  totalHours: number;
+  /** Net profit per booked hour. */
+  yieldPerHour: number | null;
   /** Students per weekday index 0=Sun … 6=Sat. */
   byDay: number[];
   /** Distinct dance styles taught in this room. */
@@ -49,6 +53,8 @@ const EMPTY_USAGE: RoomUsage = {
   revenue: 0,
   netMargin: 0,
   yieldPerSqm: null,
+  totalHours: 0,
+  yieldPerHour: null,
   byDay: [0, 0, 0, 0, 0, 0, 0],
   styles: [],
   peakHour: null,
@@ -80,6 +86,7 @@ export async function getRoomsOverviewForUser(
     usage.enrolled += row.paidCount;
     usage.revenue += row.revenue;
     usage.netMargin += row.grossMargin;
+    usage.totalHours += row.hours;
     const style = row.style?.trim();
     if (style && !usage.styles.includes(style)) usage.styles.push(style);
     usageByRoom.set(row.roomId, usage);
@@ -110,6 +117,11 @@ export async function getRoomsOverviewForUser(
     usage.yieldPerSqm =
       room.surfaceSqm && room.surfaceSqm > 0
         ? Math.round((usage.netMargin / room.surfaceSqm) * 100) / 100
+        : null;
+
+    usage.yieldPerHour =
+      usage.totalHours > 0
+        ? Math.round((usage.netMargin / usage.totalHours) * 100) / 100
         : null;
 
     const hours = hourTotals.get(room.id);

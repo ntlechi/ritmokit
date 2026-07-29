@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { ClipboardCheck } from "lucide-react";
 import { AccueilRosterView } from "@/components/accueil/accueil-roster";
 import { DbErrorBanner } from "@/components/db-error-banner";
+import { dna } from "@/lib/design/dna";
 import { canAccessAccueil, getSessionUser } from "@/lib/auth/session";
 import { getAccueilRosterForUser } from "@/lib/data/accueil-roster";
 import { safeQuery } from "@/lib/data/safe";
@@ -28,20 +29,25 @@ export default async function AccueilPage({
   );
 
   return (
-    <div className="flex flex-1 flex-col">
-      <header className="border-b border-border px-4 py-4 sm:px-6">
-        <div className="flex items-center gap-2">
-          <ClipboardCheck className="h-5 w-5 text-accent" aria-hidden />
-          <div>
-            <h1 className="display-title text-xl font-bold tracking-tight">
+    <div className="flex min-h-0 flex-1 flex-col bg-background">
+      <header className="sticky top-0 z-10 border-b border-border bg-surface/90 px-4 py-4 backdrop-blur-xl sm:px-6">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-accent text-accent-foreground">
+            <ClipboardCheck className="h-5 w-5" aria-hidden />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-accent">
+              {dict.accueil.lineupBadge}
+            </p>
+            <h1 className="display-title text-xl font-bold tracking-tight sm:text-2xl">
               {dict.accueil.title}
             </h1>
-            <p className="mt-1 text-sm text-foreground-muted">{dict.accueil.subtitle}</p>
+            <p className={dna.subtitle}>{dict.accueil.subtitle}</p>
           </div>
         </div>
       </header>
 
-      <div className="flex flex-1 flex-col gap-4 px-4 py-5 sm:px-6 sm:py-6">
+      <div className="flex flex-1 flex-col gap-4 px-4 py-4 sm:px-6 sm:py-5">
         {dbError && <DbErrorBanner label={dict.manager.stations.errors.databaseError} />}
         {roster && <AccueilRosterView initial={roster} lang={lang} dict={dict} />}
       </div>

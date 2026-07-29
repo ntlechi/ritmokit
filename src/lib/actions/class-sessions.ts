@@ -103,6 +103,50 @@ export async function createClassSessionAction(
   }
 }
 
+const updateSchema = z.object({
+  lang: z.string().min(2).max(5),
+  sessionId: z.string().uuid(),
+  roomId: z.string().uuid().optional(),
+  instructorId: z.string().uuid().optional(),
+  maxLeads: z.number().int().min(0).max(200).optional(),
+  maxFollows: z.number().int().min(0).max(200).optional(),
+  priceRegular: z.number().min(0).max(10_000).optional(),
+  priceCouple: z.number().min(0).max(10_000).nullable().optional(),
+  priceStudent: z.number().min(0).max(10_000).nullable().optional(),
+});
+
+export async function updateClassSessionAction(
+  input: z.infer<typeof updateSchema>,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const parsed = updateSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "invalid_input" };
+
+  const user = await getSessionUser();
+  if (!user || !canAccessManagerSettings(user.role)) {
+    return { ok: false, error: "unauthorized" };
+  }
+
+  const { sessionId, lang, ...patch } = parsed.data;
+  const data: Record<string, unknown> = {};
+  if (patch.roomId != null) data.roomId = patch.roomId;
+  if (patch.instructorId != null) data.instructorId = patch.instructorId;
+  if (patch.maxLeads != null) data.maxLeads = patch.maxLeads;
+  if (patch.maxFollows != null) data.maxFollows = patch.maxFollows;
+  if (patch.priceRegular != null) data.priceRegular = patch.priceRegular;
+  if (patch.priceCouple !== undefined) data.priceCouple = patch.priceCouple;
+  if (patch.priceStudent !== undefined) data.priceStudent = patch.priceStudent;
+
+  if (Object.keys(data).length === 0) return { ok: false, error: "invalid_input" };
+
+  try {
+    await prisma.classSession.update({ where: { id: sessionId }, data });
+    revalidateSessions(lang);
+    return { ok: true };
+  } catch (error) {
+    return actionDatabaseError("updateClassSession", error) as { ok: false; error: string };
+  }
+}
+
 export async function deleteClassSessionAction(input: {
   sessionId: string;
   lang: string;

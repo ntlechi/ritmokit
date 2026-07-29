@@ -44,10 +44,10 @@ export function ProfitMatrix({
   }, [rows, sortKey, bottomOnly]);
 
   return (
-    <section className="flex h-full flex-col rounded-2xl border border-border bg-surface p-5 shadow-sm">
+    <section className="flex h-full flex-col rounded-2xl border border-border bg-surface p-5 shadow-sm ring-1 ring-yield/10">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Table2 className="h-4 w-4 text-accent" aria-hidden />
+          <Table2 className="h-4 w-4 text-yield" aria-hidden />
           <div>
             <h2 className="text-sm font-semibold">{c.profit.title}</h2>
             <p className="text-xs text-foreground-muted">{c.profit.subtitle}</p>
@@ -59,7 +59,7 @@ export function ProfitMatrix({
           className={cn(
             "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition",
             bottomOnly
-              ? "border-danger/40 bg-danger/10 text-danger"
+              ? "border-margin-alert/40 bg-margin-alert/10 text-margin-alert"
               : "border-border text-foreground-muted hover:bg-surface-muted",
           )}
         >
@@ -117,7 +117,7 @@ export function ProfitMatrix({
                     key={row.sessionId}
                     className={cn(
                       "border-b border-border-subtle",
-                      unprofitable && "bg-danger/5",
+                      unprofitable && "bg-margin-alert/5",
                     )}
                   >
                     <td className="px-2 py-2">
@@ -128,11 +128,11 @@ export function ProfitMatrix({
                     </td>
                     <td className="px-2 py-2 text-foreground-muted">{row.instructorName}</td>
                     <td className="px-2 py-2 tabular-nums">{row.utilizationPct.toFixed(0)}%</td>
-                    <td className="px-2 py-2 tabular-nums">{money(row.revenue, lang)}</td>
+                    <td className="px-2 py-2 tabular-nums text-yield">{money(row.revenue, lang)}</td>
                     <td
                       className={cn(
                         "px-2 py-2 font-semibold tabular-nums",
-                        unprofitable ? "text-danger" : "text-success",
+                        unprofitable ? "text-margin-alert" : "text-yield",
                       )}
                     >
                       {money(row.grossMargin, lang)}

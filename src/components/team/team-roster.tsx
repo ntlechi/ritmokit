@@ -6,15 +6,31 @@ import { useMemo, useState, useTransition } from "react";
 import { ClipboardList, Music4, Plus, Users } from "lucide-react";
 import { Donut, ProgressRing } from "@/components/charts/primitives";
 import { addTeamMember } from "@/lib/actions/team";
+import { dna } from "@/lib/design/dna";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
 import type { TeamMemberEntry, TeamRoster } from "@/lib/data/team";
-import type { Role } from "@/generated/prisma/enums";
+import type { InstructorPayType, Role } from "@/generated/prisma/enums";
 import { stationDotStyle, stationLabel } from "@/lib/stations/display";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { cn } from "@/lib/utils";
+
+function payLabel(dict: Dictionary, type: InstructorPayType | null): string {
+  if (type === "HOURLY") return dict.team.payHourly;
+  if (type === "FLAT_PER_CLASS") return dict.team.payFlat;
+  if (type === "COMMISSION") return dict.team.payCommission;
+  return dict.team.payUnset;
+}
+
+function formatPayRate(value: number, locale: Locale) {
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: "CAD",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
 
 const MemberSheet = dynamic(
   () => import("@/components/team/member-sheet").then((m) => m.MemberSheet),
@@ -129,6 +145,24 @@ function MemberCard({
               </li>
             )}
           </ul>
+        )}
+
+        {(member.instructorPayType || member.hourlyRate != null) && (
+          <p className="mt-2 text-[11px] font-medium text-foreground-muted">
+            {member.instructorPayType ? (
+              <>
+                <span className="text-accent">{payLabel(dict, member.instructorPayType)}</span>
+                {member.instructorPayRate != null && (
+                  <> · {formatPayRate(member.instructorPayRate, locale)}</>
+                )}
+              </>
+            ) : (
+              <>
+                <span className="text-accent">{dict.team.payHourly}</span>
+                {member.hourlyRate != null && <> · {formatPayRate(member.hourlyRate, locale)}</>}
+              </>
+            )}
+          </p>
         )}
 
         <p className="sr-only">{stationName}</p>
@@ -323,17 +357,15 @@ export function TeamRoster({
       </section>
 
       <div className="border-b border-border px-4 py-3 sm:px-6">
-        <div className="inline-flex w-full flex-wrap gap-1 rounded-full border border-zinc-200/80 bg-zinc-100/80 p-1 dark:border-white/10 dark:bg-white/5 sm:w-auto">
+        <div className={cn(dna.pillTrack, "w-full flex-wrap sm:w-auto")}>
           <button
             type="button"
             data-interactive
             onClick={() => setFilter("ALL")}
             aria-pressed={filter === "ALL"}
             className={cn(
-              "rounded-full px-3 py-1.5 text-sm font-medium",
-              filter === "ALL"
-                ? "bg-zinc-900 text-white shadow-xs dark:bg-white dark:text-zinc-900"
-                : "text-foreground-muted hover:text-foreground",
+              "px-3 py-1.5 text-sm font-medium",
+              filter === "ALL" ? dna.pillActive : dna.pillIdle,
             )}
           >
             {dict.team.allStations}
@@ -346,10 +378,8 @@ export function TeamRoster({
               onClick={() => setFilter(station.id)}
               aria-pressed={filter === station.id}
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium",
-                filter === station.id
-                  ? "bg-zinc-900 text-white shadow-xs dark:bg-white dark:text-zinc-900"
-                  : "text-foreground-muted hover:text-foreground",
+                "inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium",
+                filter === station.id ? dna.pillActive : dna.pillIdle,
               )}
             >
               <span
@@ -378,14 +408,14 @@ export function TeamRoster({
                 placeholder={dict.team.email}
                 disabled={isPending}
                 required
-                className="h-10 flex-1 rounded-xl border border-border bg-surface px-3 text-sm outline-none ring-accent/30 focus:ring-2 disabled:opacity-50"
+                className={cn(dna.field, "h-10 flex-1")}
               />
               <select
                 value={addStationId}
                 onChange={(event) => setAddStationId(event.target.value)}
                 disabled={isPending}
                 aria-label={dict.team.department}
-                className="h-10 rounded-xl border border-border bg-surface px-3 text-sm outline-none ring-accent/30 focus:ring-2 disabled:opacity-50"
+                className={cn(dna.field, "h-10 sm:w-auto")}
               >
                 {roster.stations.map((station) => (
                   <option key={station.id} value={station.id}>

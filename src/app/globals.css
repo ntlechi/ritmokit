@@ -5,46 +5,56 @@
 @custom-variant dark ([data-theme="dark"] &);
 
 /* ═══════════════════════════════════════════════════════════════════════
-   RitmoKit Design System — "Modernist Organic / Apple–Claude Era"
-   Fable DNA: soft radii, floating capsules, zinc neutrals, station tints,
-   monospace metrics, frosted glass. Calm enough for everyday ops.
+   RitmoKit Design System — Dance Cockpit
+   Dual theme: dark default (ritmokit.com energy) + crisp light for daytime.
+   Rose / violet / emerald role + revenue accents. Alive, not zinc admin.
    ═══════════════════════════════════════════════════════════════════════ */
 
-/* ── Light (default) — warm zinc porcelain ── */
+/* ── Light — daytime ops porcelain with jewel accents ── */
 :root,
 [data-theme="light"] {
-  --background: #f4f4f5;
+  --background: #f7f5f6;
   --surface: #ffffff;
   --surface-elevated: #ffffff;
-  --surface-muted: #f4f4f5;
-  --surface-glass: rgb(255 255 255 / 0.8);
-  --border: rgb(228 228 231 / 0.9);
-  --border-subtle: rgb(244 244 245 / 1);
+  --surface-muted: #f1ecee;
+  --surface-glass: rgb(255 255 255 / 0.85);
+  --border: rgb(24 24 27 / 0.1);
+  --border-subtle: rgb(24 24 27 / 0.06);
   --foreground: #18181b;
-  --foreground-muted: #71717a;
+  --foreground-muted: #57534e;
 
-  /* Accent — restrained zinc-ink with a quiet indigo spark (not electric purple) */
-  --accent: #27272a;
-  --accent-hover: #18181b;
+  /* Brand spark — electric rose */
+  --accent: #e11d48;
+  --accent-hover: #be123c;
   --accent-foreground: #ffffff;
-  --accent-muted: #f4f4f5;
-  --accent-2: #52525b;
-  --accent-3: #3f3f46;
+  --accent-muted: #fff1f2;
+  --accent-2: #881337;
+  --accent-3: #9f1239;
 
   --danger: #dc2626;
   --warning: #d97706;
   --success: #059669;
 
+  /* Dance role + yield semantics */
+  --role-lead: #059669;
+  --role-follow: #7c3aed;
+  --live: #e11d48;
+  --yield: #059669;
+  --margin-alert: #e11d48;
+
+  /* Calendar period tints (staff shifts) */
   --shift-day: #d97706;
   --shift-day-bg: #fffbeb;
   --shift-night: #7c3aed;
   --shift-night-bg: #f5f3ff;
 
-  /* Station matrix tokens */
-  --station-kitchen: #059669;
-  --station-service: #d97706;
-  --station-drive: #7c3aed;
-  --station-autopilot: #dc2626;
+  /* Room / style palette */
+  --style-salsa: #e11d48;
+  --style-bachata: #7c3aed;
+  --style-kizomba: #0d9488;
+  --room-a: #e11d48;
+  --room-b: #7c3aed;
+  --room-c: #0ea5e9;
 
   --sidebar-width: 15rem;
   --radius-sm: 0.5rem;
@@ -58,80 +68,87 @@
   --shadow-sm: 0 1px 2px rgb(24 24 27 / 0.05), 0 1px 3px rgb(24 24 27 / 0.04);
   --shadow-md: 0 4px 16px rgb(24 24 27 / 0.06);
   --shadow-lg: 0 12px 40px rgb(24 24 27 / 0.08);
-  --shadow-glow: 0 0 0 1px rgb(24 24 27 / 0.06), 0 8px 24px rgb(24 24 27 / 0.06);
-  --shadow-glow-lg: 0 0 0 1px rgb(24 24 27 / 0.08), 0 12px 40px rgb(24 24 27 / 0.1);
+  --shadow-glow: 0 0 0 1px rgb(225 29 72 / 0.12), 0 8px 24px rgb(24 24 27 / 0.06);
+  --shadow-glow-lg: 0 0 0 1px rgb(225 29 72 / 0.16), 0 12px 40px rgb(24 24 27 / 0.1);
 
-  /* Soft ambient wash — barely there, no aurora circus */
-  --aurora-1: rgb(24 24 27 / 0.03);
-  --aurora-2: rgb(113 113 122 / 0.04);
-  --aurora-3: rgb(24 24 27 / 0.02);
+  --aurora-1: rgb(225 29 72 / 0.06);
+  --aurora-2: rgb(124 58 237 / 0.05);
+  --aurora-3: rgb(5 150 105 / 0.04);
 
-  --gradient-brand: linear-gradient(135deg, #27272a 0%, #3f3f46 100%);
-  --gradient-brand-soft: linear-gradient(135deg, rgb(24 24 27 / 0.06), rgb(63 63 70 / 0.04));
-  --gradient-display: linear-gradient(135deg, #18181b 0%, #3f3f46 100%);
-  --header-hairline: linear-gradient(90deg, transparent, rgb(228 228 231 / 0.9), transparent);
+  --gradient-brand: linear-gradient(135deg, #e11d48 0%, #9f1239 100%);
+  --gradient-brand-soft: linear-gradient(135deg, rgb(225 29 72 / 0.08), rgb(124 58 237 / 0.05));
+  --gradient-display: linear-gradient(135deg, #18181b 0%, #881337 100%);
+  --header-hairline: linear-gradient(90deg, transparent, rgb(225 29 72 / 0.35), transparent);
 
-  --kpi-glow-indigo: 0 1px 2px rgb(24 24 27 / 0.04);
-  --kpi-glow-cyan: 0 1px 2px rgb(24 24 27 / 0.04);
-  --kpi-glow-violet: 0 1px 2px rgb(24 24 27 / 0.04);
-  --kpi-glow-fuchsia: 0 1px 2px rgb(24 24 27 / 0.04);
-  --kpi-glow-amber: 0 1px 2px rgb(24 24 27 / 0.04);
+  --kpi-glow-indigo: 0 0 0 1px rgb(124 58 237 / 0.18);
+  --kpi-glow-cyan: 0 0 0 1px rgb(14 165 233 / 0.18);
+  --kpi-glow-violet: 0 0 0 1px rgb(124 58 237 / 0.2);
+  --kpi-glow-fuchsia: 0 0 0 1px rgb(225 29 72 / 0.2);
+  --kpi-glow-amber: 0 0 0 1px rgb(217 119 6 / 0.2);
 }
 
-/* ── Dark — high-contrast zinc, frosted panels ── */
+/* ── Dark (default cockpit) — obsidian + ritmokit.com energy ── */
 [data-theme="dark"] {
   --background: #09090b;
-  --surface: #18181b;
-  --surface-elevated: #1c1c1f;
-  --surface-muted: #27272a;
-  --surface-glass: rgb(24 24 27 / 0.8);
+  --surface: #121214;
+  --surface-elevated: #18181b;
+  --surface-muted: #1c1c1f;
+  --surface-glass: rgb(18 18 20 / 0.85);
   --border: rgb(255 255 255 / 0.1);
   --border-subtle: rgb(255 255 255 / 0.06);
   --foreground: #fafafa;
   --foreground-muted: #a1a1aa;
 
-  --accent: #fafafa;
-  --accent-hover: #e4e4e7;
-  --accent-foreground: #09090b;
-  --accent-muted: #27272a;
-  --accent-2: #d4d4d8;
-  --accent-3: #a1a1aa;
+  --accent: #f43f5e;
+  --accent-hover: #fb7185;
+  --accent-foreground: #ffffff;
+  --accent-muted: rgb(244 63 94 / 0.14);
+  --accent-2: #fda4af;
+  --accent-3: #fb7185;
 
-  --danger: #f87171;
+  --danger: #fb7185;
   --warning: #fbbf24;
   --success: #34d399;
+
+  --role-lead: #34d399;
+  --role-follow: #a78bfa;
+  --live: #f43f5e;
+  --yield: #34d399;
+  --margin-alert: #fb7185;
 
   --shift-day: #fbbf24;
   --shift-day-bg: #422006;
   --shift-night: #a78bfa;
   --shift-night-bg: #2e1065;
 
-  --station-kitchen: #34d399;
-  --station-service: #fbbf24;
-  --station-drive: #a78bfa;
-  --station-autopilot: #f87171;
+  --style-salsa: #f43f5e;
+  --style-bachata: #a78bfa;
+  --style-kizomba: #2dd4bf;
+  --room-a: #f43f5e;
+  --room-b: #a78bfa;
+  --room-c: #38bdf8;
 
   --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.35);
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
   --shadow-md: 0 4px 16px rgb(0 0 0 / 0.45);
   --shadow-lg: 0 12px 40px rgb(0 0 0 / 0.55);
-  --shadow-glow: 0 0 0 1px rgb(255 255 255 / 0.08), 0 8px 28px rgb(0 0 0 / 0.35);
-  --shadow-glow-lg: 0 0 0 1px rgb(255 255 255 / 0.1), 0 12px 40px rgb(0 0 0 / 0.45);
+  --shadow-glow: 0 0 0 1px rgb(244 63 94 / 0.22), 0 8px 28px rgb(0 0 0 / 0.35);
+  --shadow-glow-lg: 0 0 0 1px rgb(244 63 94 / 0.28), 0 12px 40px rgb(0 0 0 / 0.45);
 
-  --aurora-1: rgb(255 255 255 / 0.03);
-  --aurora-2: rgb(255 255 255 / 0.02);
-  --aurora-3: rgb(255 255 255 / 0.02);
+  --aurora-1: rgb(244 63 94 / 0.12);
+  --aurora-2: rgb(167 139 250 / 0.1);
+  --aurora-3: rgb(52 211 153 / 0.08);
 
-  --gradient-brand: linear-gradient(135deg, #fafafa 0%, #d4d4d8 100%);
-  --gradient-brand-soft: linear-gradient(135deg, rgb(255 255 255 / 0.08), rgb(255 255 255 / 0.03));
-  --gradient-display: linear-gradient(135deg, #ffffff 0%, #d4d4d8 100%);
-  --header-hairline: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.12), transparent);
+  --gradient-brand: linear-gradient(135deg, #f43f5e 0%, #9f1239 55%, #7c3aed 100%);
+  --gradient-brand-soft: linear-gradient(135deg, rgb(244 63 94 / 0.16), rgb(167 139 250 / 0.1));
+  --gradient-display: linear-gradient(135deg, #ffffff 0%, #fda4af 100%);
+  --header-hairline: linear-gradient(90deg, transparent, rgb(244 63 94 / 0.45), transparent);
 
-  --kpi-glow-indigo: 0 0 0 1px rgb(255 255 255 / 0.06);
-  --kpi-glow-cyan: 0 0 0 1px rgb(255 255 255 / 0.06);
-  --kpi-glow-violet: 0 0 0 1px rgb(255 255 255 / 0.06);
-  --kpi-glow-fuchsia: 0 0 0 1px rgb(255 255 255 / 0.06);
-  --kpi-glow-amber: 0 0 0 1px rgb(255 255 255 / 0.06);
+  --kpi-glow-indigo: 0 0 0 1px rgb(167 139 250 / 0.25);
+  --kpi-glow-cyan: 0 0 0 1px rgb(56 189 248 / 0.22);
+  --kpi-glow-violet: 0 0 0 1px rgb(167 139 250 / 0.28);
+  --kpi-glow-fuchsia: 0 0 0 1px rgb(244 63 94 / 0.28);
+  --kpi-glow-amber: 0 0 0 1px rgb(251 191 36 / 0.22);
 }
 
 @theme inline {
@@ -152,6 +169,11 @@
   --color-danger: var(--danger);
   --color-warning: var(--warning);
   --color-success: var(--success);
+  --color-role-lead: var(--role-lead);
+  --color-role-follow: var(--role-follow);
+  --color-live: var(--live);
+  --color-yield: var(--yield);
+  --color-margin-alert: var(--margin-alert);
   --color-shift-day: var(--shift-day);
   --color-shift-day-bg: var(--shift-day-bg);
   --color-shift-night: var(--shift-night);
@@ -190,7 +212,7 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* Soft ambient — barely perceptible depth, not neon aurora */
+/* Soft ambient — rose / violet wash matching ritmokit.com energy */
 body::before {
   content: "";
   position: fixed;
@@ -199,7 +221,38 @@ body::before {
   pointer-events: none;
   background:
     radial-gradient(ellipse 50% 40% at 10% 0%, var(--aurora-1), transparent 55%),
-    radial-gradient(ellipse 40% 35% at 90% 10%, var(--aurora-2), transparent 55%);
+    radial-gradient(ellipse 40% 35% at 90% 10%, var(--aurora-2), transparent 55%),
+    radial-gradient(ellipse 35% 30% at 70% 80%, var(--aurora-3), transparent 60%);
+}
+
+/* Live indicator — pulse for “En direct” (respect reduced motion) */
+.live-pulse {
+  position: relative;
+  display: inline-flex;
+  height: 0.5rem;
+  width: 0.5rem;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  background: var(--live);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--live) 55%, transparent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .live-pulse {
+    animation: live-pulse 1.8s ease-out infinite;
+  }
+}
+
+@keyframes live-pulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--live) 55%, transparent);
+  }
+  70% {
+    box-shadow: 0 0 0 8px transparent;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
 }
 
 /* Safe area for PWA / mobile notch */

@@ -1,14 +1,192 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { Users, Scale, ClipboardList, BookOpen, FileSpreadsheet, UserPlus, Award, ClipboardCheck, Gift, Activity, Shield, FileText, Tablet, Palette, Clock, Music2, DoorOpen } from "lucide-react";
+import {
+  Activity,
+  BookOpen,
+  ClipboardCheck,
+  ClipboardList,
+  Clock,
+  DoorOpen,
+  FileSpreadsheet,
+  FileText,
+  Gift,
+  Music2,
+  Palette,
+  Shield,
+  Tablet,
+  UserPlus,
+  Users,
+  Award,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { dna } from "@/lib/design/dna";
 import { getDictionary } from "@/lib/i18n/dictionaries";
-import { isLocale } from "@/lib/i18n/config";
+import type { Dictionary } from "@/lib/i18n/dictionaries";
+import { isLocale, type Locale } from "@/lib/i18n/config";
 import { canAccessManagerSettings, getSessionUser } from "@/lib/auth/session";
+import { cn } from "@/lib/utils";
 
-const items = [
-  { key: "stations" as const, icon: Users },
-  { key: "compliance" as const, icon: Scale },
-] as const;
+type HubLink = {
+  href: string;
+  icon: LucideIcon;
+  title: string;
+  subtitle: string;
+};
+
+function HubCard({ href, icon: Icon, title, subtitle }: HubLink) {
+  return (
+    <Link
+      href={href}
+      className="rounded-2xl border border-border bg-surface p-5 shadow-xs transition hover:border-accent/40 hover:shadow-sm"
+    >
+      <Icon className="h-5 w-5 text-accent" aria-hidden />
+      <h3 className="mt-3 text-base font-semibold">{title}</h3>
+      <p className="mt-1 text-sm text-foreground-muted">{subtitle}</p>
+    </Link>
+  );
+}
+
+function HubGroup({
+  label,
+  links,
+}: {
+  label: string;
+  links: HubLink[];
+}) {
+  return (
+    <section className="space-y-3">
+      <h2 className="text-[11px] font-semibold uppercase tracking-wide text-accent">{label}</h2>
+      <div className="grid gap-3 sm:grid-cols-2">{links.map((link) => <HubCard key={link.href} {...link} />)}</div>
+    </section>
+  );
+}
+
+function buildGroups(lang: Locale, dict: Dictionary): { label: string; links: HubLink[] }[] {
+  return [
+    {
+      label: dict.settings.hubStudio,
+      links: [
+        {
+          href: `/${lang}/sessions`,
+          icon: Music2,
+          title: dict.nav.sessions,
+          subtitle: dict.dance.sessionsIntro,
+        },
+        {
+          href: `/${lang}/rooms`,
+          icon: DoorOpen,
+          title: dict.nav.rooms,
+          subtitle: dict.dance.roomsIntro,
+        },
+        {
+          href: `/${lang}/accueil`,
+          icon: Tablet,
+          title: dict.nav.accueil,
+          subtitle: dict.settings.hubAccueilDesc,
+        },
+        {
+          href: `/${lang}/settings/manager/stations`,
+          icon: Users,
+          title: dict.manager.stations.title,
+          subtitle: dict.manager.stations.subtitle,
+        },
+      ],
+    },
+    {
+      label: dict.settings.hubPeople,
+      links: [
+        {
+          href: `/${lang}/team`,
+          icon: Users,
+          title: dict.team.title,
+          subtitle: dict.team.intro,
+        },
+        {
+          href: `/${lang}/settings/manager/payroll`,
+          icon: FileSpreadsheet,
+          title: dict.manager.payroll.title,
+          subtitle: dict.manager.payroll.subtitle,
+        },
+        {
+          href: `/${lang}/settings/manager/onboarding`,
+          icon: UserPlus,
+          title: dict.manager.integration.title,
+          subtitle: dict.manager.integration.subtitle,
+        },
+        {
+          href: `/${lang}/settings/manager/punches`,
+          icon: Clock,
+          title: dict.manager.punches.title,
+          subtitle: dict.manager.punches.subtitle,
+        },
+      ],
+    },
+    {
+      label: dict.settings.hubCulture,
+      links: [
+        {
+          href: `/${lang}/settings/manager/culture`,
+          icon: Shield,
+          title: dict.culture.managerTitle,
+          subtitle: dict.culture.managerSubtitle,
+        },
+        {
+          href: `/${lang}/settings/manager/convention`,
+          icon: FileText,
+          title: dict.convention.manager.title,
+          subtitle: dict.convention.manager.subtitle,
+        },
+        {
+          href: `/${lang}/settings/manager/pulse`,
+          icon: Activity,
+          title: dict.pulse.managerTitle,
+          subtitle: dict.pulse.managerSubtitle,
+        },
+        {
+          href: `/${lang}/settings/manager/brand`,
+          icon: Palette,
+          title: dict.settings.hubBrand,
+          subtitle: dict.settings.hubBrandDesc,
+        },
+      ],
+    },
+    {
+      label: dict.settings.hubMore,
+      links: [
+        {
+          href: `/${lang}/settings/manager/assiduity`,
+          icon: ClipboardList,
+          title: dict.manager.assiduity.title,
+          subtitle: dict.manager.assiduity.subtitle,
+        },
+        {
+          href: `/${lang}/settings/manager/skills`,
+          icon: Award,
+          title: dict.manager.skills.title,
+          subtitle: dict.manager.skills.subtitle,
+        },
+        {
+          href: `/${lang}/settings/manager/reviews`,
+          icon: ClipboardCheck,
+          title: dict.reviews.managerTitle,
+          subtitle: dict.reviews.managerSubtitle,
+        },
+        {
+          href: `/${lang}/settings/manager/benefits`,
+          icon: Gift,
+          title: dict.benefits.managerTitle,
+          subtitle: dict.benefits.managerSubtitle,
+        },
+        {
+          href: `/${lang}/sops`,
+          icon: BookOpen,
+          title: dict.manager.sops.title,
+          subtitle: dict.manager.sops.subtitle,
+        },
+      ],
+    },
+  ];
+}
 
 export default async function ManagerSettingsPage({
   params,
@@ -23,18 +201,22 @@ export default async function ManagerSettingsPage({
     redirect(`/${lang}/settings`);
   }
 
+  const groups = buildGroups(lang, dict);
+
   return (
     <div className="flex flex-1 flex-col">
-      <header className="border-b border-zinc-200/80 px-4 py-4 dark:border-white/10 sm:px-6">
+      <header className="sticky top-0 z-10 border-b border-border bg-surface/90 px-4 py-4 backdrop-blur-xl sm:px-6">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="display-title text-xl font-bold tracking-tight">{dict.settings.manager}</h1>
-            <p className="mt-1 text-sm text-foreground-muted">{dict.settings.managerDesc}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-accent">
+              {dict.settings.hubBadge}
+            </p>
+            <h1 className="display-title text-xl font-bold tracking-tight sm:text-2xl">
+              {dict.settings.manager}
+            </h1>
+            <p className={dna.subtitle}>{dict.settings.managerDesc}</p>
           </div>
-          <Link
-            href={`/${lang}/dashboard`}
-            className="inline-flex items-center gap-2 rounded-full bg-zinc-900 px-4 py-2 text-sm font-semibold text-white shadow-xs hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
-          >
+          <Link href={`/${lang}/dashboard`} className={dna.cta}>
             {dict.nav.cockpit}
           </Link>
         </div>
@@ -42,186 +224,22 @@ export default async function ManagerSettingsPage({
 
       <div className="flex flex-1 flex-col gap-6 px-4 py-6 sm:px-6 lg:flex-row lg:gap-8">
         <nav className="flex shrink-0 gap-2 overflow-x-auto lg:w-48 lg:flex-col lg:gap-1">
-          <Link
-            href={`/${lang}/settings`}
-            className="rounded-full px-3 py-2 text-sm font-medium text-foreground-muted hover:bg-zinc-100 hover:text-foreground dark:hover:bg-white/5"
-          >
+          <Link href={`/${lang}/settings`} className={dna.navIdle}>
             {dict.settings.general}
           </Link>
-          <Link
-            href={`/${lang}/settings/manager`}
-            className="rounded-full bg-zinc-900 px-3 py-2 text-sm font-medium text-white dark:bg-white dark:text-zinc-900"
-          >
+          <Link href={`/${lang}/settings/manager`} className={dna.navActive}>
             {dict.settings.manager}
           </Link>
           {user.role === "ADMIN" && (
-            <Link
-              href={`/${lang}/settings/admin`}
-              className="rounded-full px-3 py-2 text-sm font-medium text-foreground-muted hover:bg-zinc-100 hover:text-foreground dark:hover:bg-white/5"
-            >
+            <Link href={`/${lang}/settings/admin`} className={dna.navIdle}>
               {dict.settings.admin}
             </Link>
           )}
         </nav>
 
-        <div className="grid min-w-0 flex-1 gap-4 sm:grid-cols-2">
-          <Link
-            href={`/${lang}/settings/manager/stations`}
-            className="premium-card card-lift p-5 transition-colors hover:border-accent/30"
-          >
-            <Users className="h-5 w-5 text-accent" aria-hidden />
-            <h2 className="mt-3 text-base font-semibold">{dict.manager.stations.title}</h2>
-            <p className="mt-1 text-sm text-foreground-muted">{dict.manager.stations.subtitle}</p>
-          </Link>
-
-          <Link
-            href={`/${lang}/settings/manager/assiduity`}
-            className="premium-card card-lift p-5 transition-colors hover:border-accent/30"
-          >
-            <ClipboardList className="h-5 w-5 text-accent" aria-hidden />
-            <h2 className="mt-3 text-base font-semibold">{dict.manager.assiduity.title}</h2>
-            <p className="mt-1 text-sm text-foreground-muted">{dict.manager.assiduity.subtitle}</p>
-          </Link>
-
-          <Link
-            href={`/${lang}/settings/manager/punches`}
-            className="premium-card card-lift p-5 transition-colors hover:border-accent/30"
-          >
-            <Clock className="h-5 w-5 text-accent" aria-hidden />
-            <h2 className="mt-3 text-base font-semibold">{dict.manager.punches.title}</h2>
-            <p className="mt-1 text-sm text-foreground-muted">{dict.manager.punches.subtitle}</p>
-          </Link>
-
-          <Link
-            href={`/${lang}/settings/manager/onboarding`}
-            className="premium-card card-lift p-5 transition-colors hover:border-accent/30"
-          >
-            <UserPlus className="h-5 w-5 text-accent" aria-hidden />
-            <h2 className="mt-3 text-base font-semibold">{dict.manager.integration.title}</h2>
-            <p className="mt-1 text-sm text-foreground-muted">{dict.manager.integration.subtitle}</p>
-          </Link>
-
-          <Link
-            href={`/${lang}/settings/manager/skills`}
-            className="premium-card card-lift p-5 transition-colors hover:border-accent/30"
-          >
-            <Award className="h-5 w-5 text-accent" aria-hidden />
-            <h2 className="mt-3 text-base font-semibold">{dict.manager.skills.title}</h2>
-            <p className="mt-1 text-sm text-foreground-muted">{dict.manager.skills.subtitle}</p>
-          </Link>
-
-          <Link
-            href={`/${lang}/settings/manager/reviews`}
-            className="premium-card card-lift p-5 transition-colors hover:border-accent/30"
-          >
-            <ClipboardCheck className="h-5 w-5 text-accent" aria-hidden />
-            <h2 className="mt-3 text-base font-semibold">{dict.reviews.managerTitle}</h2>
-            <p className="mt-1 text-sm text-foreground-muted">{dict.reviews.managerSubtitle}</p>
-          </Link>
-
-          <Link
-            href={`/${lang}/settings/manager/benefits`}
-            className="premium-card card-lift p-5 transition-colors hover:border-accent/30"
-          >
-            <Gift className="h-5 w-5 text-accent" aria-hidden />
-            <h2 className="mt-3 text-base font-semibold">{dict.benefits.managerTitle}</h2>
-            <p className="mt-1 text-sm text-foreground-muted">{dict.benefits.managerSubtitle}</p>
-          </Link>
-
-          <Link
-            href={`/${lang}/settings/manager/convention`}
-            className="premium-card card-lift p-5 transition-colors hover:border-accent/30"
-          >
-            <FileText className="h-5 w-5 text-accent" aria-hidden />
-            <h2 className="mt-3 text-base font-semibold">{dict.convention.manager.title}</h2>
-            <p className="mt-1 text-sm text-foreground-muted">{dict.convention.manager.subtitle}</p>
-          </Link>
-
-          <Link
-            href={`/${lang}/settings/manager/brand`}
-            className="premium-card card-lift p-5 transition-colors hover:border-accent/30"
-          >
-            <Palette className="h-5 w-5 text-accent" aria-hidden />
-            <h2 className="mt-3 text-base font-semibold">Marque & parcours</h2>
-            <p className="mt-1 text-sm text-foreground-muted">
-              Couleur enseigne, accueil et déverrouillage J1–J5
-            </p>
-          </Link>
-
-          <Link
-            href={`/${lang}/tablet`}
-            className="premium-card card-lift p-5 transition-colors hover:border-accent/30"
-          >
-            <Tablet className="h-5 w-5 text-accent" aria-hidden />
-            <h2 className="mt-3 text-base font-semibold">Tablette studio</h2>
-            <p className="mt-1 text-sm text-foreground-muted">
-              Accueil, coaching, formations, alertes et NIP pointeuse
-            </p>
-          </Link>
-
-          <Link
-            href={`/${lang}/sessions`}
-            className="premium-card card-lift p-5 transition-colors hover:border-accent/30"
-          >
-            <Music2 className="h-5 w-5 text-accent" aria-hidden />
-            <h2 className="mt-3 text-base font-semibold">{dict.nav.sessions}</h2>
-            <p className="mt-1 text-sm text-foreground-muted">{dict.dance.sessionsIntro}</p>
-          </Link>
-
-          <Link
-            href={`/${lang}/rooms`}
-            className="premium-card card-lift p-5 transition-colors hover:border-accent/30"
-          >
-            <DoorOpen className="h-5 w-5 text-accent" aria-hidden />
-            <h2 className="mt-3 text-base font-semibold">{dict.nav.rooms}</h2>
-            <p className="mt-1 text-sm text-foreground-muted">{dict.dance.roomsIntro}</p>
-          </Link>
-
-          <Link
-            href={`/${lang}/settings/manager/culture`}
-            className="premium-card card-lift p-5 transition-colors hover:border-accent/30"
-          >
-            <Shield className="h-5 w-5 text-accent" aria-hidden />
-            <h2 className="mt-3 text-base font-semibold">{dict.culture.managerTitle}</h2>
-            <p className="mt-1 text-sm text-foreground-muted">{dict.culture.managerSubtitle}</p>
-          </Link>
-
-          <Link
-            href={`/${lang}/settings/manager/pulse`}
-            className="premium-card card-lift p-5 transition-colors hover:border-accent/30"
-          >
-            <Activity className="h-5 w-5 text-accent" aria-hidden />
-            <h2 className="mt-3 text-base font-semibold">{dict.pulse.managerTitle}</h2>
-            <p className="mt-1 text-sm text-foreground-muted">{dict.pulse.managerSubtitle}</p>
-          </Link>
-
-          <Link
-            href={`/${lang}/sops`}
-            className="premium-card card-lift p-5 transition-colors hover:border-accent/30"
-          >
-            <BookOpen className="h-5 w-5 text-accent" aria-hidden />
-            <h2 className="mt-3 text-base font-semibold">{dict.manager.sops.title}</h2>
-            <p className="mt-1 text-sm text-foreground-muted">{dict.manager.sops.subtitle}</p>
-          </Link>
-
-          <Link
-            href={`/${lang}/settings/manager/payroll`}
-            className="premium-card card-lift p-5 transition-colors hover:border-accent/30"
-          >
-            <FileSpreadsheet className="h-5 w-5 text-accent" aria-hidden />
-            <h2 className="mt-3 text-base font-semibold">{dict.manager.payroll.title}</h2>
-            <p className="mt-1 text-sm text-foreground-muted">{dict.manager.payroll.subtitle}</p>
-          </Link>
-
-          {items.filter(({ key }) => key !== "stations").map(({ key, icon: Icon }) => (
-            <article
-              key={key}
-              className="rounded-2xl border border-border bg-surface p-5 shadow-sm"
-            >
-              <Icon className="h-5 w-5 text-accent" aria-hidden />
-              <h2 className="mt-3 text-base font-semibold">{dict.settings[key]}</h2>
-              <p className="mt-1 text-sm text-foreground-muted">{dict.settings.comingSoon}</p>
-            </article>
+        <div className={cn("min-w-0 flex-1 space-y-8")}>
+          {groups.map((group) => (
+            <HubGroup key={group.label} label={group.label} links={group.links} />
           ))}
         </div>
       </div>

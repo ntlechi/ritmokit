@@ -23,16 +23,15 @@ export function toneColor(tone: ChartTone): string {
 }
 
 /**
- * Categorical series colours. `--accent` is near-black in light mode, so a
- * multi-category chart needs its own hues to stay readable.
+ * Categorical series colours — rose / violet / emerald dance cockpit palette.
  */
 export const CHART_PALETTE = [
-  "#0EA5E9",
-  "#8B5CF6",
-  "#F59E0B",
-  "#10B981",
   "#F43F5E",
-  "#6366F1",
+  "#8B5CF6",
+  "#10B981",
+  "#0EA5E9",
+  "#F59E0B",
+  "#A78BFA",
 ] as const;
 
 export function paletteColor(index: number): string {

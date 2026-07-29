@@ -125,7 +125,9 @@ export function Sidebar({
   const showAccueil = canAccessAccueil(role);
   const cockpitHref = `/${lang}/dashboard`;
   const cockpitActive =
-    pathname?.startsWith(cockpitHref) || pathname?.startsWith(`/${lang}/settings/manager`);
+    pathname?.startsWith(cockpitHref) ||
+    pathname?.startsWith(`/${lang}/cockpit`) ||
+    pathname?.startsWith(`/${lang}/settings/manager`);
 
   const prefs = useSidebarPrefs();
   const { collapsed, width } = prefs;
@@ -194,7 +196,7 @@ export function Sidebar({
           collapsed ? "justify-center px-2" : "gap-2.5 px-4",
         )}
       >
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground">
           <Sparkles className="h-3.5 w-3.5" aria-hidden />
         </div>
         {!collapsed && (
@@ -282,8 +284,8 @@ export function Sidebar({
                 "relative flex items-center rounded-xl text-sm font-semibold",
                 collapsed ? "h-10 justify-center px-0" : "gap-3 px-3 py-2.5",
                 cockpitActive
-                  ? "bg-zinc-900 text-white shadow-xs dark:bg-white dark:text-zinc-900"
-                  : "text-foreground-muted hover:bg-zinc-100 hover:text-foreground dark:hover:bg-white/5",
+                  ? "bg-accent text-accent-foreground shadow-xs"
+                  : "text-foreground-muted hover:bg-surface-muted hover:text-foreground",
               )}
             >
               <LayoutDashboard className="h-4 w-4 shrink-0" aria-hidden />

@@ -3,9 +3,10 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ClipboardCheck, RefreshCw } from "lucide-react";
-import { DivergingBar } from "@/components/charts/primitives";
 import { CheckInRow } from "@/components/accueil/check-in-row";
 import { ClassTimeline } from "@/components/accueil/class-timeline";
+import { RoleMeters } from "@/components/accueil/role-meters";
+import { dna } from "@/lib/design/dna";
 import { markAttendanceAction } from "@/lib/actions/enrollments";
 import type { AccueilClassCard, AccueilRoster, AccueilRosterRow } from "@/lib/data/accueil-roster";
 import type { Locale } from "@/lib/i18n/config";
@@ -97,8 +98,7 @@ export function AccueilRosterView({
       if (prev && initial.classes.some((c) => c.sessionId === prev)) return prev;
       return pickDefaultSession(initial.classes);
     });
-    // Re-sync after router.refresh() — keyed by server snapshot time.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional resync on server snapshot
   }, [initial.generatedAt]);
 
   const selected = useMemo(
@@ -107,6 +107,7 @@ export function AccueilRosterView({
   );
 
   const totalToCheckIn = classes.reduce((sum, c) => sum + c.notCheckedInCount, 0);
+  const hasLive = classes.some((c) => c.status === "live");
 
   const filters: { key: FilterKey; label: string }[] = [
     { key: "all", label: a.filterAll },
@@ -142,9 +143,9 @@ export function AccueilRosterView({
 
   if (classes.length === 0) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border px-6 py-16 text-center">
-        <ClipboardCheck className="h-8 w-8 text-foreground-muted" aria-hidden />
-        <p className="text-sm text-foreground-muted">{a.empty}</p>
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border px-6 py-20 text-center">
+        <ClipboardCheck className="h-10 w-10 text-foreground-muted" aria-hidden />
+        <p className="max-w-sm text-sm text-foreground-muted">{a.empty}</p>
       </div>
     );
   }
@@ -174,16 +175,24 @@ export function AccueilRosterView({
     <div className="flex flex-1 flex-col gap-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-foreground-muted">
-            {initial.locationName} · {initial.date}
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-foreground-muted">
+              {initial.locationName} · {initial.date}
+            </p>
+            {hasLive && (
+              <span className={cn(dna.liveBadge)}>
+                <span className="live-pulse" aria-hidden />
+                {a.live}
+              </span>
+            )}
+          </div>
           <p className="mt-1 text-sm text-foreground-muted">
             <span className="font-semibold tabular-nums text-foreground">{classes.length}</span>{" "}
             {a.classesToday}
             {totalToCheckIn > 0 && (
               <>
                 {" · "}
-                <span className="font-semibold tabular-nums text-foreground">{totalToCheckIn}</span>{" "}
+                <span className="font-semibold tabular-nums text-accent">{totalToCheckIn}</span>{" "}
                 {a.toCheckIn}
               </>
             )}
@@ -198,7 +207,7 @@ export function AccueilRosterView({
               router.refresh();
             })
           }
-          className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-border bg-surface px-3 text-sm font-medium text-foreground-muted hover:text-foreground"
+          className={cn(dna.ctaGhost, "min-h-11")}
         >
           <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} aria-hidden />
           {a.refresh}
@@ -213,17 +222,17 @@ export function AccueilRosterView({
       />
 
       {selected && (
-        <article className="overflow-hidden rounded-2xl border border-border bg-surface shadow-xs">
+        <article className="flex flex-1 flex-col overflow-hidden rounded-3xl border border-border bg-surface shadow-sm">
           <div
-            className="h-1"
+            className="h-1.5"
             style={{ backgroundColor: selected.roomColorHex }}
             aria-hidden
           />
-          <div className="space-y-4 p-4 sm:p-5">
+          <div className="flex flex-1 flex-col gap-5 p-4 sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-lg font-bold tracking-tight sm:text-xl">
+                  <h2 className="display-title text-xl font-bold tracking-tight sm:text-2xl">
                     {selected.courseTitle}
                   </h2>
                   <StatusPill status={selected.status} dict={a} />
@@ -236,51 +245,36 @@ export function AccueilRosterView({
                   {a.instructor}: {selected.instructorName}
                 </p>
               </div>
-              <div className="flex flex-wrap gap-2 text-xs font-medium">
+              <div className="flex flex-wrap gap-2 text-xs font-bold uppercase tracking-wide">
                 {selected.unpaidCount > 0 && (
-                  <span className="rounded-lg bg-warning/15 px-2 py-1 text-warning">
-                    {selected.unpaidCount} {a.unpaid}
+                  <span className="rounded-lg bg-warning/15 px-2.5 py-1 text-warning">
+                    {selected.unpaidCount} {a.badgePending}
                   </span>
                 )}
                 {selected.waitlistedCount > 0 && (
-                  <span className="rounded-lg bg-surface-muted px-2 py-1 text-foreground-muted">
-                    {selected.waitlistedCount} {a.waitlisted}
+                  <span className="rounded-lg border border-border bg-surface-muted px-2.5 py-1 text-foreground-muted">
+                    {selected.waitlistedCount} {a.badgeWaitlist}
                   </span>
                 )}
-                <span className="rounded-lg bg-surface-muted px-2 py-1 tabular-nums text-foreground-muted">
+                <span className="rounded-lg bg-yield/15 px-2.5 py-1 tabular-nums text-yield">
                   {selected.leads.present + selected.follows.present} {a.present}
                 </span>
               </div>
             </div>
 
-            <div className="rounded-xl bg-surface-muted/50 px-3 py-3 sm:px-4">
-              <div className="mb-2 flex justify-between text-xs font-semibold tabular-nums">
-                <span>
-                  {selected.leads.filled}/{selected.leads.max} {a.leads}
-                  <span className="ml-1 font-normal text-foreground-muted">
-                    ({selected.leads.present} {a.present})
-                  </span>
-                </span>
-                <span>
-                  {selected.follows.filled}/{selected.follows.max} {a.follows}
-                  <span className="ml-1 font-normal text-foreground-muted">
-                    ({selected.follows.present} {a.present})
-                  </span>
-                </span>
-              </div>
-              <DivergingBar
-                leftValue={selected.leads.filled}
-                rightValue={selected.follows.filled}
-                leftMax={selected.leads.max}
-                rightMax={selected.follows.max}
-                leftLabel={a.leads}
-                rightLabel={a.follows}
-                leftColor="#0EA5E9"
-                rightColor="#F43F5E"
-              />
-            </div>
+            <RoleMeters
+              leadsFilled={selected.leads.filled}
+              leadsMax={selected.leads.max}
+              leadsPresent={selected.leads.present}
+              followsFilled={selected.follows.filled}
+              followsMax={selected.follows.max}
+              followsPresent={selected.follows.present}
+              leadsLabel={a.leads}
+              followsLabel={a.follows}
+              presentLabel={a.present}
+            />
 
-            <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Filter">
+            <div className="flex flex-wrap gap-1.5" role="tablist" aria-label={a.filterAll}>
               {filters.map(({ key, label }) => (
                 <button
                   key={key}
@@ -290,9 +284,9 @@ export function AccueilRosterView({
                   data-interactive
                   onClick={() => setFilter(key)}
                   className={cn(
-                    "min-h-9 rounded-xl px-3 text-xs font-semibold transition",
+                    "min-h-10 rounded-xl px-3.5 text-xs font-bold transition sm:min-h-11 sm:text-sm",
                     filter === key
-                      ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
+                      ? "bg-accent text-accent-foreground shadow-xs"
                       : "bg-surface-muted text-foreground-muted hover:text-foreground",
                   )}
                 >
@@ -308,18 +302,18 @@ export function AccueilRosterView({
             )}
 
             {showEmpty ? (
-              <p className="py-8 text-center text-sm text-foreground-muted">{a.noMatch}</p>
+              <p className="py-10 text-center text-sm text-foreground-muted">{a.noMatch}</p>
             ) : (
-              <div className="space-y-5">
+              <div className="space-y-6">
                 {(filter === "all" || filter === "pending" || filter === "unpaid") &&
                   activeRows.length > 0 && (
                     <section>
                       {filter === "all" && (
-                        <h3 className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-foreground-muted">
+                        <h3 className="mb-2.5 text-xs font-bold uppercase tracking-[0.12em] text-foreground-muted">
                           {a.activeSection}
                         </h3>
                       )}
-                      <ul className="space-y-2">
+                      <ul className="space-y-2.5">
                         {activeRows.map((row) => (
                           <CheckInRow
                             key={row.enrollmentId}
@@ -335,10 +329,10 @@ export function AccueilRosterView({
 
                 {waitlistRows.length > 0 && (
                   <section>
-                    <h3 className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-foreground-muted">
+                    <h3 className="mb-2.5 text-xs font-bold uppercase tracking-[0.12em] text-foreground-muted">
                       {a.waitlistSection}
                     </h3>
-                    <ul className="space-y-2">
+                    <ul className="space-y-2.5">
                       {waitlistRows.map((row) => (
                         <CheckInRow
                           key={row.enrollmentId}
@@ -372,12 +366,13 @@ function StatusPill({
   return (
     <span
       className={cn(
-        "rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
-        status === "live" && "bg-success/15 text-success",
-        status === "upcoming" && "bg-accent/10 text-foreground",
+        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+        status === "live" && "border border-live/30 bg-live/10 text-live",
+        status === "upcoming" && "bg-accent/10 text-accent",
         status === "done" && "bg-surface-muted text-foreground-muted",
       )}
     >
+      {status === "live" && <span className="live-pulse" aria-hidden />}
       {label}
     </span>
   );

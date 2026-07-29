@@ -20,8 +20,8 @@ import {
   KPI_PARITY_DELTA_WARN_MAX,
 } from "@/lib/kpi/thresholds";
 
-const LEAD_COLOR = "#0EA5E9";
-const FOLLOW_COLOR = "#F43F5E";
+const LEAD_COLOR = "var(--role-lead)";
+const FOLLOW_COLOR = "var(--role-follow)";
 
 function money(value: number, lang: Locale) {
   return new Intl.NumberFormat(lang === "en" ? "en-CA" : lang === "es" ? "es-ES" : "fr-CA", {
@@ -202,7 +202,7 @@ export function StudioPulse({
           showValues
           bars={dayBars.map((bar) => ({
             ...bar,
-            color: bar.value === peakDayValue ? "#6366F1" : "#0EA5E9",
+            color: bar.value === peakDayValue ? "var(--role-follow)" : "var(--role-lead)",
           }))}
           caption={p.weekLoad}
         />

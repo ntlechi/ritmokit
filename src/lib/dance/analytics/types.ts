@@ -10,6 +10,10 @@ export type ClassEconomicsRow = {
   surfaceSqm: number | null;
   instructorId: string;
   instructorName: string;
+  /** 0 = Sunday … 6 = Saturday (JS Date.getDay). */
+  dayOfWeek: number | null;
+  startTimeIso: string;
+  endTimeIso: string;
   paidCount: number;
   waitlistedCount: number;
   leadsFilled: number;

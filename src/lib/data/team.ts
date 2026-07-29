@@ -1,7 +1,6 @@
 import "server-only";
 
-import type { Role } from "@/generated/prisma/enums";
-import type { OnboardingStatus } from "@/generated/prisma/enums";
+import type { InstructorPayType, OnboardingStatus, Role } from "@/generated/prisma/enums";
 import { canAccessManagerSettings } from "@/lib/auth/session-client";
 import { getTeamOnboardingSummaries } from "@/lib/data/hr-onboarding";
 import { prisma } from "@/lib/prisma";
@@ -33,6 +32,10 @@ export type TeamMemberEntry = {
   };
   hourlyRate: number | null;
   maxHoursPerWeek: number | null;
+  /** Instructor compensation model when configured. */
+  instructorPayType: InstructorPayType | null;
+  /** Flat / hourly / commission rate for instructor pay. */
+  instructorPayRate: number | null;
   onboarding: TeamMemberOnboarding | null;
   /** Dance styles this person actually teaches, from their scheduled classes. */
   danceStyles: string[];
@@ -176,6 +179,11 @@ export async function getTeamRosterForUser(
       maxHoursPerWeek: includeRates
         ? (row.user.employeeProfile?.maxHoursPerWeek ?? null)
         : null,
+      instructorPayType: includeRates ? (row.user.instructorPayType ?? null) : null,
+      instructorPayRate:
+        includeRates && row.user.instructorPayRate != null
+          ? asPlainNumber(row.user.instructorPayRate)
+          : null,
       onboarding:
         row.user.role === "EMPLOYEE"
           ? (onboardingSummaries.get(row.userId) ?? {

@@ -26,6 +26,7 @@ export interface Dictionary {
   accueil: {
     title: string;
     subtitle: string;
+    lineupBadge: string;
     empty: string;
     today: string;
     live: string;
@@ -33,12 +34,16 @@ export interface Dictionary {
     done: string;
     leads: string;
     follows: string;
+    solo: string;
     present: string;
     checkIn: string;
     checkedIn: string;
     undo: string;
     unpaid: string;
     waitlisted: string;
+    badgePaid: string;
+    badgePending: string;
+    badgeWaitlist: string;
     filterAll: string;
     filterUnpaid: string;
     filterWaitlist: string;
@@ -96,6 +101,7 @@ export interface Dictionary {
     badge: string;
     title: string;
     subtitle: string;
+    liveBadge: string;
     emptyTitle: string;
     emptyHint: string;
     emptyCta: string;
@@ -103,6 +109,18 @@ export interface Dictionary {
       sessions: string;
       rooms: string;
       settings: string;
+    };
+    tonight: {
+      title: string;
+      subtitle: string;
+      empty: string;
+      waitlistOpen: string;
+    };
+    marginAlerts: {
+      title: string;
+      subtitle: string;
+      badge: string;
+      cta: string;
     };
     pulse: {
       title: string;
@@ -232,6 +250,14 @@ export interface Dictionary {
     themeDark: string;
     themeSystem: string;
     managerDesc: string;
+    hubBadge: string;
+    hubStudio: string;
+    hubPeople: string;
+    hubCulture: string;
+    hubMore: string;
+    hubAccueilDesc: string;
+    hubBrand: string;
+    hubBrandDesc: string;
     adminDesc: string;
     adminConsoleTitle: string;
     adminConsoleSubtitle: string;
@@ -334,6 +360,7 @@ export interface Dictionary {
     };
   };
   rooms: {
+    badge: string;
     intro: string;
     addRoom: string;
     edit: string;
@@ -348,6 +375,7 @@ export interface Dictionary {
     classesPerWeek: string;
     students: string;
     yieldPerSqm: string;
+    yieldPerHour: string;
     weekRhythm: string;
     peak: string;
     totalRooms: string;
@@ -356,6 +384,8 @@ export interface Dictionary {
     avgOccupancy: string;
   };
   team: {
+    badge: string;
+    intro: string;
     title: string;
     station: string;
     members: string;
@@ -385,6 +415,10 @@ export interface Dictionary {
     weeklyClasses: string;
     weeklyClassesTotal: string;
     weeklyClassesShort: string;
+    payHourly: string;
+    payFlat: string;
+    payCommission: string;
+    payUnset: string;
     roles: {
       OWNER: string;
       MANAGER: string;
@@ -1939,6 +1973,11 @@ export interface Dictionary {
     waitlistFollow: string;
     sessionsIntro: string;
     roomsIntro: string;
+    gridBadge: string;
+    gridHint: string;
+    gridEmptyDay: string;
+    gridOneOff: string;
+    classesCount: string;
     seasonsTitle: string;
     classesTitle: string;
     enrollmentsTitle: string;
@@ -1954,14 +1993,22 @@ export interface Dictionary {
     addClass: string;
     createClass: string;
     classCreated: string;
+    classUpdated: string;
     classDeleted: string;
     deleteClass: string;
+    editClass: string;
+    saveClass: string;
+    closeDrawer: string;
+    instructorLabel: string;
+    roomLabel: string;
     createCourse: string;
     courseTitlePlaceholder: string;
     courseStylePlaceholder: string;
     maxLeads: string;
     maxFollows: string;
     priceRegular: string;
+    priceCouple: string;
+    priceStudent: string;
     selectClass: string;
     emptyEnrollments: string;
     enrollStudent: string;

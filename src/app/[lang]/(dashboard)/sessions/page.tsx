@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { CalendarRange } from "lucide-react";
 import { SessionsAdmin } from "@/components/dance/sessions-admin";
 import { DbErrorBanner } from "@/components/db-error-banner";
+import { dna } from "@/lib/design/dna";
 import { canAccessManagerSettings, getSessionUser } from "@/lib/auth/session";
 import { getDanceAdminBundle } from "@/lib/data/dance-admin";
 import { safeQuery } from "@/lib/data/safe";
@@ -26,17 +27,24 @@ export default async function SessionsPage({
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="border-b border-border px-4 py-4 sm:px-6">
-        <div className="flex items-center gap-2">
-          <CalendarRange className="h-5 w-5 text-accent" aria-hidden />
-          <div>
-            <h1 className="display-title text-xl font-bold tracking-tight">{dict.nav.sessions}</h1>
-            <p className="mt-1 text-sm text-foreground-muted">{dict.dance.sessionsIntro}</p>
+      <header className="sticky top-0 z-10 border-b border-border bg-surface/90 px-4 py-4 backdrop-blur-xl sm:px-6">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-accent text-accent-foreground">
+            <CalendarRange className="h-5 w-5" aria-hidden />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-accent">
+              {dict.dance.gridBadge}
+            </p>
+            <h1 className="display-title text-xl font-bold tracking-tight sm:text-2xl">
+              {dict.nav.sessions}
+            </h1>
+            <p className={dna.subtitle}>{dict.dance.sessionsIntro}</p>
           </div>
         </div>
       </header>
 
-      <div className="flex flex-1 flex-col gap-4 px-4 py-6 sm:px-6">
+      <div className="flex flex-1 flex-col gap-4 px-4 py-5 sm:px-6 sm:py-6">
         {dbError && <DbErrorBanner label={dict.dance.errors.generic} />}
         {data && <SessionsAdmin data={data} dict={dict} lang={lang} />}
       </div>
