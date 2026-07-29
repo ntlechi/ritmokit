@@ -18,7 +18,7 @@ export function AppHeader({
   user: SessionUser | null;
 }) {
   return (
-    <header className="header-hairline sticky top-0 z-40 shrink-0 border-b border-zinc-200/80 bg-white/80 pt-safe backdrop-blur-xl dark:border-white/10 dark:bg-zinc-900/80">
+    <header className="header-hairline sticky top-0 z-40 shrink-0 border-b border-border bg-surface-glass pt-safe backdrop-blur-xl">
       <div className="flex h-14 items-center justify-between gap-3 px-4 sm:px-6">
         <div className="min-w-0 lg:hidden">
           <p className="text-sm font-bold tracking-tight text-foreground">{shell.brand.name}</p>

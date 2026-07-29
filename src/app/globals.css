@@ -156,6 +156,7 @@
   --color-surface: var(--surface);
   --color-surface-elevated: var(--surface-elevated);
   --color-surface-muted: var(--surface-muted);
+  --color-surface-glass: var(--surface-glass);
   --color-border: var(--border);
   --color-border-subtle: var(--border-subtle);
   --color-foreground: var(--foreground);

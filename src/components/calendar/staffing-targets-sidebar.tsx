@@ -6,6 +6,7 @@ import { Check, SlidersHorizontal, X } from "lucide-react";
 import { updateStaffingProfileAction } from "@/lib/actions/staffing";
 import type { StaffingProfileSnapshot } from "@/lib/scheduling/staffing-curve-core";
 import { stationLabel, type StationRecord } from "@/lib/stations/display";
+import { dna } from "@/lib/design/dna";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
 import { cn } from "@/lib/utils";
@@ -113,7 +114,7 @@ export function StaffingTargetsSidebar({
     <>
       <div
         className={cn(
-          "fixed inset-0 z-40 bg-zinc-950/50 backdrop-blur-sm transition-opacity",
+          "fixed inset-0 z-40 bg-foreground/40 backdrop-blur-sm transition-opacity",
           open ? "opacity-100" : "pointer-events-none opacity-0",
         )}
         onClick={onClose}
@@ -121,12 +122,12 @@ export function StaffingTargetsSidebar({
       />
       <aside
         className={cn(
-          "fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col border-l border-zinc-200/80 bg-white shadow-2xl transition-transform duration-200 ease-out dark:border-white/10 dark:bg-zinc-900",
+          "fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col border-l border-border bg-surface shadow-2xl transition-transform duration-200 ease-out",
           open ? "translate-x-0" : "translate-x-full",
         )}
         aria-hidden={!open}
       >
-        <header className="flex items-center justify-between gap-3 border-b border-zinc-200/80 px-5 py-4 dark:border-white/10">
+        <header className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
           <div className="flex items-center gap-2">
             <SlidersHorizontal className="h-4 w-4 text-accent" aria-hidden />
             <div>
@@ -137,7 +138,7 @@ export function StaffingTargetsSidebar({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full p-1.5 text-foreground-muted hover:bg-zinc-100 dark:hover:bg-white/5"
+            className={cn(dna.iconBtn, "rounded-full")}
             aria-label={dict.common.cancel}
           >
             <X className="h-4 w-4" aria-hidden />
@@ -148,7 +149,7 @@ export function StaffingTargetsSidebar({
           <p className="mb-4 text-xs text-foreground-muted">{dict.schedule.sidebarLiveHint}</p>
           <div className="flex flex-col gap-4">
             {stations.map((station) => (
-              <div key={station.id} className="rounded-xl border border-zinc-200/80 bg-zinc-50 p-3 dark:border-white/10 dark:bg-white/5">
+              <div key={station.id} className="rounded-xl border border-border bg-surface-muted p-3">
                 <h3 className="text-sm font-medium">{stationLabel(station, locale)}</h3>
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <label className="flex flex-col gap-1 text-[11px] text-foreground-muted">
@@ -159,7 +160,7 @@ export function StaffingTargetsSidebar({
                       step="0.5"
                       value={form[station.id].studentsPerHour}
                       onChange={(e) => updateField(station.id, "studentsPerHour", e.target.value)}
-                      className="rounded-lg border border-zinc-200/80 bg-white px-2 py-1.5 text-sm dark:border-white/10 dark:bg-zinc-900/60"
+                      className="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm"
                     />
                   </label>
                   <label className="flex flex-col gap-1 text-[11px] text-foreground-muted">
@@ -170,7 +171,7 @@ export function StaffingTargetsSidebar({
                       max={100}
                       value={form[station.id].classMixSharePercent}
                       onChange={(e) => updateField(station.id, "classMixSharePercent", e.target.value)}
-                      className="rounded-lg border border-zinc-200/80 bg-white px-2 py-1.5 text-sm dark:border-white/10 dark:bg-zinc-900/60"
+                      className="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm"
                     />
                   </label>
                   <label className="flex flex-col gap-1 text-[11px] text-foreground-muted">
@@ -180,7 +181,7 @@ export function StaffingTargetsSidebar({
                       min={0}
                       value={form[station.id].minHeadcount}
                       onChange={(e) => updateField(station.id, "minHeadcount", e.target.value)}
-                      className="rounded-lg border border-zinc-200/80 bg-white px-2 py-1.5 text-sm dark:border-white/10 dark:bg-zinc-900/60"
+                      className="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm"
                     />
                   </label>
                   <label className="flex flex-col gap-1 text-[11px] text-foreground-muted">
@@ -190,7 +191,7 @@ export function StaffingTargetsSidebar({
                       min={0}
                       value={form[station.id].maxHeadcount}
                       onChange={(e) => updateField(station.id, "maxHeadcount", e.target.value)}
-                      className="rounded-lg border border-zinc-200/80 bg-white px-2 py-1.5 text-sm dark:border-white/10 dark:bg-zinc-900/60"
+                      className="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm"
                     />
                   </label>
                 </div>
@@ -199,7 +200,7 @@ export function StaffingTargetsSidebar({
           </div>
         </div>
 
-        <footer className="flex items-center gap-2 border-t border-zinc-200/80 px-5 py-4 dark:border-white/10">
+        <footer className="flex items-center gap-2 border-t border-border px-5 py-4">
           <button
             type="button"
             onClick={handleApply}

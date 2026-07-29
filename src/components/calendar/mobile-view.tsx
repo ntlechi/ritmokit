@@ -16,6 +16,7 @@ import {
   stationLabel,
   stationRailStyle,
 } from "@/lib/stations/display";
+import { dna } from "@/lib/design/dna";
 import type { Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { cn } from "@/lib/utils";
@@ -24,7 +25,7 @@ const dateFnsLocales = { fr, en: enUS, es } as const;
 
 /** Pastille de statut — remplace les badges lourds par un point + libellé fin. */
 const statusDot: Record<ReturnType<typeof toneOf>, string> = {
-  neutral: "bg-zinc-400",
+  neutral: "bg-foreground-muted",
   accent: "bg-accent",
   success: "bg-success",
   warning: "bg-warning",
@@ -157,7 +158,7 @@ function NextShiftHero({
 
   return (
     <section
-      className="shimmer-overlay animate-fade-up relative overflow-hidden rounded-2xl border border-zinc-200/80 bg-white dark:border-white/10 dark:bg-zinc-900/60"
+      className={cn("shimmer-overlay animate-fade-up relative overflow-hidden", dna.panel)}
       style={stationGlowStyle(shift.station.colorHex)}
     >
       <span
@@ -166,7 +167,7 @@ function NextShiftHero({
         aria-hidden
       />
       <div
-        className="border-b border-zinc-200/60 p-5 dark:border-white/5"
+        className="border-b border-border p-5"
         style={stationHeroTintStyle(shift.station.colorHex)}
       >
         <div className="flex items-center justify-between gap-3">
@@ -271,14 +272,14 @@ function ShiftRow({
   const opts = { locale: dateFnsLocales[locale] };
 
   return (
-    <li className="card-lift relative overflow-hidden rounded-xl border border-zinc-200/80 bg-white dark:border-white/10 dark:bg-zinc-900/60">
+    <li className={cn("card-lift relative overflow-hidden rounded-xl border border-border bg-surface")}>
       <span
         className="absolute inset-y-0 left-0 w-[3px]"
         style={stationRailStyle(shift.station.colorHex)}
         aria-hidden
       />
       <div className="flex items-stretch gap-3 p-3.5">
-        <div className="flex w-14 shrink-0 flex-col justify-center border-r border-zinc-200/60 pr-3 font-mono tabular-nums dark:border-white/5">
+        <div className="flex w-14 shrink-0 flex-col justify-center border-r border-border pr-3 font-mono tabular-nums">
           <span className="text-sm font-semibold leading-tight">{format(shift.startsAt, "HH:mm", opts)}</span>
           <span className="text-xs leading-tight text-foreground-muted">{format(shift.endsAt, "HH:mm", opts)}</span>
         </div>
@@ -316,7 +317,7 @@ function ShiftRow({
       </div>
 
       {actionable && (
-        <div className="border-t border-zinc-200/60 px-3.5 py-2.5 dark:border-white/5">
+        <div className="border-t border-border px-3.5 py-2.5">
           <ShiftActions shift={shift} dict={dict} isPending={isPending} onConfirm={onConfirm} onSwap={onSwap} />
         </div>
       )}
@@ -391,7 +392,7 @@ export function MobileView({
 
   if (localShifts.length === 0) {
     return (
-      <p className="rounded-2xl border border-zinc-200/80 bg-zinc-50 px-4 py-8 text-center text-sm text-foreground-muted dark:border-white/10 dark:bg-white/5">
+      <p className="rounded-2xl border border-border bg-surface-muted px-4 py-8 text-center text-sm text-foreground-muted">
         {dict.calendar.noShifts}
       </p>
     );

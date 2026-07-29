@@ -23,6 +23,7 @@ import type { ShiftWithEmployee } from "@/lib/data/shifts";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
 import { stationLabel as stationDisplayLabel } from "@/lib/stations/display";
+import { dna } from "@/lib/design/dna";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/ui/user-avatar";
@@ -161,14 +162,14 @@ export function ReplacementFinderSheet({
   return (
     <Dialog.Root open={open} onOpenChange={(next) => !next && onClose()}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-zinc-950/50 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-foreground/40 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
         <Dialog.Content
           className={cn(
-            "fixed inset-x-0 bottom-0 z-50 flex max-h-[92dvh] flex-col rounded-t-3xl border border-zinc-200/80 bg-white shadow-lg dark:border-white/10 dark:bg-zinc-900",
+            "fixed inset-x-0 bottom-0 z-50 flex max-h-[92dvh] flex-col rounded-t-3xl border border-border bg-surface shadow-lg",
             "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
           )}
         >
-          <div className="flex items-start justify-between gap-3 border-b border-zinc-200/80 px-4 py-4 dark:border-white/10">
+          <div className="flex items-start justify-between gap-3 border-b border-border px-4 py-4">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <Zap className="h-4 w-4 shrink-0 text-warning" aria-hidden />
@@ -184,7 +185,7 @@ export function ReplacementFinderSheet({
               )}
             </div>
             <Dialog.Close
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-foreground-muted hover:bg-zinc-100 dark:hover:bg-white/5"
+              className={cn(dna.iconBtn, "h-9 w-9 rounded-full")}
               aria-label={dict.common.cancel}
             >
               <X className="h-4 w-4" />
@@ -291,7 +292,7 @@ export function ReplacementFinderSheet({
                 )}
 
                 {scan.rejections.length > 0 && (
-                  <div className="rounded-xl border border-zinc-200/80 bg-zinc-50 dark:border-white/10 dark:bg-white/5">
+                  <div className="rounded-xl border border-border bg-surface-muted">
                     <button
                       type="button"
                       onClick={() => setShowRejections((v) => !v)}
@@ -300,14 +301,14 @@ export function ReplacementFinderSheet({
                       <div className="flex items-center gap-2">
                         <UserX className="h-4 w-4 text-foreground-muted" aria-hidden />
                         <span className="text-sm font-medium">{r.rejectionsTitle}</span>
-                        <span className="rounded-full bg-zinc-200/80 px-2 py-0.5 text-xs tabular-nums text-foreground-muted dark:bg-white/10">
+                        <span className="rounded-full bg-surface-muted px-2 py-0.5 text-xs tabular-nums text-foreground-muted">
                           {scan.rejections.length}
                         </span>
                       </div>
                       <span className="text-xs text-accent">{showRejections ? r.hideRejections : r.showRejections}</span>
                     </button>
                     {showRejections && (
-                      <ul className="space-y-1.5 border-t border-zinc-200/80 px-4 py-3 dark:border-white/10">
+                      <ul className="space-y-1.5 border-t border-border px-4 py-3">
                         {scan.rejections.map((row) => (
                           <li
                             key={`${row.userId}-${row.reason}`}
@@ -334,7 +335,7 @@ export function ReplacementFinderSheet({
             )}
           </div>
 
-          <div className="safe-area-pb border-t border-zinc-200/80 px-4 py-3 dark:border-white/10">
+          <div className="safe-area-pb border-t border-border px-4 py-3">
             <Button variant="secondary" size="md" className="w-full" onClick={onClose}>
               {dict.common.cancel}
             </Button>

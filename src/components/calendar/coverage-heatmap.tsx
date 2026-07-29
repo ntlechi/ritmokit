@@ -10,12 +10,13 @@ import {
   type StationHourCoverage,
 } from "@/lib/scheduling/coverage-client";
 import { stationLabel, type StationRecord } from "@/lib/stations/display";
+import { dna } from "@/lib/design/dna";
 import type { Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { cn } from "@/lib/utils";
 
 const toneStyles: Record<string, string> = {
-  closed: "bg-zinc-100/60 text-foreground-muted dark:bg-white/[0.04]",
+  closed: "bg-surface-muted/60 text-foreground-muted",
   understaffed: "bg-danger/15 ring-1 ring-inset ring-danger/20",
   overstaffed: "bg-warning/15 ring-1 ring-inset ring-warning/20",
   ok: "bg-success/15 ring-1 ring-inset ring-success/15",
@@ -73,7 +74,7 @@ function HeatmapCell({
         aria-label={tooltip}
       />
       {hovered && coverage.status !== "closed" && (
-        <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 w-max max-w-[220px] -translate-x-1/2 rounded-xl border border-zinc-200/80 bg-white px-3 py-2 text-xs shadow-lg dark:border-white/10 dark:bg-zinc-900">
+        <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 w-max max-w-[220px] -translate-x-1/2 rounded-xl border border-border bg-surface px-3 py-2 text-xs shadow-lg">
           <p className="font-medium">{stationLabelText} · {String(coverage.hour).padStart(2, "0")}:00</p>
           <p className="mt-1 text-foreground-muted">
             {dict.schedule.need}: {coverage.requiredHeadcount} · {dict.schedule.planned}: {coverage.scheduledHeadcount}
@@ -131,7 +132,7 @@ export function CoverageHeatmap({
   }, [hourly]);
 
   return (
-    <section className="flex flex-col gap-3 rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-xs dark:border-white/10 dark:bg-zinc-900/60">
+    <section className={cn("flex flex-col gap-3 p-4", dna.panel)}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-semibold">{dict.schedule.heatmapTitle}</h3>
         <div className="flex flex-wrap items-center gap-3 text-[10px] font-medium uppercase tracking-wide text-foreground-muted">

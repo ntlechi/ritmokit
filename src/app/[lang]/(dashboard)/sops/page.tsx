@@ -11,6 +11,8 @@ import { safeQuery } from "@/lib/data/safe";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { isLocale, type Locale } from "@/lib/i18n/config";
+import { dna } from "@/lib/design/dna";
+import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +35,7 @@ export default async function SopsPage({ params }: { params: Promise<{ lang: str
   if (!user) {
     return (
       <div className="flex flex-1 flex-col">
-        <header className="border-b border-zinc-200/80 px-4 py-4 dark:border-white/10 sm:px-6">
+        <header className={cn("px-4 py-4 sm:px-6", dna.pageHeader)}>
           <h1 className="text-xl font-semibold tracking-tight">{dict.training.centerTitle}</h1>
         </header>
         <main className="flex flex-1 items-center justify-center px-4 py-12 sm:px-6">
@@ -46,8 +48,8 @@ export default async function SopsPage({ params }: { params: Promise<{ lang: str
   const canManage = canManageTrainingCatalog(user.role);
 
   return (
-    <div className="flex flex-1 flex-col bg-zinc-50/50 dark:bg-transparent">
-      <header className="border-b border-zinc-200/80 px-4 py-4 dark:border-white/10 sm:px-6">
+    <div className="flex flex-1 flex-col">
+      <header className={cn("px-4 py-4 sm:px-6", dna.pageHeader)}>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="text-xl font-semibold tracking-tight">{dict.training.centerTitle}</h1>
@@ -56,7 +58,7 @@ export default async function SopsPage({ params }: { params: Promise<{ lang: str
           {canManage && (
             <Link
               href={`/${lang}/settings/training`}
-              className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200/80 bg-white px-3 py-1.5 text-xs font-semibold text-foreground shadow-xs hover:bg-zinc-50 dark:border-white/10 dark:bg-zinc-900 dark:hover:bg-white/5"
+              className={cn(dna.ctaGhost, "px-3 py-1.5 text-xs font-semibold shadow-xs")}
             >
               <Settings2 className="h-3.5 w-3.5" aria-hidden />
               {dict.training.manageCatalog}

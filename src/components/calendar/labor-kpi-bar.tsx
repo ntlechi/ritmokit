@@ -1,4 +1,5 @@
 import { AlertTriangle, Clock3, DollarSign, Gauge, TrendingUp } from "lucide-react";
+import { dna } from "@/lib/design/dna";
 import {
   LABOR_COST_TARGET_MAX,
   LABOR_COST_TARGET_MIN,
@@ -38,7 +39,7 @@ function LaborCostGauge({ dict, report }: { dict: Dictionary; report: LiveLaborK
   const gaugePct = Math.min(report.liveLaborCostPercentage, 60);
 
   return (
-    <div className="flex min-w-[220px] flex-1 flex-col gap-2 rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-xs dark:border-white/10 dark:bg-zinc-900/60">
+    <div className={cn("flex min-w-[220px] flex-1 flex-col gap-2 p-4", dna.panel)}>
         <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-foreground-muted">
           <DollarSign className="h-3.5 w-3.5" aria-hidden />
@@ -53,7 +54,7 @@ function LaborCostGauge({ dict, report }: { dict: Dictionary; report: LiveLaborK
 
       {report.hasClassRevenueData ? (
         <>
-          <div className="relative h-1.5 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
+          <div className="relative h-1.5 overflow-hidden rounded-full bg-surface-muted">
             <div
               className={cn("absolute inset-y-0 left-0 rounded-full transition-all", statusRingColor(status))}
               style={{ width: `${(gaugePct / 60) * 100}%` }}
@@ -82,7 +83,7 @@ function LaborCostGauge({ dict, report }: { dict: Dictionary; report: LiveLaborK
 
 function RevenuePerHourCard({ dict, report }: { dict: Dictionary; report: LiveLaborKpiReport }) {
   return (
-    <div className="flex min-w-[180px] flex-1 flex-col gap-2 rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-xs dark:border-white/10 dark:bg-zinc-900/60">
+    <div className={cn("flex min-w-[180px] flex-1 flex-col gap-2 p-4", dna.panel)}>
       <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-foreground-muted">
         <TrendingUp className="h-3.5 w-3.5" aria-hidden />
         {dict.laborKpi.revenuePerHour}
@@ -100,7 +101,7 @@ function RevenuePerHourCard({ dict, report }: { dict: Dictionary; report: LiveLa
 
 function OvertimeRiskCard({ dict, report }: { dict: Dictionary; report: LiveLaborKpiReport }) {
   return (
-    <div className="flex min-w-[220px] flex-1 flex-col gap-2 rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-xs dark:border-white/10 dark:bg-zinc-900/60">
+    <div className={cn("flex min-w-[220px] flex-1 flex-col gap-2 p-4", dna.panel)}>
       <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-foreground-muted">
         <AlertTriangle className="h-3.5 w-3.5" aria-hidden />
         {dict.laborKpi.overtimeRisk}
@@ -135,7 +136,7 @@ function LaborVarianceCard({ dict, report }: { dict: Dictionary; report: LiveLab
   const total = laborVariance.totalVarianceHours;
 
   return (
-    <div className="flex min-w-[200px] flex-1 flex-col gap-2 rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-xs dark:border-white/10 dark:bg-zinc-900/60">
+    <div className={cn("flex min-w-[200px] flex-1 flex-col gap-2 p-4", dna.panel)}>
       <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-foreground-muted">
         <Clock3 className="h-3.5 w-3.5" aria-hidden />
         {dict.laborKpi.laborVariance}

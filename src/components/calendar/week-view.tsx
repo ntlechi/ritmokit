@@ -317,12 +317,12 @@ export function WeekView({
       )}
       <div
         className={cn(
-          "grid overflow-auto rounded-3xl border border-zinc-200/80 bg-zinc-50/60 shadow-xs transition-opacity dark:border-white/10 dark:bg-zinc-900/40",
+          "grid overflow-auto rounded-3xl border border-border bg-surface-muted/60 shadow-xs transition-opacity",
           isPending && "opacity-90",
         )}
         style={{ gridTemplateColumns: `176px repeat(7, minmax(148px, 1fr))` }}
       >
-        <div className="sticky left-0 top-0 z-10 border-b border-r border-zinc-200/80 bg-white/80 px-3 py-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground-muted backdrop-blur-xl dark:border-white/10 dark:bg-zinc-900/80">
+        <div className="sticky left-0 top-0 z-10 border-b border-r border-border bg-surface-glass px-3 py-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground-muted backdrop-blur-xl">
           {dict.calendar.team}
         </div>
         {days.map((day) => {
@@ -331,8 +331,8 @@ export function WeekView({
             <div
               key={day.toISOString()}
               className={cn(
-                "flex items-baseline gap-1.5 border-b border-r border-zinc-200/60 px-3 py-2.5 dark:border-white/5",
-                isToday && "bg-zinc-900/[0.03] dark:bg-white/[0.04]",
+                "flex items-baseline gap-1.5 border-b border-r border-border px-3 py-2.5",
+                isToday && "bg-accent/5",
               )}
             >
               <span
@@ -347,7 +347,7 @@ export function WeekView({
                 className={cn(
                   "metric text-xs font-medium",
                   isToday
-                    ? "flex h-5 w-5 items-center justify-center rounded-full bg-zinc-900 font-semibold text-white dark:bg-white dark:text-zinc-900"
+                    ? "flex h-5 w-5 items-center justify-center rounded-full bg-accent font-semibold text-accent-foreground"
                     : "text-foreground",
                 )}
               >
@@ -359,7 +359,7 @@ export function WeekView({
 
         {hasUnassigned && (
           <div className="contents">
-            <div className="sticky left-0 z-10 flex flex-col justify-center gap-0.5 border-b border-r border-zinc-200/80 bg-zinc-50/90 px-3 py-2 backdrop-blur-xl dark:border-white/10 dark:bg-zinc-900/90">
+            <div className="sticky left-0 z-10 flex flex-col justify-center gap-0.5 border-b border-r border-border bg-surface-glass px-3 py-2 backdrop-blur-xl">
               <span className="flex items-center gap-1.5 text-sm font-medium">
                 <span className="h-1.5 w-1.5 rounded-full bg-warning" aria-hidden />
                 {dict.calendar.unassigned}
@@ -394,7 +394,7 @@ export function WeekView({
                     if (shiftId) handleUnassign(day, shiftId);
                   }}
                   className={cn(
-                    "flex min-h-22 flex-col gap-1.5 border-b border-r border-zinc-200/50 bg-zinc-50/40 p-2 transition-colors dark:border-white/5 dark:bg-white/[0.02]",
+                    "flex min-h-22 flex-col gap-1.5 border-b border-r border-border bg-surface-muted/40 p-2 transition-colors",
                     isDropTarget && "bg-warning/10 ring-2 ring-inset ring-warning/40",
                   )}
                 >
@@ -419,7 +419,7 @@ export function WeekView({
                       type="button"
                       data-interactive
                       onClick={() => toggleUnassignedDay(key)}
-                      className="metric self-start rounded-full px-2 py-0.5 text-[11px] font-medium text-foreground-muted transition-colors hover:bg-zinc-200/60 hover:text-foreground dark:hover:bg-white/10"
+                      className="metric self-start rounded-full px-2 py-0.5 text-[11px] font-medium text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground"
                     >
                       +{hiddenCount}
                     </button>
@@ -429,7 +429,7 @@ export function WeekView({
                       type="button"
                       data-interactive
                       onClick={() => toggleUnassignedDay(key)}
-                      className="self-start rounded-full px-2 py-0.5 text-[11px] font-medium text-foreground-muted transition-colors hover:bg-zinc-200/60 hover:text-foreground dark:hover:bg-white/10"
+                      className="self-start rounded-full px-2 py-0.5 text-[11px] font-medium text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground"
                     >
                       {dict.calendar.showLess}
                     </button>
@@ -449,11 +449,11 @@ export function WeekView({
           const hours = weeklyHours.get(entry.userId) ?? 0;
           const maxHours = entry.maxHoursPerWeek ?? 40;
           const ratio = maxHours > 0 ? hours / maxHours : 0;
-          const barColor = ratio > 1 ? "bg-danger" : ratio > 0.85 ? "bg-warning" : "bg-zinc-900 dark:bg-zinc-100";
+          const barColor = ratio > 1 ? "bg-danger" : ratio > 0.85 ? "bg-warning" : "bg-accent";
 
           return (
             <div key={entry.userId} className="contents">
-              <div className="sticky left-0 z-10 flex flex-col justify-center gap-1.5 border-b border-r border-zinc-200/80 bg-white/80 px-3 py-2.5 backdrop-blur-xl dark:border-white/10 dark:bg-zinc-900/80">
+              <div className="sticky left-0 z-10 flex flex-col justify-center gap-1.5 border-b border-r border-border bg-surface-glass px-3 py-2.5 backdrop-blur-xl">
                 <div className="flex items-center gap-2">
                   <UserAvatar
                     fullName={entry.user.fullName}
@@ -463,7 +463,7 @@ export function WeekView({
                   <span className="truncate text-sm font-medium">{entry.user.fullName}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
+                  <span className="h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-surface-muted">
                     <span
                       className={cn("block h-full rounded-full transition-[width] duration-300", barColor)}
                       style={{ width: `${Math.min(100, Math.round(ratio * 100))}%` }}
@@ -496,9 +496,9 @@ export function WeekView({
                       if (shiftId) handleDrop(entry.userId, day, shiftId);
                     }}
                     className={cn(
-                      "flex min-h-22 flex-col gap-1.5 border-b border-r border-zinc-200/50 p-2 transition-colors dark:border-white/5",
-                      isToday && "bg-zinc-900/[0.02] dark:bg-white/[0.03]",
-                      isDropTarget && "bg-zinc-900/5 ring-2 ring-inset ring-zinc-900/20 dark:bg-white/10 dark:ring-white/25",
+                      "flex min-h-22 flex-col gap-1.5 border-b border-r border-border p-2 transition-colors",
+                      isToday && "bg-accent/5",
+                      isDropTarget && "bg-accent/5 ring-2 ring-inset ring-accent/20",
                     )}
                   >
                     {cellShifts.map((shift) => (

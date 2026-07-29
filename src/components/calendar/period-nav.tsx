@@ -2,6 +2,7 @@ import Link from "next/link";
 import { addDays, addMonths, addWeeks, format } from "date-fns";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { WeekStartPicker } from "@/components/calendar/week-start-picker";
+import { dna } from "@/lib/design/dna";
 import type { WeekStartDay } from "@/lib/calendar/week-start";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
@@ -20,7 +21,7 @@ function dateHref(lang: Locale, view: PeriodView, date?: Date) {
 }
 
 const navItemClass =
-  "flex h-9 items-center justify-center rounded-lg border border-zinc-200/80 bg-white text-foreground-muted transition-colors hover:border-zinc-300 hover:text-foreground dark:border-white/10 dark:bg-zinc-900/60 dark:hover:border-white/20";
+  "flex h-9 items-center justify-center rounded-lg border border-border bg-surface text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground";
 
 /** En-tête de période : libellé + navigation ‹ Aujourd'hui › (liens ?date=). */
 export function PeriodNav({

@@ -4,6 +4,7 @@ import { ShiftChip } from "@/components/calendar/shift-chip";
 import type { ShiftWithEmployee } from "@/lib/data/shifts";
 import type { Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
+import { dna } from "@/lib/design/dna";
 import { isSameDay } from "@/lib/calendar/grid";
 import { cn } from "@/lib/utils";
 
@@ -39,8 +40,8 @@ export function MonthView({
   const rowCount = Math.ceil(days.length / 7);
 
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-xs dark:border-white/10 dark:bg-zinc-900/60">
-      <div className="grid grid-cols-7 border-b border-zinc-200/80 dark:border-white/10">
+    <div className={cn("flex h-full flex-col overflow-hidden shadow-xs", dna.panel)}>
+      <div className="grid grid-cols-7 border-b border-border">
         {weekdayLabels.map((label, i) => {
           const isTodayColumn = today.getDay() === days[i].getDay() && isSameMonth(today, anchor);
           return (
@@ -74,17 +75,17 @@ export function MonthView({
               key={day.toISOString()}
               className={cn(
                 "flex flex-col gap-1 p-1.5 transition-colors",
-                !lastColumn && "border-r border-zinc-200/60 dark:border-white/5",
-                !lastRow && "border-b border-zinc-200/60 dark:border-white/5",
-                !inMonth && "bg-zinc-100/50 dark:bg-white/[0.03]",
-                isToday && "bg-zinc-900/[0.03] dark:bg-white/[0.04]",
+                !lastColumn && "border-r border-border",
+                !lastRow && "border-b border-border",
+                !inMonth && "bg-surface-muted/50",
+                isToday && "bg-accent/5",
               )}
             >
               <span
                 className={cn(
                   "flex h-6 w-6 items-center justify-center self-start rounded-full font-mono text-xs tabular-nums",
                   isToday
-                    ? "bg-zinc-900 font-semibold text-white dark:bg-white dark:text-zinc-900"
+                    ? "bg-accent font-semibold text-accent-foreground"
                     : inMonth
                       ? "text-foreground"
                       : "text-foreground-muted/50",

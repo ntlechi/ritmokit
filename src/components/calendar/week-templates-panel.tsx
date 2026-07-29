@@ -8,6 +8,7 @@ import {
   deleteScheduleTemplateAction,
   saveWeekAsTemplateAction,
 } from "@/lib/actions/schedule-templates";
+import { dna } from "@/lib/design/dna";
 import type { ScheduleTemplateSummary } from "@/lib/data/schedule-templates";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { Button } from "@/components/ui/button";
@@ -133,12 +134,12 @@ export function WeekTemplatesPanel({
   }
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-xs dark:border-white/10 dark:bg-zinc-900/60">
+    <section className={cn("overflow-hidden shadow-xs", dna.panel)}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-white/[0.03]"
+        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-muted"
       >
         <div className="flex items-center gap-2.5">
           <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-accent/10 text-accent">
@@ -151,7 +152,7 @@ export function WeekTemplatesPanel({
         </div>
         <div className="flex items-center gap-2">
           {templates.length > 0 && (
-            <span className="metric rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-semibold text-foreground-muted dark:bg-white/10">
+            <span className="metric rounded-full bg-surface-muted px-2 py-0.5 text-xs font-semibold text-foreground-muted">
               {templates.length}
             </span>
           )}
@@ -170,7 +171,7 @@ export function WeekTemplatesPanel({
         )}
       >
         <div className="overflow-hidden">
-          <div className="flex flex-col gap-3 border-t border-zinc-200/60 p-4 dark:border-white/5">
+          <div className="flex flex-col gap-3 border-t border-border p-4">
       <div className="flex justify-end">
         <Button
           type="button"
@@ -185,7 +186,7 @@ export function WeekTemplatesPanel({
       </div>
 
       {showSaveForm && (
-        <div className="space-y-2 rounded-xl border border-zinc-200/80 bg-zinc-50 p-3 dark:border-white/10 dark:bg-white/5">
+        <div className="space-y-2 rounded-xl border border-border bg-surface-muted p-3">
           <label className="block">
             <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-foreground-muted">
               {t.nameLabel}
@@ -195,7 +196,7 @@ export function WeekTemplatesPanel({
               onChange={(e) => setName(e.target.value)}
               placeholder={t.namePlaceholder}
               maxLength={80}
-              className="h-10 w-full rounded-xl border border-zinc-200/80 bg-white px-3 text-sm outline-none ring-accent/30 focus:ring-2 dark:border-white/10 dark:bg-zinc-900/60"
+              className={cn(dna.field, "h-10 px-3 ring-accent/30 focus:ring-2")}
             />
           </label>
           <label className="block">
@@ -207,7 +208,7 @@ export function WeekTemplatesPanel({
               onChange={(e) => setDescription(e.target.value)}
               placeholder={t.descriptionPlaceholder}
               maxLength={200}
-              className="h-10 w-full rounded-xl border border-zinc-200/80 bg-white px-3 text-sm outline-none ring-accent/30 focus:ring-2 dark:border-white/10 dark:bg-zinc-900/60"
+              className={cn(dna.field, "h-10 px-3 ring-accent/30 focus:ring-2")}
             />
           </label>
           <div className="flex justify-end gap-2 pt-1">
@@ -228,7 +229,7 @@ export function WeekTemplatesPanel({
       )}
 
       {templates.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-zinc-200/80 px-3 py-6 text-center text-xs text-foreground-muted dark:border-white/10">
+        <p className="rounded-xl border border-dashed border-border px-3 py-6 text-center text-xs text-foreground-muted">
           {t.empty}
         </p>
       ) : (
@@ -238,7 +239,7 @@ export function WeekTemplatesPanel({
             return (
               <li
                 key={template.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-zinc-200/80 bg-zinc-50/60 px-3 py-2.5 dark:border-white/10 dark:bg-white/5"
+                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-surface-muted/60 px-3 py-2.5"
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">{template.name}</p>

@@ -26,6 +26,7 @@ import {
 } from "@/lib/scheduling/coverage-client";
 import type { StaffingProfileSnapshot } from "@/lib/scheduling/staffing-curve-core";
 import type { StationRecord } from "@/lib/stations/display";
+import { dna } from "@/lib/design/dna";
 import type { Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { cn } from "@/lib/utils";
@@ -216,8 +217,8 @@ export function ManagerScheduleView({
               className={cn(
                 "rounded-full px-3 py-1.5 text-xs font-medium capitalize transition-colors",
                 index === selectedDayIndex
-                  ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
-                  : "bg-zinc-100 text-foreground-muted hover:text-foreground dark:bg-white/5",
+                  ? dna.pillActive
+                  : cn(dna.pillIdle, "bg-surface-muted px-3 py-1.5"),
               )}
             >
               {format(day, "EEE d", { locale: dateFnsLocales[locale] })}
@@ -227,7 +228,7 @@ export function ManagerScheduleView({
         <button
           type="button"
           onClick={() => setSidebarOpen(true)}
-          className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200/80 px-3 py-1.5 text-xs font-medium hover:bg-zinc-100 dark:border-white/10 dark:hover:bg-white/5"
+          className={cn(dna.ctaGhost, "px-3 py-1.5 text-xs")}
         >
           <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden />
           {dict.schedule.openTargets}

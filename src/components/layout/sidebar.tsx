@@ -31,6 +31,7 @@ import {
   canAccessAdminSettings,
   canAccessManagerSettings,
 } from "@/lib/auth/session-client";
+import { dna } from "@/lib/design/dna";
 import { cn } from "@/lib/utils";
 
 const STORAGE_COLLAPSED = "ritmokit-sidebar-collapsed";
@@ -41,13 +42,15 @@ const MIN_WIDTH = 200;
 const MAX_WIDTH = 360;
 const DEFAULT_WIDTH = 240;
 
+/** Dance-first order: Cockpit → Accueil → Sessions → Rooms → Calendar → … */
 const navItems = [
-  { key: "calendar" as const, href: "/calendar/week", icon: Calendar },
+  { key: "cockpit" as const, href: "/dashboard", icon: LayoutDashboard, managerOnly: true },
   { key: "accueil" as const, href: "/accueil", icon: ClipboardCheck, accueilOnly: true },
-  { key: "sessions" as const, href: "/sessions", icon: Music2 },
-  { key: "rooms" as const, href: "/rooms", icon: DoorOpen },
-  { key: "messages" as const, href: "/messages", icon: MessagesSquare },
+  { key: "sessions" as const, href: "/sessions", icon: Music2, managerOnly: true },
+  { key: "rooms" as const, href: "/rooms", icon: DoorOpen, managerOnly: true },
+  { key: "calendar" as const, href: "/calendar/week", icon: Calendar },
   { key: "team" as const, href: "/team", icon: Users },
+  { key: "messages" as const, href: "/messages", icon: MessagesSquare },
   { key: "settings" as const, href: "/settings", icon: Settings },
 ] as const;
 
@@ -110,6 +113,11 @@ function useSidebarPrefs() {
   return useSyncExternalStore(subscribePrefs, readPrefs, () => SERVER_PREFS);
 }
 
+function navLabel(shell: ShellCopy, key: (typeof navItems)[number]["key"]): string {
+  if (key === "cockpit") return shell.nav.cockpit;
+  return shell.nav[key];
+}
+
 export function Sidebar({
   lang,
   shell,
@@ -123,11 +131,6 @@ export function Sidebar({
   const isManagement = canAccessManagerSettings(role);
   const isAdmin = canAccessAdminSettings(role);
   const showAccueil = canAccessAccueil(role);
-  const cockpitHref = `/${lang}/dashboard`;
-  const cockpitActive =
-    pathname?.startsWith(cockpitHref) ||
-    pathname?.startsWith(`/${lang}/cockpit`) ||
-    pathname?.startsWith(`/${lang}/settings/manager`);
 
   const prefs = useSidebarPrefs();
   const { collapsed, width } = prefs;
@@ -183,16 +186,15 @@ export function Sidebar({
   return (
     <aside
       className={cn(
-        "relative hidden lg:flex lg:shrink-0 lg:flex-col lg:border-r lg:border-zinc-200/80 lg:bg-white/80 lg:backdrop-blur-xl dark:lg:border-white/10 dark:lg:bg-zinc-900/80",
+        "relative hidden lg:flex lg:shrink-0 lg:flex-col lg:border-r lg:border-border lg:bg-surface-glass lg:backdrop-blur-xl",
         dragWidth == null && "transition-[width] duration-200 ease-out",
       )}
       style={{ width: effectiveWidth }}
       data-collapsed={collapsed ? "true" : "false"}
     >
-      {/* Brand — same height as AppHeader for a continuous hairline */}
       <div
         className={cn(
-          "flex h-14 shrink-0 items-center border-b border-zinc-200/80 dark:border-white/10",
+          "flex h-14 shrink-0 items-center border-b border-border",
           collapsed ? "justify-center px-2" : "gap-2.5 px-4",
         )}
       >
@@ -209,7 +211,7 @@ export function Sidebar({
             type="button"
             data-interactive
             onClick={() => setCollapsed(true)}
-            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-foreground-muted transition-colors hover:bg-zinc-100 hover:text-foreground dark:hover:bg-white/5"
+            className={dna.iconBtn}
             aria-label={shell.common.collapseSidebar}
             title={shell.common.collapseSidebar}
           >
@@ -227,7 +229,7 @@ export function Sidebar({
             type="button"
             data-interactive
             onClick={() => setCollapsed(false)}
-            className="mb-1 flex h-10 w-full items-center justify-center rounded-xl text-foreground-muted transition-colors hover:bg-zinc-100 hover:text-foreground dark:hover:bg-white/5"
+            className={cn(dna.iconBtn, "mb-1 h-10 w-full")}
             aria-label={shell.common.expandSidebar}
             title={shell.common.expandSidebar}
           >
@@ -236,11 +238,19 @@ export function Sidebar({
         )}
 
         {navItems
-          .filter((item) => !("accueilOnly" in item && item.accueilOnly) || showAccueil)
+          .filter((item) => {
+            if ("accueilOnly" in item && item.accueilOnly) return showAccueil;
+            if ("managerOnly" in item && item.managerOnly) return isManagement;
+            return true;
+          })
           .map(({ key, href, icon: Icon }) => {
             const fullHref = `/${lang}${href}`;
-            const active = pathname?.startsWith(fullHref);
-            const label = shell.nav[key];
+            const active =
+              key === "cockpit"
+                ? pathname?.startsWith(`/${lang}/dashboard`) ||
+                  pathname?.startsWith(`/${lang}/cockpit`)
+                : pathname?.startsWith(fullHref);
+            const label = navLabel(shell, key);
 
             return (
               <Link
@@ -250,11 +260,10 @@ export function Sidebar({
                 aria-current={active ? "page" : undefined}
                 title={collapsed ? label : undefined}
                 className={cn(
-                  "relative flex items-center rounded-xl text-sm font-medium",
+                  "relative flex items-center text-sm font-medium",
                   collapsed ? "h-10 justify-center px-0" : "gap-3 px-3 py-2.5",
-                  active
-                    ? "bg-zinc-900 text-white shadow-xs dark:bg-white dark:text-zinc-900"
-                    : "text-foreground-muted hover:bg-zinc-100 hover:text-foreground dark:hover:bg-white/5",
+                  active ? dna.navItemActive : dna.navItemIdle,
+                  key === "cockpit" && "font-semibold",
                 )}
               >
                 <Icon className="h-4 w-4 shrink-0" aria-hidden />
@@ -263,59 +272,41 @@ export function Sidebar({
             );
           })}
 
-        {isManagement && (
+        {isAdmin && (
           <div
             className={cn(
-              "mt-3 space-y-1 border-t border-zinc-200/80 pt-3 dark:border-white/10",
+              "mt-3 space-y-1 border-t border-border pt-3",
               collapsed && "border-t-0 pt-1",
             )}
           >
             {!collapsed && (
-              <p className="px-3 pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-foreground-muted">
+              <p className="px-3 pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-accent">
                 {shell.nav.franchiseSection}
               </p>
             )}
             <Link
-              href={cockpitHref}
+              href={`/${lang}/settings/admin`}
               data-interactive
-              aria-current={cockpitActive ? "page" : undefined}
-              title={collapsed ? shell.nav.cockpit : undefined}
+              aria-current={pathname?.startsWith(`/${lang}/settings/admin`) ? "page" : undefined}
+              title={collapsed ? shell.settings.admin : undefined}
               className={cn(
-                "relative flex items-center rounded-xl text-sm font-semibold",
+                "flex items-center text-sm font-medium",
                 collapsed ? "h-10 justify-center px-0" : "gap-3 px-3 py-2.5",
-                cockpitActive
-                  ? "bg-accent text-accent-foreground shadow-xs"
-                  : "text-foreground-muted hover:bg-surface-muted hover:text-foreground",
+                pathname?.startsWith(`/${lang}/settings/admin`)
+                  ? dna.navItemActive
+                  : dna.navItemIdle,
               )}
             >
-              <LayoutDashboard className="h-4 w-4 shrink-0" aria-hidden />
-              {!collapsed && <span className="truncate">{shell.nav.cockpit}</span>}
+              <Settings className="h-4 w-4 shrink-0" aria-hidden />
+              {!collapsed && <span className="truncate">{shell.settings.admin}</span>}
             </Link>
-            {isAdmin && (
-              <Link
-                href={`/${lang}/settings/admin`}
-                data-interactive
-                aria-current={pathname?.startsWith(`/${lang}/settings/admin`) ? "page" : undefined}
-                title={collapsed ? shell.settings.admin : undefined}
-                className={cn(
-                  "flex items-center rounded-xl text-sm font-medium",
-                  collapsed ? "h-10 justify-center px-0" : "gap-3 px-3 py-2.5",
-                  pathname?.startsWith(`/${lang}/settings/admin`)
-                    ? "bg-zinc-900 text-white shadow-xs dark:bg-white dark:text-zinc-900"
-                    : "text-foreground-muted hover:bg-zinc-100 hover:text-foreground dark:hover:bg-white/5",
-                )}
-              >
-                <Settings className="h-4 w-4 shrink-0" aria-hidden />
-                {!collapsed && <span className="truncate">{shell.settings.admin}</span>}
-              </Link>
-            )}
           </div>
         )}
       </nav>
 
       <div
         className={cn(
-          "shrink-0 border-t border-zinc-200/80 p-2 dark:border-white/10",
+          "shrink-0 border-t border-border p-2",
           collapsed && "flex flex-col items-stretch",
         )}
       >
@@ -323,11 +314,9 @@ export function Sidebar({
           href={`/${lang}/help`}
           title={collapsed ? shell.nav.help : undefined}
           className={cn(
-            "flex items-center rounded-xl text-sm font-medium",
+            "flex items-center text-sm font-medium",
             collapsed ? "h-10 justify-center px-0" : "gap-3 px-3 py-2.5",
-            pathname?.startsWith(`/${lang}/help`)
-              ? "bg-zinc-900 text-white shadow-xs dark:bg-white dark:text-zinc-900"
-              : "text-foreground-muted hover:bg-zinc-100 hover:text-foreground dark:hover:bg-white/5",
+            pathname?.startsWith(`/${lang}/help`) ? dna.navItemActive : dna.navItemIdle,
           )}
         >
           <LifeBuoy className="h-4 w-4 shrink-0" aria-hidden />
@@ -335,14 +324,13 @@ export function Sidebar({
         </Link>
       </div>
 
-      {/* Resize handle — expanded only */}
       {!collapsed && (
         <div
           role="separator"
           aria-orientation="vertical"
           aria-label={shell.common.resizeSidebar}
           onPointerDown={startResize}
-          className="absolute inset-y-0 right-0 z-20 w-1.5 cursor-col-resize touch-none hover:bg-zinc-900/10 active:bg-zinc-900/15 dark:hover:bg-white/10 dark:active:bg-white/15"
+          className="absolute inset-y-0 right-0 z-20 w-1.5 cursor-col-resize touch-none hover:bg-accent/15 active:bg-accent/25"
         />
       )}
     </aside>

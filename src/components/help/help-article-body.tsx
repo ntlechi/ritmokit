@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Lightbulb } from "lucide-react";
 import type { Dictionary, HelpTopicCopy } from "@/lib/i18n/dictionaries";
+import { dna } from "@/lib/design/dna";
 import { cn } from "@/lib/utils";
 
 /**
@@ -27,7 +28,7 @@ export function HelpArticleBody({
         <ol className="mt-3 space-y-2.5">
           {topic.steps.map((step, index) => (
             <li key={step} className="flex gap-3">
-              <span className="metric mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-[11px] font-bold text-white dark:bg-white dark:text-zinc-900">
+              <span className={cn("metric mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center text-[11px] font-bold", dna.pillActive)}>
                 {index + 1}
               </span>
               <span className="max-w-2xl pt-0.5 text-sm leading-relaxed">{step}</span>
@@ -43,10 +44,7 @@ export function HelpArticleBody({
         </div>
       )}
 
-      <Link
-        href={ctaHref}
-        className="inline-flex items-center gap-2 rounded-full bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
-      >
+      <Link href={ctaHref} className={dna.cta}>
         {topic.ctaLabel}
         <ArrowRight className="h-4 w-4" aria-hidden />
       </Link>

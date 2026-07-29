@@ -5,6 +5,7 @@ import { fr, enUS, es } from "date-fns/locale";
 import { format } from "date-fns";
 import { Activity, Check } from "lucide-react";
 import type { DayCoverageAlerts } from "@/lib/data/coverage";
+import { dna } from "@/lib/design/dna";
 import type { Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { StationRecord } from "@/lib/stations/display";
@@ -70,7 +71,7 @@ export function WeeklyCoverageAlerts({
   const dfLocale = dateFnsLocales[locale];
 
   return (
-    <section className="rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-xs dark:border-white/10 dark:bg-zinc-900/60">
+    <section className={cn("p-4", dna.panel)}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="flex items-center gap-1.5 text-sm font-semibold">
           <Activity className="h-4 w-4 text-accent" aria-hidden />
@@ -105,9 +106,9 @@ export function WeeklyCoverageAlerts({
               className={cn(
                 "flex flex-col items-center gap-1 rounded-xl border px-1 py-2 transition-colors",
                 selected
-                  ? "border-zinc-900/20 bg-zinc-900/[0.04] dark:border-white/25 dark:bg-white/[0.06]"
+                  ? "border-accent/20 bg-accent/5"
                   : "border-transparent",
-                count > 0 && !selected && "hover:bg-zinc-100/80 dark:hover:bg-white/5",
+                count > 0 && !selected && "hover:bg-surface-muted",
                 count === 0 && "cursor-default",
               )}
             >
@@ -135,11 +136,11 @@ export function WeeklyCoverageAlerts({
       </div>
 
       {selectedDay && selectedDay.alerts.length > 0 && (
-        <div className="mt-3 overflow-hidden rounded-xl border border-zinc-200/60 dark:border-white/5">
-          <p className="border-b border-zinc-200/60 bg-zinc-50/80 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground-muted dark:border-white/5 dark:bg-white/[0.03]">
+        <div className="mt-3 overflow-hidden rounded-xl border border-border">
+          <p className="border-b border-border bg-surface-muted/80 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground-muted">
             {format(new Date(selectedDay.date), "EEEE d MMMM", { locale: dfLocale })}
           </p>
-          <ul className="divide-y divide-zinc-200/60 dark:divide-white/5">
+          <ul className="divide-y divide-border">
             {[...selectedDay.alerts]
               .sort((a, b) => a.startHour - b.startHour)
               .map((alert, i) => (

@@ -9,6 +9,7 @@ import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { dna } from "@/lib/design/dna";
 import { cn } from "@/lib/utils";
 
 function toInputValue(iso: string | null): string {
@@ -218,8 +219,8 @@ export function ManagerPunchesDashboard({
             className={cn(
               "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
               filterMissingOnly
-                ? "border-transparent bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
-                : "border-border bg-surface-muted text-foreground-muted hover:text-foreground",
+                ? cn(dna.pillActive, "inline-flex items-center gap-1.5 border border-transparent px-3 py-1.5 text-xs font-semibold")
+                : "inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-muted px-3 py-1.5 text-xs font-semibold text-foreground-muted transition-colors hover:text-foreground",
             )}
           >
             <Clock className="h-3.5 w-3.5" aria-hidden />

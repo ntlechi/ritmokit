@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Sparkles, Send } from "lucide-react";
 import { generateAutoScheduleAction, publishDraftShiftsAction } from "@/lib/actions/auto-schedule";
+import { dna } from "@/lib/design/dna";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { cn } from "@/lib/utils";
 
@@ -67,7 +68,7 @@ export function AutoScheduleControls({
   }
 
   return (
-    <section className="flex flex-col gap-2 rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-xs dark:border-white/10 dark:bg-zinc-900/60">
+    <section className={cn("flex flex-col gap-2 p-4", dna.panel)}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="flex items-center gap-1.5 text-sm font-semibold">
@@ -81,7 +82,7 @@ export function AutoScheduleControls({
             type="button"
             onClick={handleGenerate}
             disabled={isGenerating || isPublishing}
-            className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200/80 px-3 py-1.5 text-xs font-medium hover:bg-zinc-100 disabled:opacity-60 dark:border-white/10 dark:hover:bg-white/5"
+            className={cn(dna.ctaGhost, "px-3 py-1.5 text-xs disabled:opacity-60")}
           >
             <Sparkles className="h-3.5 w-3.5" aria-hidden />
             {isGenerating ? dict.autoSchedule.generating : dict.autoSchedule.generate}

@@ -14,6 +14,7 @@ import type { Locale } from "@/lib/i18n/config";
 import { Button } from "@/components/ui/button";
 import { closeButtonClass, contentClass, overlayClass } from "@/components/ui/modal-chrome";
 import { UserAvatar } from "@/components/ui/user-avatar";
+import { dna } from "@/lib/design/dna";
 import { cn } from "@/lib/utils";
 
 export type ComposerMode = "direct" | "group";
@@ -121,7 +122,7 @@ export function NewConversationSheet({
             "sm:inset-auto sm:left-1/2 sm:top-1/2 sm:max-h-[80vh] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl",
           )}
         >
-          <header className="flex items-start justify-between gap-3 border-b border-zinc-200/80 px-5 py-4 dark:border-white/10">
+          <header className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
             <div className="min-w-0">
               <Dialog.Title className="text-base font-semibold tracking-tight">
                 {title}
@@ -137,7 +138,7 @@ export function NewConversationSheet({
           </header>
 
           {mode === "group" && (
-            <div className="border-b border-zinc-200/80 px-5 py-3 dark:border-white/10">
+            <div className="border-b border-border px-5 py-3">
               <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-foreground-muted">
                 {dict.messages.groupName}
               </label>
@@ -147,12 +148,12 @@ export function NewConversationSheet({
                 placeholder={dict.messages.groupNamePlaceholder}
                 maxLength={60}
                 autoFocus
-                className="h-11 w-full rounded-2xl border border-zinc-200/80 bg-surface-muted/60 px-4 text-sm outline-none ring-accent/30 focus:ring-2 dark:border-white/10"
+                className={cn(dna.field, "h-11 rounded-2xl px-4 ring-accent/30 focus:ring-2")}
               />
             </div>
           )}
 
-          <div className="border-b border-zinc-200/80 px-5 py-3 dark:border-white/10">
+          <div className="border-b border-border px-5 py-3">
             <div className="relative">
               <Search
                 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground-muted"
@@ -163,7 +164,7 @@ export function NewConversationSheet({
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={dict.messages.searchPeers}
                 autoFocus={mode === "direct"}
-                className="h-11 w-full rounded-2xl border border-zinc-200/80 bg-surface-muted/60 pl-10 pr-3 text-sm outline-none ring-accent/30 focus:ring-2 dark:border-white/10"
+                className={cn(dna.field, "h-11 rounded-2xl pl-10 pr-3 ring-accent/30 focus:ring-2")}
               />
             </div>
             {mode === "group" && selectedIds.length > 0 && (
@@ -242,7 +243,7 @@ export function NewConversationSheet({
             </p>
           )}
 
-          <footer className="flex items-center justify-between gap-3 border-t border-zinc-200/80 px-5 py-4 dark:border-white/10">
+          <footer className="flex items-center justify-between gap-3 border-t border-border px-5 py-4">
             {mode === "group" ? (
               <>
                 <p className="flex items-center gap-1.5 text-xs text-foreground-muted">

@@ -37,6 +37,7 @@ import { startDirectConversationAction } from "@/lib/actions/chat";
 import { HELP_CATEGORY_ICONS, HELP_TOPIC_ICONS } from "@/components/help/help-icons";
 import { HelpArticleBody } from "@/components/help/help-article-body";
 import { UserAvatar } from "@/components/ui/user-avatar";
+import { dna } from "@/lib/design/dna";
 import { cn } from "@/lib/utils";
 
 /** Suggestions du hero : de vrais titres de fiches, donc toujours cliquables vers un résultat. */
@@ -234,7 +235,7 @@ function SearchHero({
   const allowed = new Set(topicsForRole(role).map((topic) => topic.key));
 
   return (
-    <section className="relative overflow-hidden rounded-3xl bg-zinc-950 px-6 py-8 text-white sm:px-10 sm:py-10">
+    <section className="relative overflow-hidden rounded-3xl bg-accent px-6 py-8 text-accent-foreground sm:px-10 sm:py-10">
       {/* Éclat froid en coin — la palette RitmoKit est encre, pas néon. */}
       <span
         aria-hidden
@@ -244,42 +245,42 @@ function SearchHero({
         }}
       />
       <div className="relative max-w-2xl">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent-foreground/70">
           {locationName ? `${dict.help.title} · ${locationName}` : dict.help.title}
         </p>
         <h1 className="mt-2.5 text-2xl font-bold tracking-tight sm:text-4xl">
           {dict.help.searchTitle}
         </h1>
-        <p className="mt-2 text-sm text-zinc-400 sm:text-base">{dict.help.searchSubtitle}</p>
+        <p className="mt-2 text-sm text-accent-foreground/70 sm:text-base">{dict.help.searchSubtitle}</p>
 
-        <div className="mt-6 flex items-center gap-3 rounded-full bg-white py-2 pl-5 pr-2 shadow-2xl shadow-black/30">
-          <Search className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
+        <div className="mt-6 flex items-center gap-3 rounded-full bg-surface py-2 pl-5 pr-2 shadow-2xl shadow-black/30">
+          <Search className="h-4 w-4 shrink-0 text-foreground-muted" aria-hidden />
           <input
             ref={inputRef}
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder={dict.help.searchPlaceholder}
             aria-label={dict.help.searchAction}
-            className="min-w-0 flex-1 bg-transparent py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 sm:text-base"
+            className="min-w-0 flex-1 bg-transparent py-2 text-sm text-foreground outline-none placeholder:text-foreground-muted sm:text-base"
           />
           {query ? (
             <button
               type="button"
               onClick={() => onQueryChange("")}
-              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
+              className={dna.iconBtn}
               aria-label={dict.help.clearSearch}
             >
               <X className="h-4 w-4" aria-hidden />
             </button>
           ) : (
-            <kbd className="metric hidden shrink-0 rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-medium text-zinc-500 sm:inline-block">
+            <kbd className="metric hidden shrink-0 rounded-full bg-surface-muted px-2.5 py-1 text-[11px] font-medium text-foreground-muted sm:inline-block">
               ⌘K
             </kbd>
           )}
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <span className="mr-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500">
+          <span className="mr-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-accent-foreground/60">
             {dict.help.popularLabel}
           </span>
           {popular
@@ -289,7 +290,7 @@ function SearchHero({
                 key={key}
                 type="button"
                 onClick={() => onPickPopular(key)}
-                className="rounded-full bg-white/10 px-3.5 py-1.5 text-xs font-medium text-zinc-200 transition-colors hover:bg-white/20 hover:text-white"
+                className="rounded-full bg-accent-foreground/10 px-3.5 py-1.5 text-xs font-medium text-accent-foreground/90 transition-colors hover:bg-accent-foreground/20 hover:text-accent-foreground"
               >
                 {dict.help.topics[key].title}
               </button>
@@ -369,7 +370,7 @@ function ResultsPanel({
                   className={cn(
                     "flex items-center gap-3.5 rounded-2xl px-4 py-3.5 transition-colors",
                     index === 0
-                      ? "border-2 border-zinc-900/12 bg-surface shadow-sm hover:bg-surface-muted/50 dark:border-white/15"
+                      ? "border-2 border-border bg-surface shadow-sm hover:bg-surface-muted/50"
                       : "bg-surface-muted hover:bg-surface-muted/70",
                   )}
                 >
@@ -429,7 +430,7 @@ function Collapsible({ open, children }: { open: boolean; children: React.ReactN
 
 function ResultBadge({ label }: { label: string }) {
   return (
-    <span className="shrink-0 rounded-full bg-zinc-900 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.06em] text-white dark:bg-white dark:text-zinc-900">
+    <span className={cn("shrink-0 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.06em]", dna.pillActive)}>
       {label}
     </span>
   );
@@ -499,7 +500,7 @@ function RailItem({
       className={cn(
         "flex shrink-0 items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-[13px] font-medium transition-colors xl:w-full",
         active
-          ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
+          ? dna.navItemActive
           : "text-foreground-muted hover:bg-surface-muted hover:text-foreground",
       )}
     >
@@ -567,7 +568,7 @@ function QuickStart({
                 "group flex flex-col rounded-2xl border px-4 py-3.5 transition-colors",
                 isSeen
                   ? "border-transparent bg-surface-muted hover:bg-surface-muted/70"
-                  : "border-zinc-900/12 bg-surface shadow-xs hover:bg-surface-muted/60 dark:border-white/15",
+                  : "border-border bg-surface shadow-xs hover:bg-surface-muted/60",
               )}
             >
               <Icon
@@ -841,7 +842,10 @@ function ManagerButton({
         type="button"
         onClick={openConversation}
         disabled={pending}
-        className="flex items-center gap-3 rounded-xl bg-zinc-900 px-4 py-3 text-left text-white transition-colors hover:bg-zinc-800 disabled:opacity-70 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+        className={cn(
+          "flex items-center gap-3 rounded-xl px-4 py-3 text-left transition-colors disabled:opacity-70",
+          "bg-accent text-accent-foreground hover:bg-accent-hover",
+        )}
       >
         <UserAvatar fullName={contact.fullName} pictureUrl={contact.profilePictureUrl} size="sm" />
         <span className="min-w-0 flex-1">

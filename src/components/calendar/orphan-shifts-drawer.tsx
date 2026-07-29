@@ -9,6 +9,7 @@ import { ReplacementFinderTrigger } from "@/components/calendar/replacement-find
 import type { ShiftWithEmployee } from "@/lib/data/shifts";
 import type { Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
+import { dna } from "@/lib/design/dna";
 import { isSameDay } from "@/lib/calendar/grid";
 import { cn } from "@/lib/utils";
 
@@ -68,7 +69,7 @@ export function OrphanShiftsDrawer({
   return (
     <section
       className={cn(
-        "overflow-hidden rounded-2xl border border-zinc-200/80 bg-white shadow-xs transition-colors dark:border-white/10 dark:bg-zinc-900/60",
+        cn("overflow-hidden shadow-xs transition-colors", dna.panel),
         dragOver && "border-warning/60 bg-warning/5 ring-2 ring-warning/25",
       )}
       onDragOver={(e) => {
@@ -89,7 +90,7 @@ export function OrphanShiftsDrawer({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-white/[0.03]"
+        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-muted"
       >
         <div className="flex items-center gap-2.5">
           <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-warning/10 text-warning">
@@ -122,11 +123,11 @@ export function OrphanShiftsDrawer({
       >
         <div className="overflow-hidden">
           {shifts.length === 0 ? (
-            <p className="border-t border-zinc-200/60 px-4 py-6 text-center text-xs text-foreground-muted dark:border-white/5">
+            <p className="border-t border-border px-4 py-6 text-center text-xs text-foreground-muted">
               {dict.schedule.drawerDropHint}
             </p>
           ) : (
-            <div className="grid grid-cols-2 gap-px border-t border-zinc-200/60 bg-zinc-200/60 sm:grid-cols-4 xl:grid-cols-7 dark:border-white/5 dark:bg-white/5">
+            <div className="grid grid-cols-2 gap-px border-t border-border bg-border sm:grid-cols-4 xl:grid-cols-7">
               {byDay.map(({ day, shifts: dayShifts }) => {
                 const key = day.toDateString();
                 const isExpanded = expandedDays.has(key);
@@ -134,7 +135,7 @@ export function OrphanShiftsDrawer({
                 const hiddenCount = dayShifts.length - visible.length;
 
                 return (
-                  <div key={key} className="flex flex-col gap-1.5 bg-white p-2 dark:bg-zinc-900">
+                  <div key={key} className="flex flex-col gap-1.5 bg-surface p-2">
                     <p className="flex items-baseline gap-1 px-0.5">
                       <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground-muted">
                         {format(day, "EEE", { locale: dfLocale })}
@@ -190,7 +191,7 @@ export function OrphanShiftsDrawer({
                             type="button"
                             data-interactive
                             onClick={() => toggleDay(key)}
-                            className="metric self-start rounded-full px-2 py-0.5 text-[11px] font-medium text-foreground-muted transition-colors hover:bg-zinc-100 hover:text-foreground dark:hover:bg-white/10"
+                            className="metric self-start rounded-full px-2 py-0.5 text-[11px] font-medium text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground"
                           >
                             +{hiddenCount}
                           </button>
@@ -200,7 +201,7 @@ export function OrphanShiftsDrawer({
                             type="button"
                             data-interactive
                             onClick={() => toggleDay(key)}
-                            className="self-start rounded-full px-2 py-0.5 text-[11px] font-medium text-foreground-muted transition-colors hover:bg-zinc-100 hover:text-foreground dark:hover:bg-white/10"
+                            className="self-start rounded-full px-2 py-0.5 text-[11px] font-medium text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground"
                           >
                             {dict.calendar.showLess}
                           </button>

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { dna } from "@/lib/design/dna";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
 import { cn } from "@/lib/utils";
@@ -30,7 +31,7 @@ export function ViewSwitcher({
     <div
       role="tablist"
       aria-label={dict.calendar.title}
-      className="inline-flex flex-wrap gap-1 rounded-full bg-zinc-100 p-1 dark:bg-white/5"
+      className={dna.pillTrack}
     >
       {views.map((view) => {
         const href = `/${lang}/calendar/${view.segment}`;
@@ -44,10 +45,8 @@ export function ViewSwitcher({
             aria-selected={active}
             data-interactive
             className={cn(
-              "rounded-full px-3.5 py-1.5 text-sm font-medium",
-              active
-                ? "bg-white text-foreground shadow-xs dark:bg-zinc-900"
-                : "text-foreground-muted hover:text-foreground",
+              "px-3.5 py-1.5 text-sm font-medium",
+              active ? dna.pillActive : dna.pillIdle,
             )}
           >
             {dict.calendar.views[view.key]}
@@ -61,10 +60,8 @@ export function ViewSwitcher({
           aria-selected={onManagerSchedule}
           data-interactive
           className={cn(
-            "rounded-full px-3.5 py-1.5 text-sm font-medium",
-            onManagerSchedule
-              ? "bg-white text-foreground shadow-xs dark:bg-zinc-900"
-              : "text-foreground-muted hover:text-foreground",
+            "px-3.5 py-1.5 text-sm font-medium",
+            onManagerSchedule ? dna.pillActive : dna.pillIdle,
           )}
         >
           {dict.calendar.views.schedule}

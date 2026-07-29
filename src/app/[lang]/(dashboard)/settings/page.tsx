@@ -22,6 +22,8 @@ import { getDictionary } from "@/lib/i18n/dictionaries";
 import { isLocale } from "@/lib/i18n/config";
 import { canAccessAdminSettings, canAccessManagerSettings, getSessionUser } from "@/lib/auth/session";
 import { UserAvatar } from "@/components/ui/user-avatar";
+import { dna } from "@/lib/design/dna";
+import { cn } from "@/lib/utils";
 
 const adminItems = [
   { key: "users", icon: Users },
@@ -44,16 +46,21 @@ export default async function SettingsPage({
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="border-b border-zinc-200/80 px-4 py-4 dark:border-white/10 sm:px-6">
+      <header
+        className={cn(
+          "sticky top-0 z-10 bg-surface/90 px-4 py-4 backdrop-blur-xl sm:px-6",
+          dna.pageHeader,
+        )}
+      >
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-accent">
+          {dict.settings.general}
+        </p>
         <h1 className="display-title text-xl font-bold tracking-tight">{dict.settings.title}</h1>
       </header>
 
       <div className="flex flex-1 flex-col gap-6 px-4 py-6 sm:px-6 lg:flex-row lg:gap-8">
         <nav className="flex shrink-0 gap-2 overflow-x-auto pb-1 lg:w-48 lg:flex-col lg:gap-1 lg:overflow-visible lg:pb-0">
-          <Link
-            href={`/${lang}/settings`}
-            className="shrink-0 rounded-full bg-zinc-900 px-3 py-2 text-sm font-medium text-white dark:bg-white dark:text-zinc-900"
-          >
+          <Link href={`/${lang}/settings`} className={cn("shrink-0", dna.navActive)}>
             {dict.settings.general}
           </Link>
           {showManager && (
@@ -66,26 +73,26 @@ export default async function SettingsPage({
           )}
           <Link
             href={`/${lang}/settings/profile`}
-            className="shrink-0 rounded-xl px-3 py-2 text-sm font-medium text-foreground-muted hover:bg-surface-muted"
+            className={cn("shrink-0", dna.navIdle)}
           >
             {dict.settings.profile}
           </Link>
           <Link
             href={`/${lang}/settings/availability`}
-            className="shrink-0 rounded-xl px-3 py-2 text-sm font-medium text-foreground-muted hover:bg-surface-muted"
+            className={cn("shrink-0", dna.navIdle)}
           >
             {dict.settings.availability}
           </Link>
           <Link
             href={`/${lang}/help`}
-            className="shrink-0 rounded-xl px-3 py-2 text-sm font-medium text-foreground-muted hover:bg-surface-muted"
+            className={cn("shrink-0", dna.navIdle)}
           >
             {dict.settings.help}
           </Link>
           {showManager && (
             <Link
               href={`/${lang}/settings/manager`}
-              className="shrink-0 rounded-xl px-3 py-2 text-sm font-medium text-foreground-muted hover:bg-surface-muted"
+              className={cn("shrink-0", dna.navIdle)}
             >
               {dict.settings.manager}
             </Link>
@@ -93,7 +100,7 @@ export default async function SettingsPage({
           {showAdmin && (
             <Link
               href={`/${lang}/settings/admin`}
-              className="shrink-0 rounded-xl px-3 py-2 text-sm font-medium text-foreground-muted hover:bg-surface-muted"
+              className={cn("shrink-0", dna.navIdle)}
             >
               {dict.settings.admin}
             </Link>
@@ -102,7 +109,7 @@ export default async function SettingsPage({
 
         <div className="flex min-w-0 flex-1 flex-col gap-6">
           {user && (
-            <section className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-xs dark:border-white/10 dark:bg-zinc-900/60">
+            <section className={cn(dna.panel, "p-5")}>
               <div className="flex items-center gap-3">
                 <UserAvatar
                   fullName={user.fullName}
@@ -127,7 +134,7 @@ export default async function SettingsPage({
             </section>
           )}
 
-          <section className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-xs dark:border-white/10 dark:bg-zinc-900/60">
+          <section className={cn(dna.panel, "p-5")}>
             <h2 className="text-base font-semibold">{dict.settings.appearance}</h2>
             <p className="mt-1 text-sm text-foreground-muted">{dict.settings.themeSystem}</p>
             <div className="mt-4">
@@ -141,14 +148,14 @@ export default async function SettingsPage({
             </div>
           </section>
 
-          <section className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-xs dark:border-white/10 dark:bg-zinc-900/60">
+          <section className={cn(dna.panel, "p-5")}>
             <h2 className="text-base font-semibold">{dict.settings.language}</h2>
             <div className="mt-4">
               <LanguageSwitcher lang={lang} />
             </div>
           </section>
 
-          <section className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-xs dark:border-white/10 dark:bg-zinc-900/60">
+          <section className={cn(dna.panel, "p-5")}>
             <div className="flex items-center gap-2">
               <CalendarClock className="h-4 w-4 text-foreground-muted" aria-hidden />
               <h2 className="text-base font-semibold">{dict.settings.availability}</h2>
@@ -162,7 +169,7 @@ export default async function SettingsPage({
             </Link>
           </section>
 
-          <section className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-xs dark:border-white/10 dark:bg-zinc-900/60">
+          <section className={cn(dna.panel, "p-5")}>
             <div className="flex items-center gap-2">
               <FileText className="h-4 w-4 text-foreground-muted" aria-hidden />
               <h2 className="text-base font-semibold">{dict.convention.pageTitle}</h2>
@@ -176,7 +183,7 @@ export default async function SettingsPage({
             </Link>
           </section>
 
-          <section className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-xs dark:border-white/10 dark:bg-zinc-900/60">
+          <section className={cn(dna.panel, "p-5")}>
             <div className="flex items-center gap-2">
               <LifeBuoy className="h-4 w-4 text-foreground-muted" aria-hidden />
               <h2 className="text-base font-semibold">{dict.settings.help}</h2>
@@ -191,24 +198,18 @@ export default async function SettingsPage({
           </section>
 
           {showManager && (
-            <section className="overflow-hidden rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-xs dark:border-white/10 dark:bg-zinc-900/60">
+            <section className={cn(dna.panel, "overflow-hidden p-5")}>
               <div className="flex items-center gap-2">
                 <LayoutDashboard className="h-5 w-5 text-foreground-muted" aria-hidden />
                 <h2 className="text-base font-semibold">{dict.settings.manager}</h2>
               </div>
               <p className="mt-1 text-sm text-foreground-muted">{dict.settings.managerDesc}</p>
               <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-                <Link
-                  href={`/${lang}/dashboard`}
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
-                >
+                <Link href={`/${lang}/dashboard`} className={dna.cta}>
                   {dict.nav.cockpit}
                   <ArrowRight className="h-4 w-4" aria-hidden />
                 </Link>
-                <Link
-                  href={`/${lang}/settings/manager`}
-                  className="inline-flex items-center justify-center gap-2 rounded-full border border-zinc-200/80 bg-white px-4 py-2.5 text-sm font-medium text-foreground hover:bg-zinc-50 dark:border-white/10 dark:bg-transparent dark:hover:bg-white/5"
-                >
+                <Link href={`/${lang}/settings/manager`} className={dna.ctaGhost}>
                   {dict.opsDashboard.openModules}
                 </Link>
               </div>
@@ -254,7 +255,7 @@ export default async function SettingsPage({
           )}
 
           {showAdmin && (
-            <section className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-xs dark:border-white/10 dark:bg-zinc-900/60">
+            <section className={cn(dna.panel, "p-5")}>
               <div className="flex items-center gap-2">
                 <Shield className="h-4 w-4 text-foreground-muted" aria-hidden />
                 <h2 className="text-base font-semibold">{dict.settings.admin}</h2>

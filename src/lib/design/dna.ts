@@ -18,6 +18,12 @@ export const dna = {
     "rounded-full bg-accent px-3 py-2 text-sm font-medium text-accent-foreground shadow-xs",
   navIdle:
     "rounded-full px-3 py-2 text-sm font-medium text-foreground-muted hover:bg-surface-muted hover:text-foreground",
+  /** Sidebar / stacked nav rows (rounded-xl, not pill). */
+  navItemActive: "rounded-xl bg-accent text-accent-foreground shadow-xs",
+  navItemIdle:
+    "rounded-xl text-foreground-muted hover:bg-surface-muted hover:text-foreground",
+  iconBtn:
+    "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground",
   field:
     "w-full rounded-xl border border-border bg-surface-muted px-3.5 py-2.5 text-sm text-foreground outline-none transition placeholder:text-foreground-muted focus:border-accent focus:bg-surface focus:ring-2 focus:ring-accent/20 disabled:opacity-50",
   cta: "inline-flex items-center justify-center gap-2 rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-accent-foreground shadow-xs hover:bg-accent-hover",

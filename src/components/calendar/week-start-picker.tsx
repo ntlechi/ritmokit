@@ -6,6 +6,7 @@ import { format, startOfWeek, addDays } from "date-fns";
 import { fr, enUS, es } from "date-fns/locale";
 import { CalendarDays, Check, ChevronDown } from "lucide-react";
 import { WEEK_START_COOKIE, type WeekStartDay } from "@/lib/calendar/week-start";
+import { dna } from "@/lib/design/dna";
 import type { Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { cn } from "@/lib/utils";
@@ -69,7 +70,7 @@ export function WeekStartPicker({
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="flex h-9 items-center gap-1.5 rounded-lg border border-zinc-200/80 bg-white px-3 text-sm font-medium capitalize text-foreground-muted transition-colors hover:border-zinc-300 hover:text-foreground dark:border-white/10 dark:bg-zinc-900/60 dark:hover:border-white/20"
+        className="flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-sm font-medium capitalize text-foreground-muted transition-colors hover:bg-surface-muted hover:text-foreground"
       >
         <CalendarDays className="h-4 w-4" aria-hidden />
         <span className="hidden sm:inline">{dayName(value, "EEE")}</span>
@@ -80,7 +81,7 @@ export function WeekStartPicker({
         <div
           role="listbox"
           aria-label={dict.calendar.weekStartLabel}
-          className="absolute right-0 top-full z-30 mt-1.5 w-48 overflow-hidden rounded-xl border border-zinc-200/80 bg-white p-1 shadow-lg dark:border-white/10 dark:bg-zinc-900"
+          className="absolute right-0 top-full z-30 mt-1.5 w-48 overflow-hidden rounded-xl border border-border bg-surface p-1 shadow-lg"
         >
           <p className="px-2.5 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-foreground-muted">
             {dict.calendar.weekStartLabel}
@@ -97,8 +98,8 @@ export function WeekStartPicker({
                 className={cn(
                   "flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-sm capitalize transition-colors",
                   active
-                    ? "bg-zinc-900/[0.05] font-medium text-foreground dark:bg-white/10"
-                    : "text-foreground-muted hover:bg-zinc-100 hover:text-foreground dark:hover:bg-white/5",
+                    ? "bg-surface-muted font-medium text-foreground"
+                    : cn(dna.pillIdle, "hover:bg-surface-muted"),
                 )}
               >
                 {dayName(day, "EEEE")}

@@ -60,7 +60,7 @@ export function ModernShiftCard({
         "group/chip card-lift relative overflow-hidden rounded-xl border px-2.5 py-2 text-xs shadow-xs",
         isAutopilot ? AUTOPILOT_CAPSULE : matrix.capsule,
         isDraft && !isAutopilot && "opacity-90",
-        draggableHint && "ring-1 ring-zinc-900/10 dark:ring-white/15",
+        draggableHint && "ring-1 ring-foreground/10",
         compact && "py-1.5",
       )}
       title={`${shift.employee?.fullName ?? dict.calendar.unassigned} · ${formatTimeRange(shift.startsAt, shift.endsAt, locale)}${alertTitle ? ` · ${alertTitle}` : ""}`}

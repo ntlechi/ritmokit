@@ -10,6 +10,7 @@ import type { ShiftWithEmployee } from "@/lib/data/shifts";
 import type { Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { formatTimeRange } from "@/lib/calendar/format";
+import { dna } from "@/lib/design/dna";
 import { isSameDay } from "@/lib/calendar/grid";
 import { cn } from "@/lib/utils";
 
@@ -40,9 +41,9 @@ export function DayView({
   const nowPct = nowPositionPct(day);
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-zinc-200/80 bg-white shadow-xs dark:border-white/10 dark:bg-zinc-900/60">
+    <div className={cn("overflow-x-auto shadow-xs", dna.panel)}>
       <div className="min-w-[900px]">
-        <div className="grid grid-cols-[160px_1fr] border-b border-zinc-200/80 dark:border-white/10">
+        <div className="grid grid-cols-[160px_1fr] border-b border-border">
           <div className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground-muted">
             {dict.calendar.team}
           </div>
@@ -70,10 +71,10 @@ export function DayView({
               key={station.id}
               className={cn(
                 "grid grid-cols-[160px_1fr]",
-                stationIndex < stations.length - 1 && "border-b border-zinc-200/60 dark:border-white/5",
+                stationIndex < stations.length - 1 && "border-b border-border",
               )}
             >
-              <div className="flex items-center gap-2 border-r border-zinc-200/60 px-4 py-2 dark:border-white/5">
+              <div className="flex items-center gap-2 border-r border-border px-4 py-2">
                 <span
                   className="h-2 w-2 shrink-0 rounded-full"
                   style={stationDotStyle(station.colorHex)}
@@ -89,7 +90,7 @@ export function DayView({
                 {hours.map((hour) => (
                   <div
                     key={hour}
-                    className="absolute inset-y-0 border-r border-zinc-200/60 dark:border-white/5"
+                    className="absolute inset-y-0 border-r border-border"
                     style={{ left: `${((hour - TIMELINE_START_HOUR) / (hours.length - 1)) * 100}%` }}
                   />
                 ))}
@@ -110,7 +111,7 @@ export function DayView({
                   <div
                     key={shift.id}
                     className={cn(
-                      "absolute flex items-center gap-2 overflow-hidden rounded-lg border border-zinc-200/80 bg-white pl-2.5 pr-2 text-xs shadow-xs transition-shadow hover:shadow-sm dark:border-white/10 dark:bg-zinc-900/60",
+                      "absolute flex items-center gap-2 overflow-hidden rounded-lg border border-border bg-surface pl-2.5 pr-2 text-xs shadow-xs transition-shadow hover:shadow-sm",
                       shift.status === "DRAFT" && "border-dashed opacity-75",
                     )}
                     style={{
