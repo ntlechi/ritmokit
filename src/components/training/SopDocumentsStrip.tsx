@@ -33,10 +33,10 @@ export function SopDocumentsStrip({
               href={`/${lang}/sops/${doc.id}`}
               className={cn(
                 "flex items-center gap-3 rounded-2xl border px-4 py-3 shadow-xs transition hover:shadow-sm",
-                "border-zinc-200/80 bg-white dark:border-white/10 dark:bg-zinc-900/60",
+                "border-border bg-surface",
               )}
             >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-100 dark:bg-white/5">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-muted">
                 <FileText className="h-4 w-4 text-foreground-muted" aria-hidden />
               </span>
               <div className="min-w-0 flex-1">

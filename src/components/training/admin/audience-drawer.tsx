@@ -168,7 +168,7 @@ function AudienceForm({
 
   return (
     <>
-          <div className="flex items-start justify-between gap-4 border-b border-zinc-200/80 px-5 py-4 dark:border-white/10">
+          <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
             <div className="min-w-0">
               <Dialog.Title className="text-base font-semibold tracking-tight">
                 {copy.assignTitle}
@@ -331,7 +331,7 @@ function AudienceForm({
             {error && <p className="mt-4 text-xs text-danger">{error}</p>}
           </div>
 
-          <div className="border-t border-zinc-200/80 px-5 py-4 dark:border-white/10">
+          <div className="border-t border-border px-5 py-4">
             <p
               className={cn(
                 "mb-3 text-xs",

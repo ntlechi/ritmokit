@@ -2,6 +2,7 @@
 
 import type { getDemoTabletSnapshot } from "@/lib/demo/franchise-pitch";
 import { AlertTriangle } from "lucide-react";
+import { dna } from "@/lib/design/dna";
 import { cn } from "@/lib/utils";
 
 type Snapshot = ReturnType<typeof getDemoTabletSnapshot>;
@@ -10,7 +11,7 @@ function statusBadge(status: string) {
   if (status === "late") return { label: "Retard", className: "bg-red-50 text-red-800" };
   if (status === "onboarding_j1") return { label: "J1 onboarding", className: "bg-amber-50 text-amber-900" };
   if (status === "on_floor") return { label: "En poste", className: "bg-emerald-50 text-emerald-900" };
-  return { label: "Off", className: "bg-zinc-100 text-zinc-600" };
+  return { label: "Off", className: "bg-surface-muted text-foreground-muted" };
 }
 
 export function FloorTab({ snapshot }: { snapshot: Snapshot }) {
@@ -27,7 +28,7 @@ export function FloorTab({ snapshot }: { snapshot: Snapshot }) {
         ].map((s) => (
           <div
             key={s.label}
-            className="rounded-2xl border border-zinc-200/80 bg-white p-3 shadow-xs dark:border-white/10 dark:bg-zinc-900/60"
+            className={cn(dna.panel, "p-3")}
           >
             <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground-muted">
               {s.label}
@@ -63,7 +64,7 @@ export function FloorTab({ snapshot }: { snapshot: Snapshot }) {
             <article
               key={emp.id}
               className={cn(
-                "rounded-xl border bg-white p-3 dark:bg-surface",
+                "rounded-xl border bg-surface p-3",
                 emp.status === "late" ? "border-[var(--brand)]" : "border-border",
               )}
             >
@@ -90,7 +91,7 @@ export function FloorTab({ snapshot }: { snapshot: Snapshot }) {
                 <span className={cn("rounded-md px-1.5 py-0.5 text-[10px] font-bold", badge.className)}>
                   {badge.label}
                 </span>
-                <div className="h-1 flex-1 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
+                <div className="h-1 flex-1 overflow-hidden rounded-full bg-surface-muted">
                   <div
                     className="h-full rounded-full"
                     style={{ width: `${emp.trainingPercent}%`, background: brand.primaryColor }}

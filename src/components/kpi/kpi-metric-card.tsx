@@ -5,6 +5,7 @@ import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { KpiMetric } from "@/lib/kpi/types";
 import { KpiExplainer } from "@/components/kpi/kpi-explainer";
 import { Meter, type ChartTone } from "@/components/charts/primitives";
+import { dna } from "@/lib/design/dna";
 import { cn } from "@/lib/utils";
 
 function formatValue(metric: KpiMetric, lang: Locale): string {
@@ -80,7 +81,8 @@ export function KpiMetricCard({
   return (
     <article
       className={cn(
-        "flex flex-col rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-xs dark:border-white/10 dark:bg-zinc-900/60",
+        dna.panel,
+        "flex flex-col p-4",
         healthTone(metric.health),
         compact && "p-3",
       )}

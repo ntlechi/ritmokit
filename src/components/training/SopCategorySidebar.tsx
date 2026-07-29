@@ -14,6 +14,7 @@ import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
 import { stationLabel } from "@/lib/stations/display";
 import { resolveLockedLabel } from "@/lib/training/lms-ui";
+import { dna } from "@/lib/design/dna";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
@@ -38,7 +39,7 @@ function LessonStatusIcon({
   if (!module.unlocked) return <Lock className="h-3.5 w-3.5 text-foreground-muted" aria-hidden />;
   if (module.status === "COMPLETED") return <Check className="h-3.5 w-3.5 text-emerald-600" aria-hidden />;
   if (module.id === activeId) return <Play className="h-3.5 w-3.5 text-red-500" aria-hidden />;
-  return <Circle className="h-3.5 w-3.5 text-zinc-300 dark:text-zinc-600" aria-hidden />;
+  return <Circle className="h-3.5 w-3.5 text-foreground-muted/40" aria-hidden />;
 }
 
 function CategoryBlock({
@@ -62,12 +63,12 @@ function CategoryBlock({
     section.stationId !== null && section.stationId === catalog.primaryStationId;
 
   return (
-    <div className="border-b border-zinc-200/60 last:border-b-0 dark:border-white/5">
+    <div className="border-b border-border last:border-b-0">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="flex w-full items-center gap-2 px-3 py-2.5 text-left hover:bg-zinc-50 dark:hover:bg-white/5"
+        className="flex w-full items-center gap-2 px-3 py-2.5 text-left hover:bg-surface-muted"
       >
         <ChevronDown
           className={cn(
@@ -78,7 +79,7 @@ function CategoryBlock({
         />
         <span className="min-w-0 flex-1 truncate text-sm font-semibold">{title}</span>
         {isPrimary && (
-          <span className="rounded-full bg-zinc-900/5 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-foreground-muted dark:bg-white/10">
+          <span className="rounded-full bg-surface-muted px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-foreground-muted">
             {dict.training.yourStation}
           </span>
         )}
@@ -112,7 +113,7 @@ function CategoryBlock({
                       "mx-2 flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs transition",
                       active
                         ? "bg-red-500/10 font-semibold text-red-700 dark:text-red-300"
-                        : "text-foreground-muted hover:bg-zinc-100 hover:text-foreground dark:hover:bg-white/5",
+                        : "text-foreground-muted hover:bg-surface-muted hover:text-foreground",
                     )}
                   >
                     {content}
@@ -152,18 +153,18 @@ export function SopCategorySidebar({
   const docsPending = docs.filter((m) => m.status !== "COMPLETED").length;
 
   return (
-    <aside className="flex w-full flex-col rounded-2xl border border-zinc-200/80 bg-white shadow-xs dark:border-white/10 dark:bg-zinc-900/60 lg:w-72 lg:shrink-0 xl:w-80">
-      <div className="border-b border-zinc-200/80 px-4 py-4 dark:border-white/10">
+    <aside className={cn("flex w-full flex-col lg:w-72 lg:shrink-0 xl:w-80", dna.panel)}>
+      <div className="border-b border-border px-4 py-4">
         <h2 className="text-base font-bold tracking-tight">{dict.training.centerTitle}</h2>
         <p className="mt-1 text-[11px] text-foreground-muted">{dict.training.polyvalenceHint}</p>
       </div>
 
-      <div className="mx-3 mt-3 rounded-2xl bg-zinc-900 p-4 text-white dark:bg-zinc-950">
+      <div className="mx-3 mt-3 rounded-2xl bg-accent p-4 text-accent-foreground">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent-foreground/70">
             {dict.training.yourPath}
           </p>
-          <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+          <span className="rounded-full bg-accent-foreground/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider">
             {dict.training.journeyDay.replace("{day}", String(journeyDay))}
           </span>
         </div>
@@ -172,7 +173,7 @@ export function SopCategorySidebar({
             .replace("{done}", String(catalog.completedLessons))
             .replace("{total}", String(catalog.totalLessons))}
         </p>
-        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
+        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-accent-foreground/10">
           <div
             className="h-full rounded-full bg-emerald-400 transition-[width]"
             style={{
@@ -209,7 +210,7 @@ export function SopCategorySidebar({
       </nav>
 
       {docs.length > 0 && (
-        <div className="border-t border-zinc-200/80 p-3 dark:border-white/10">
+        <div className="border-t border-border p-3">
           <div className="flex items-center justify-between gap-2 px-1">
             <p className="text-xs font-semibold text-foreground">{dict.training.importantDocs}</p>
             {docsPending > 0 && (

@@ -35,15 +35,15 @@ export function SopCatalogHero({
   const isResume = module.status !== "COMPLETED";
 
   return (
-    <section className="relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-950 text-white shadow-xs">
+    <section className="relative overflow-hidden rounded-2xl border border-accent/20 bg-accent text-accent-foreground shadow-xs">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_20%_0%,rgba(239,68,68,0.18),transparent_55%)]" />
       <div className="relative grid gap-5 p-5 sm:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] sm:p-6">
-        <div className="relative aspect-video overflow-hidden rounded-xl bg-zinc-900">
+        <div className="relative aspect-video overflow-hidden rounded-xl bg-accent-hover">
           {thumb ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={thumb} alt="" className="absolute inset-0 h-full w-full object-cover opacity-80" />
           ) : (
-            <div className="absolute inset-0 bg-gradient-to-br from-zinc-800 to-zinc-950" />
+            <div className="absolute inset-0 bg-gradient-to-br from-accent-hover to-accent" />
           )}
           <div className="absolute inset-0 flex items-center justify-center">
             <span className="flex h-14 w-14 items-center justify-center rounded-full bg-red-500 text-white shadow-lg">
@@ -53,12 +53,12 @@ export function SopCatalogHero({
         </div>
 
         <div className="flex flex-col justify-center">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent-foreground/70">
             {dict.training.resumeWhere.replace("{track}", track)}
           </p>
           <h2 className="mt-2 text-xl font-bold tracking-tight sm:text-2xl">{module.title}</h2>
           {module.summary && (
-            <p className="mt-2 line-clamp-2 text-sm text-zinc-400">{module.summary}</p>
+            <p className="mt-2 line-clamp-2 text-sm text-accent-foreground/70">{module.summary}</p>
           )}
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -73,13 +73,13 @@ export function SopCatalogHero({
               </span>
             )}
             {module.videoUrl && (
-              <span className="rounded-full border border-white/15 bg-white/5 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-zinc-300">
+              <span className="rounded-full border border-accent-foreground/15 bg-accent-foreground/5 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-accent-foreground/80">
                 + {dict.training.videoBadge}
               </span>
             )}
           </div>
 
-          <p className="metric mt-3 text-xs text-zinc-400">
+          <p className="metric mt-3 text-xs text-accent-foreground/70">
             {dict.training.stepRemaining
               .replace("{current}", String(currentStep))
               .replace("{total}", String(totalSteps))

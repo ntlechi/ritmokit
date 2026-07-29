@@ -475,7 +475,7 @@ export function TrainingCatalogManager({
                               "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
                               module.isActive
                                 ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                                : "bg-zinc-500/10 text-foreground-muted",
+                                : "bg-surface-muted text-foreground-muted",
                             )}
                           >
                             {module.isActive ? copy.publishedBadge : copy.draftBadge}
@@ -537,7 +537,7 @@ export function TrainingCatalogManager({
 
                         {module.assignedCount > 0 && (
                           <div className="mt-2">
-                            <div className="h-1 overflow-hidden rounded-full bg-zinc-200 dark:bg-white/10">
+                            <div className="h-1 overflow-hidden rounded-full bg-surface-muted">
                               <div
                                 className="h-full rounded-full bg-emerald-500"
                                 style={{
@@ -654,7 +654,7 @@ function IconAction({
       title={label}
       aria-label={label}
       onClick={onClick}
-      className="inline-flex h-7 w-7 items-center justify-center rounded-full text-foreground-muted hover:bg-zinc-100 dark:hover:bg-white/10"
+      className="inline-flex h-7 w-7 items-center justify-center rounded-full text-foreground-muted hover:bg-surface-muted"
     >
       {children}
     </button>

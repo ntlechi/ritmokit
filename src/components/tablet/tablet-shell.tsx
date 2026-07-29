@@ -12,6 +12,7 @@ import { FloorTab } from "@/components/tablet/floor-tab";
 import { CoachingTab } from "@/components/tablet/coaching-tab";
 import { TrainingTab } from "@/components/tablet/training-tab";
 import { AlertsTab } from "@/components/tablet/alerts-tab";
+import { dna } from "@/lib/design/dna";
 import { cn } from "@/lib/utils";
 
 export type TabletTabId = "floor" | "coaching" | "training" | "alerts" | "kiosk";
@@ -58,7 +59,7 @@ export function TabletShell({
 
   return (
     <div
-      className="mx-auto flex min-h-[640px] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-zinc-200/80 bg-white shadow-lg dark:border-white/10 dark:bg-zinc-900"
+      className="mx-auto flex min-h-[640px] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-border bg-surface shadow-lg"
       style={
         {
           "--brand": brand.primaryColor,
@@ -66,7 +67,7 @@ export function TabletShell({
         } as React.CSSProperties
       }
     >
-      <header className="flex items-center justify-between bg-zinc-950 px-4 py-3 text-white">
+      <header className="dark flex items-center justify-between bg-background px-4 py-3 text-foreground">
         <div className="flex items-center gap-2">
           <span
             className="flex h-8 w-8 items-center justify-center rounded-lg text-sm font-black text-white"
@@ -79,7 +80,7 @@ export function TabletShell({
           </p>
         </div>
         <div className="flex items-center gap-3 text-xs font-semibold">
-          <span className="text-zinc-300">Vendredi 11:42</span>
+          <span className="text-foreground-muted">Vendredi 11:42</span>
           <span
             className="rounded-md px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white"
             style={{ background: brand.primaryColor }}
@@ -102,8 +103,8 @@ export function TabletShell({
               className={cn(
                 "rounded-lg px-2.5 py-1 text-[11px] font-black uppercase tracking-wide transition",
                 day === d
-                  ? "bg-zinc-950 text-white"
-                  : "border border-border bg-surface text-foreground-muted hover:border-zinc-400",
+                  ? "bg-accent text-accent-foreground"
+                  : "border border-border bg-surface text-foreground-muted hover:border-accent/40",
               )}
             >
               J{d}
@@ -112,7 +113,7 @@ export function TabletShell({
         </div>
       )}
 
-      <nav className="flex gap-1 border-b border-zinc-200/80 bg-white/80 p-1.5 backdrop-blur-xl dark:border-white/10 dark:bg-zinc-900/80">
+      <nav className={cn(dna.glass, "flex gap-1 border-b p-1.5")}>
         {TABS.map((t) => (
           <button
             key={t.id}
@@ -120,9 +121,7 @@ export function TabletShell({
             onClick={() => setTab(t.id)}
             className={cn(
               "flex-1 rounded-full px-1 py-2 text-center text-[10px] font-bold uppercase tracking-wide transition sm:text-[11px]",
-              tab === t.id
-                ? "bg-zinc-900 text-white shadow-xs dark:bg-white dark:text-zinc-900"
-                : "text-foreground-muted hover:bg-zinc-100 hover:text-foreground dark:hover:bg-white/5",
+              tab === t.id ? dna.pillActive : cn(dna.pillIdle, "hover:bg-surface-muted"),
             )}
           >
             {t.label}
@@ -133,7 +132,7 @@ export function TabletShell({
       <div
         className={cn(
           "flex-1 overflow-y-auto p-3 sm:p-4",
-          tab === "kiosk" ? "bg-zinc-950" : "bg-zinc-100 dark:bg-zinc-900/40",
+          tab === "kiosk" ? "dark bg-background" : "bg-surface-muted",
         )}
       >
         {tab === "floor" && <FloorTab snapshot={snapshot} />}

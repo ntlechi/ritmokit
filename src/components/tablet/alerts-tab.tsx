@@ -47,7 +47,7 @@ export function AlertsTab({ snapshot }: { snapshot: Snapshot }) {
             <div>
               <p className="text-xs font-bold text-foreground">{a.title}</p>
               <p className="mt-0.5 text-[11px] leading-snug text-foreground-muted">{a.body}</p>
-              <p className="mt-1 text-[10px] text-zinc-400">
+              <p className="mt-1 text-[10px] text-foreground-muted">
                 {a.minutesAgo < 60
                   ? `Il y a ${a.minutesAgo} min`
                   : `Il y a ${Math.round(a.minutesAgo / 60)} h`}

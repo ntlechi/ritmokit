@@ -19,6 +19,7 @@ import { resolveLockedLabel } from "@/lib/training/lms-ui";
 import type { FormationCatalog, FormationModuleDetail } from "@/lib/data/training";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
+import { dna } from "@/lib/design/dna";
 import { cn } from "@/lib/utils";
 
 function resolveError(dict: Dictionary, code: string) {
@@ -174,7 +175,7 @@ export function LessonPlayer({
         <div className="flex items-center gap-3">
           <Link
             href={`/${lang}/sops`}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200/80 text-foreground-muted hover:bg-zinc-100 dark:border-white/10 dark:hover:bg-white/5"
+            className={cn(dna.iconBtn, "h-9 w-9 rounded-full border border-border")}
             aria-label={dict.training.backToList}
           >
             <ArrowLeft className="h-4 w-4" aria-hidden />
@@ -201,7 +202,7 @@ export function LessonPlayer({
         )}
 
         {!showVideo && current?.key === "intro" && (
-          <article className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-xs dark:border-white/10 dark:bg-zinc-900/60 sm:p-6">
+          <article className={cn(dna.panel, "p-5 sm:p-6")}>
             <div className="prose prose-sm max-w-none whitespace-pre-wrap text-foreground dark:prose-invert">
               {module.body}
             </div>
@@ -209,7 +210,7 @@ export function LessonPlayer({
         )}
 
         {currentStep && (
-          <article className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-xs dark:border-white/10 dark:bg-zinc-900/60 sm:p-6">
+          <article className={cn(dna.panel, "p-5 sm:p-6")}>
             <h2 className="text-base font-semibold">{currentStep.title}</h2>
             <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-foreground-muted">
               {currentStep.body}
@@ -218,7 +219,7 @@ export function LessonPlayer({
         )}
 
         {atAttestation && !completed && (
-          <article className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-xs dark:border-white/10 dark:bg-zinc-900/60 sm:p-6">
+          <article className={cn(dna.panel, "p-5 sm:p-6")}>
             {module.summary && (
               <p className="text-sm text-foreground-muted">{module.summary}</p>
             )}
@@ -231,7 +232,7 @@ export function LessonPlayer({
                   value={signature}
                   onChange={(e) => setSignature(e.target.value)}
                   placeholder={dict.training.signaturePlaceholder}
-                  className="w-full rounded-xl border border-zinc-200/80 bg-zinc-50 px-3.5 py-2.5 text-sm outline-none focus:border-zinc-400 focus:bg-white focus:ring-2 focus:ring-zinc-900/10 dark:border-white/10 dark:bg-white/5 dark:focus:bg-zinc-900"
+                  className={dna.field}
                 />
                 <p className="text-[11px] text-foreground-muted">{dict.training.signatureDisclaimer}</p>
               </div>
@@ -256,7 +257,7 @@ export function LessonPlayer({
                   "rounded-full border px-3 py-1.5 text-[11px] font-semibold transition",
                   done && "border-emerald-500/25 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200",
                   active && "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300",
-                  !done && !active && "border-zinc-200/80 text-foreground-muted dark:border-white/10",
+                  !done && !active && "border-border text-foreground-muted",
                 )}
               >
                 {done && <Check className="mr-1 inline h-3 w-3" aria-hidden />}
@@ -271,7 +272,7 @@ export function LessonPlayer({
             type="button"
             onClick={goBack}
             disabled={phase === 0 || isPending}
-            className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200/80 px-4 py-2.5 text-sm font-medium text-foreground disabled:opacity-40 dark:border-white/10"
+            className={cn(dna.ctaGhost, "rounded-full disabled:opacity-40")}
           >
             <ChevronLeft className="h-4 w-4" aria-hidden />
             {dict.training.previous}
@@ -282,7 +283,7 @@ export function LessonPlayer({
               type="button"
               disabled={isPending || (module.requiresSignature && signature.trim().length < 2)}
               onClick={submitCompletion}
-              className="inline-flex items-center gap-2 rounded-xl bg-zinc-900 px-6 py-3 text-sm font-semibold text-white hover:bg-zinc-800 disabled:opacity-40 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
+              className="inline-flex items-center gap-2 rounded-xl bg-accent px-6 py-3 text-sm font-semibold text-accent-foreground hover:bg-accent-hover disabled:opacity-40"
             >
               {isPending ? dict.training.submitting : dict.training.signAndComplete}
             </button>
@@ -290,7 +291,7 @@ export function LessonPlayer({
             <button
               type="button"
               onClick={goNext}
-              className="inline-flex items-center gap-2 rounded-xl bg-zinc-900 px-6 py-3 text-sm font-semibold text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900"
+              className="inline-flex items-center gap-2 rounded-xl bg-accent px-6 py-3 text-sm font-semibold text-accent-foreground hover:bg-accent-hover"
             >
               {dict.training.markStepSeen}
               <ChevronRight className="h-4 w-4" aria-hidden />
@@ -298,7 +299,7 @@ export function LessonPlayer({
           ) : (
             <Link
               href={`/${lang}/sops`}
-              className="inline-flex items-center gap-2 rounded-xl bg-zinc-900 px-6 py-3 text-sm font-semibold text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900"
+              className="inline-flex items-center gap-2 rounded-xl bg-accent px-6 py-3 text-sm font-semibold text-accent-foreground hover:bg-accent-hover"
             >
               {dict.training.backToList}
             </Link>

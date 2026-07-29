@@ -3,6 +3,8 @@ import { LoginForm } from "@/components/auth/login-form";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { isLocale } from "@/lib/i18n/config";
+import { dna } from "@/lib/design/dna";
+import { cn } from "@/lib/utils";
 
 export default async function LoginPage({
   params,
@@ -18,8 +20,8 @@ export default async function LoginPage({
 
   return (
     <ThemeProvider>
-      <div className="premium-shell flex min-h-screen items-center justify-center bg-zinc-50 px-4 pb-safe pt-safe dark:bg-zinc-950">
-        <div className="w-full max-w-md rounded-3xl border border-zinc-200/80 bg-white p-6 shadow-xs dark:border-white/10 dark:bg-zinc-900 sm:p-8">
+      <div className="premium-shell flex min-h-screen items-center justify-center bg-background px-4 pb-safe pt-safe">
+        <div className={cn(dna.panelLg, "w-full max-w-md p-6 sm:p-8")}>
           <LoginForm lang={lang} dict={dict} next={next} initialError={error} />
         </div>
       </div>

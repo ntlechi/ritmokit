@@ -46,12 +46,12 @@ function CourseCard({
       className={cn(
         "flex h-full flex-col overflow-hidden rounded-2xl border shadow-xs transition",
         locked
-          ? "border-zinc-200/80 bg-zinc-50 opacity-80 dark:border-white/10 dark:bg-zinc-900/40"
+          ? "border-border bg-surface-muted opacity-80"
           : completed
-            ? "border-emerald-500/25 bg-white dark:bg-zinc-900/60"
+            ? "border-emerald-500/25 bg-surface"
             : inProgress
-              ? "border-red-500/35 bg-white ring-1 ring-red-500/15 dark:bg-zinc-900/60"
-              : "border-zinc-200/80 bg-white hover:-translate-y-0.5 hover:shadow-sm dark:border-white/10 dark:bg-zinc-900/60",
+              ? "border-red-500/35 bg-surface ring-1 ring-red-500/15"
+              : "border-border bg-surface hover:-translate-y-0.5 hover:shadow-sm",
       )}
     >
       <div className={cn("relative flex h-28 items-center justify-center", modulePastel(module.kind))}>
@@ -83,7 +83,7 @@ function CourseCard({
             </span>
           )}
           {module.videoUrl && (
-            <span className="inline-flex items-center gap-1 rounded-full border border-zinc-200/80 bg-zinc-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-foreground-muted dark:border-white/10 dark:bg-white/5">
+            <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-foreground-muted">
               <PlayCircle className="h-3 w-3" aria-hidden />
               {dict.training.videoBadge}
             </span>
@@ -165,7 +165,7 @@ export function SopCardGrid({
 
   if (cards.length === 0) {
     return (
-      <p className="rounded-2xl border border-zinc-200/80 bg-zinc-50 px-6 py-10 text-center text-sm text-foreground-muted dark:border-white/10 dark:bg-zinc-900/40">
+      <p className="rounded-2xl border border-border bg-surface-muted px-6 py-10 text-center text-sm text-foreground-muted">
         {dict.training.emptyModules}
       </p>
     );

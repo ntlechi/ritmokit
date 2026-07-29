@@ -6,12 +6,12 @@ import { Mail, KeyRound } from "lucide-react";
 import { loginWithPasswordAction, requestMagicLinkAction } from "@/lib/actions/auth";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
+import { dna } from "@/lib/design/dna";
 import { cn } from "@/lib/utils";
 
 type Mode = "password" | "magicLink";
 
-const inputClass =
-  "w-full rounded-xl border border-zinc-200/80 bg-zinc-50 px-3.5 py-2.5 text-sm text-foreground outline-none transition placeholder:text-foreground-muted focus:border-zinc-400 focus:bg-white focus:ring-2 focus:ring-zinc-900/10 disabled:opacity-50 dark:border-white/10 dark:bg-white/5 dark:focus:bg-zinc-900 dark:focus:ring-white/15";
+const inputClass = dna.field;
 
 export function LoginForm({
   lang,
@@ -76,7 +76,7 @@ export function LoginForm({
         <p className="text-sm text-foreground-muted">{dict.auth.signInSubtitle}</p>
       </div>
 
-      <div className="inline-flex w-full rounded-full border border-zinc-200/80 bg-zinc-100/80 p-1 shadow-xs dark:border-white/10 dark:bg-white/5">
+      <div className={cn(dna.pillTrack, "w-full shadow-xs")}>
         {(["password", "magicLink"] as const).map((value) => (
           <button
             key={value}
@@ -91,9 +91,7 @@ export function LoginForm({
             aria-pressed={mode === value}
             className={cn(
               "flex-1 rounded-full px-3 py-1.5 text-sm font-medium",
-              mode === value
-                ? "bg-zinc-900 text-white shadow-xs dark:bg-white dark:text-zinc-900"
-                : "text-foreground-muted hover:text-foreground",
+              mode === value ? dna.pillActive : dna.pillIdle,
             )}
           >
             {value === "password" ? dict.auth.passwordTab : dict.auth.magicLinkTab}
@@ -144,7 +142,7 @@ export function LoginForm({
             type="submit"
             disabled={isPending || !email || !password}
             data-interactive
-            className="flex w-full items-center justify-center gap-2 rounded-full bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white shadow-xs hover:bg-zinc-800 disabled:opacity-40 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
+            className={cn(dna.cta, "w-full disabled:opacity-40")}
           >
             <KeyRound className="h-4 w-4" aria-hidden />
             {isPending ? dict.auth.signingIn : dict.auth.signIn}
@@ -184,7 +182,7 @@ export function LoginForm({
                 type="submit"
                 disabled={isPending || !email}
                 data-interactive
-                className="flex w-full items-center justify-center gap-2 rounded-full bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white shadow-xs hover:bg-zinc-800 disabled:opacity-40 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
+                className={cn(dna.cta, "w-full disabled:opacity-40")}
               >
                 <Mail className="h-4 w-4" aria-hidden />
                 {isPending ? dict.auth.sendingMagicLink : dict.auth.sendMagicLink}

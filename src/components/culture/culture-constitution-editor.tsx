@@ -167,7 +167,7 @@ export function CultureConstitutionEditor({
   return (
     <section className="space-y-4">
       <div className="flex items-start gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-zinc-900 text-white shadow-xs dark:bg-white dark:text-zinc-900">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground shadow-xs">
           <PenLine className="h-4 w-4" aria-hidden />
         </div>
         <div>

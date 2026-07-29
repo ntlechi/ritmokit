@@ -119,7 +119,7 @@ function CategoryForm({
 
   return (
     <>
-          <div className="flex items-start justify-between gap-4 border-b border-zinc-200/80 px-5 py-4 dark:border-white/10">
+          <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
             <div>
               <Dialog.Title className="text-base font-semibold tracking-tight">
                 {category ? copy.editCategoryTitle : copy.newCategoryTitle}
@@ -208,7 +208,7 @@ function CategoryForm({
             {error && <p className="text-xs text-danger">{error}</p>}
           </div>
 
-          <div className="flex justify-end gap-2 border-t border-zinc-200/80 px-5 py-4 dark:border-white/10">
+          <div className="flex justify-end gap-2 border-t border-border px-5 py-4">
             <Button variant="ghost" onClick={onClose} disabled={isPending}>
               {copy.cancel}
             </Button>

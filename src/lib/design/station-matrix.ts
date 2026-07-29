@@ -42,10 +42,9 @@ const TONES: Record<StationMatrixKey, StationMatrixTone> = {
   },
   default: {
     key: "default",
-    capsule:
-      "border-zinc-300/80 bg-zinc-100/80 text-zinc-900 dark:border-white/10 dark:bg-white/5 dark:text-zinc-100",
-    badge: "border-zinc-300/80 bg-zinc-100 text-zinc-700 dark:border-white/10 dark:bg-white/10 dark:text-zinc-200",
-    bar: "bg-zinc-400",
+    capsule: "border-border bg-surface-muted text-foreground",
+    badge: "border-border bg-surface-muted text-foreground-muted",
+    bar: "bg-foreground-muted",
   },
 };
 

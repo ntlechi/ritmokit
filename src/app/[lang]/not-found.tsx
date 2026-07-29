@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { dna } from "@/lib/design/dna";
 
 export default function NotFound() {
   return (
@@ -9,7 +10,7 @@ export default function NotFound() {
       </p>
       <Link
         href="/"
-        className="inline-flex h-10 items-center rounded-lg bg-zinc-900 px-4 text-sm text-white dark:bg-white dark:text-zinc-900"
+        className={dna.cta}
       >
         Retour à l&apos;accueil
       </Link>

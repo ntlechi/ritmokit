@@ -64,7 +64,7 @@ export function LaborRevenueChart({
             {copy.laborSeries}
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-zinc-900 dark:bg-zinc-100" />
+            <span className="h-2 w-2 rounded-full bg-accent" />
             {copy.salesSeries}
           </span>
           <span className="inline-flex items-center gap-1.5 text-red-600/80 dark:text-red-300/80">

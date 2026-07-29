@@ -3,9 +3,9 @@ import { cn } from "@/lib/utils";
 
 const variantStyles = {
   primary:
-    "bg-zinc-900 text-white shadow-xs hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200",
+    "bg-accent text-accent-foreground shadow-xs hover:bg-accent-hover",
   secondary:
-    "border border-zinc-200/80 bg-white text-foreground shadow-xs backdrop-blur-sm hover:bg-zinc-50 dark:border-white/10 dark:bg-zinc-900/60 dark:hover:bg-zinc-800/60",
+    "border border-border bg-surface text-foreground shadow-xs backdrop-blur-sm hover:bg-surface-muted",
   ghost: "bg-transparent text-foreground hover:bg-surface-muted",
   danger: "bg-danger/10 text-danger hover:bg-danger/20",
 } as const;

@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { overlayClass, sheetContentClass } from "@/components/ui/modal-chrome";
 import { UserAvatar } from "@/components/ui/user-avatar";
+import { dna } from "@/lib/design/dna";
 import { cn } from "@/lib/utils";
 
 const EDITABLE_ROLES = ["EMPLOYEE", "MANAGER", "OWNER"] as const;
@@ -137,7 +138,7 @@ function MemberSheetBody({
 
   return (
     <>
-      <header className="flex items-start justify-between gap-3 border-b border-zinc-200/80 px-5 py-4 dark:border-white/10">
+      <header className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
         <div className="flex min-w-0 items-center gap-3">
           <UserAvatar
             fullName={member.user.fullName}
@@ -155,7 +156,7 @@ function MemberSheetBody({
           </div>
         </div>
         <Dialog.Close
-          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-foreground-muted hover:bg-zinc-100 dark:hover:bg-white/5"
+          className={cn(dna.iconBtn, "h-9 w-9 rounded-full")}
           aria-label={dict.common.cancel}
         >
           <X className="h-4 w-4" />
@@ -179,7 +180,7 @@ function MemberSheetBody({
           </p>
           {canOwner && !isSelf && EDITABLE_ROLES.includes(member.user.role as EditableRole) ? (
             <div className="space-y-2">
-              <div className="inline-flex w-full rounded-xl border border-zinc-200/80 bg-zinc-100 p-1 dark:border-white/10 dark:bg-white/5">
+              <div className={cn(dna.pillTrack, "w-full")}>
                 {EDITABLE_ROLES.map((value) => (
                   <button
                     key={value}
@@ -189,10 +190,8 @@ function MemberSheetBody({
                     onClick={() => setRole(value)}
                     aria-pressed={role === value}
                     className={cn(
-                      "flex-1 rounded-lg px-2 py-1.5 text-xs font-medium sm:text-sm",
-                      role === value
-                        ? "bg-white text-foreground shadow-xs dark:bg-zinc-900"
-                        : "text-foreground-muted hover:text-foreground",
+                      "flex-1 px-2 py-1.5 text-xs font-medium sm:text-sm",
+                      role === value ? dna.pillActive : dna.pillIdle,
                     )}
                   >
                     {dict.team.roles[value]}
@@ -208,7 +207,7 @@ function MemberSheetBody({
               </p>
             </div>
           ) : (
-            <div className="rounded-xl border border-zinc-200/80 bg-zinc-50 px-3 py-2.5 dark:border-white/10 dark:bg-white/5">
+            <div className={cn(dna.panel, "px-3 py-2.5")}>
               <Badge tone="accent">
                 {dict.team.roles[member.user.role as keyof Dictionary["team"]["roles"]] ??
                   dict.roles[member.user.role]}
@@ -223,7 +222,7 @@ function MemberSheetBody({
         <div className="space-y-2">
           <p className="text-xs font-medium text-foreground-muted">{dict.team.station}</p>
           {readOnly ? (
-            <div className="inline-flex items-center gap-2 rounded-xl border border-zinc-200/80 bg-zinc-50 px-3 py-2 text-sm dark:border-white/10 dark:bg-white/5">
+            <div className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface-muted px-3 py-2 text-sm">
               <span
                 className="h-3 w-3 rounded-full"
                 style={stationDotStyle(selectedStation.colorHex)}
@@ -247,7 +246,7 @@ function MemberSheetBody({
                       "flex items-center gap-2 rounded-xl border px-3 py-3 text-xs font-medium",
                       selected
                         ? "border-accent bg-accent-muted text-accent"
-                        : "border-zinc-200/80 bg-white text-foreground-muted hover:bg-zinc-50 hover:text-foreground dark:border-white/10 dark:bg-zinc-900/60 dark:hover:bg-white/5",
+                        : "border-border bg-surface text-foreground-muted hover:bg-surface-muted hover:text-foreground",
                     )}
                   >
                     <span
@@ -264,14 +263,14 @@ function MemberSheetBody({
         </div>
 
         {canManage && !isSelf && (
-          <label className="flex items-center justify-between gap-3 rounded-xl border border-zinc-200/80 bg-zinc-50 px-3 py-3 dark:border-white/10 dark:bg-white/5">
+          <label className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface-muted px-3 py-3">
             <span className="text-sm font-medium">{dict.team.activeOnFloor}</span>
             <input
               type="checkbox"
               checked={isPrimary}
               disabled={isPending || readOnly}
               onChange={(event) => setIsPrimary(event.target.checked)}
-              className="h-4 w-4 rounded border-zinc-300 accent-accent dark:border-white/20"
+              className="h-4 w-4 rounded border-border accent-accent"
             />
           </label>
         )}
@@ -280,7 +279,7 @@ function MemberSheetBody({
       </div>
 
       {!readOnly && (
-        <footer className="flex flex-col gap-2 border-t border-zinc-200/80 px-5 py-4 dark:border-white/10">
+        <footer className="flex flex-col gap-2 border-t border-border px-5 py-4">
           <Button
             variant="primary"
             className="w-full rounded-xl"

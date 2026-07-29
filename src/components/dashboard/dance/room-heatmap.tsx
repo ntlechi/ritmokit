@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 const HOURS = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21];
 
 function utilColor(pct: number): string {
-  if (pct <= 0) return "bg-zinc-200/80 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400";
+  if (pct <= 0) return "bg-surface-muted text-foreground-muted";
   if (pct < 30) return "bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200";
   if (pct < 60) return "bg-emerald-300/80 text-emerald-950 dark:bg-emerald-800 dark:text-emerald-50";
   if (pct < 85) return "bg-emerald-500 text-white dark:bg-emerald-600";
@@ -131,7 +131,7 @@ export function RoomHeatmap({
 
           <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] text-foreground-muted">
             <span>{c.heatmap.legendDead}</span>
-            <span className="h-3 w-6 rounded bg-zinc-200 dark:bg-zinc-800" />
+            <span className="h-3 w-6 rounded bg-surface-muted" />
             <span>{c.heatmap.legendLow}</span>
             <span className="h-3 w-6 rounded bg-emerald-200" />
             <span>{c.heatmap.legendFull}</span>

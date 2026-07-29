@@ -28,7 +28,7 @@ const LaborRevenueChart = dynamic(
   () => import("@/components/manager/labor-revenue-chart").then((m) => m.LaborRevenueChart),
   {
     loading: () => (
-      <div className="premium-card h-[320px] animate-pulse bg-zinc-100/80 dark:bg-zinc-800/40" aria-hidden />
+      <div className="premium-card h-[320px] animate-pulse bg-surface-muted" aria-hidden />
     ),
   },
 );

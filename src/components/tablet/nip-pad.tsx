@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import type { DemoBrandKit } from "@/lib/demo/franchise-pitch";
 import { submitPinPunchAction, type PinPunchIntent } from "@/lib/actions/punch-pin";
+import { dna } from "@/lib/design/dna";
 import { cn } from "@/lib/utils";
 
 const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "clear", "0", "ok"] as const;
@@ -99,18 +100,18 @@ export function NipPad({
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col items-stretch gap-6 py-2 sm:flex-row sm:items-center sm:gap-8">
       <div className="hidden flex-1 text-center sm:block">
-        <p className="metric text-5xl font-semibold tracking-tight text-zinc-100">{clock}</p>
-        <p className="mt-2 text-xs font-medium uppercase tracking-[0.16em] text-zinc-500">
+        <p className="metric text-5xl font-semibold tracking-tight text-foreground">{clock}</p>
+        <p className="mt-2 text-xs font-medium uppercase tracking-[0.16em] text-foreground-muted">
           Horodateur
         </p>
       </div>
 
-      <div className="mx-auto w-full max-w-xs rounded-3xl border border-white/10 bg-zinc-900/90 p-8 shadow-lg backdrop-blur-2xl">
+      <div className={cn(dna.panelLg, "mx-auto w-full max-w-xs p-8 shadow-lg backdrop-blur-2xl")}>
         <div className="text-center">
-          <h2 className="text-lg font-semibold tracking-tight text-zinc-50">
+          <h2 className="text-lg font-semibold tracking-tight text-foreground">
             Pointeuse {brand.name}
           </h2>
-          <p className="mt-1 text-xs text-zinc-400">
+          <p className="mt-1 text-xs text-foreground-muted">
             {awaitingIntent
               ? "Choisis Entrée ou Sortie"
               : "Entre ton NIP à 4 chiffres"}
@@ -124,8 +125,8 @@ export function NipPad({
               className={cn(
                 "h-3 w-3 rounded-full border-2 transition",
                 pin.length > i
-                  ? "border-transparent bg-zinc-100"
-                  : "border-zinc-600 bg-transparent",
+                  ? "border-transparent bg-accent"
+                  : "border-border bg-transparent",
               )}
             />
           ))}
@@ -167,7 +168,7 @@ export function NipPad({
                 setAwaitingIntent(false);
                 setPin("");
               }}
-              className="col-span-2 rounded-2xl border border-white/10 bg-white/5 px-2 py-3 text-xs font-semibold text-zinc-400 transition active:scale-95"
+              className="col-span-2 rounded-2xl border border-border bg-surface-muted px-2 py-3 text-xs font-semibold text-foreground-muted transition active:scale-95"
             >
               Annuler
             </button>
@@ -187,10 +188,10 @@ export function NipPad({
                   className={cn(
                     "flex h-16 w-16 items-center justify-center rounded-full text-xl font-semibold transition active:scale-95 disabled:opacity-60",
                     isClear && "bg-red-500 text-sm font-bold text-white",
-                    isOk && "bg-zinc-100 text-sm font-bold text-zinc-900",
+                    isOk && cn(dna.pillActive, "text-sm font-bold"),
                     !isClear &&
                       !isOk &&
-                      "bg-white/10 text-zinc-50 hover:bg-white/15",
+                      "bg-surface-muted text-foreground hover:bg-surface",
                   )}
                 >
                   <span className={cn(!isClear && !isOk && "metric")}>{label}</span>

@@ -1,6 +1,8 @@
 "use client";
 
 import type { getDemoTabletSnapshot } from "@/lib/demo/franchise-pitch";
+import { dna } from "@/lib/design/dna";
+import { cn } from "@/lib/utils";
 
 type Snapshot = ReturnType<typeof getDemoTabletSnapshot>;
 
@@ -9,7 +11,7 @@ export function CoachingTab({ snapshot }: { snapshot: Snapshot }) {
 
   if (coaching.length === 0) {
     return (
-      <p className="rounded-xl border border-border bg-white p-6 text-center text-sm text-foreground-muted dark:bg-surface">
+      <p className={cn(dna.panel, "p-6 text-center text-sm text-foreground-muted")}>
         Aucune action coaching pour ce jour.
       </p>
     );
@@ -23,7 +25,7 @@ export function CoachingTab({ snapshot }: { snapshot: Snapshot }) {
       {coaching.map((item) => (
         <article
           key={`${item.employeeId}-${item.level}`}
-          className="rounded-xl border border-border bg-white p-4 dark:bg-surface"
+          className={cn(dna.panel, "p-4")}
           style={item.priority === "normal" ? { opacity: 0.65 } : undefined}
         >
           <div className="mb-2 flex items-center justify-between gap-2">
@@ -54,13 +56,13 @@ export function CoachingTab({ snapshot }: { snapshot: Snapshot }) {
           <div className="mt-3 flex gap-2">
             <button
               type="button"
-              className="rounded-md bg-zinc-950 px-3 py-1.5 text-[11px] font-black uppercase tracking-wide text-white"
+              className={cn(dna.cta, "rounded-md px-3 py-1.5 text-[11px] font-black uppercase tracking-wide")}
             >
               {item.primaryCta}
             </button>
             <button
               type="button"
-              className="rounded-md bg-zinc-100 px-3 py-1.5 text-[11px] font-black uppercase tracking-wide text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
+              className={cn(dna.ctaGhost, "rounded-md px-3 py-1.5 text-[11px] font-black uppercase tracking-wide")}
             >
               {item.secondaryCta}
             </button>

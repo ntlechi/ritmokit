@@ -1,6 +1,7 @@
 "use client";
 
 import type { getDemoTabletSnapshot } from "@/lib/demo/franchise-pitch";
+import { dna } from "@/lib/design/dna";
 import { cn } from "@/lib/utils";
 
 type Snapshot = ReturnType<typeof getDemoTabletSnapshot>;
@@ -14,7 +15,7 @@ export function TrainingTab({ snapshot }: { snapshot: Snapshot }) {
         Progression équipe — semaine 1 · J{day}
       </p>
       {formations.map(({ employee, modules }) => (
-        <article key={employee.id} className="rounded-xl border border-border bg-white p-3 dark:bg-surface">
+        <article key={employee.id} className={cn(dna.panel, "p-3")}>
           <div className="mb-2 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span
@@ -47,13 +48,13 @@ export function TrainingTab({ snapshot }: { snapshot: Snapshot }) {
           </div>
           <ul>
             {modules.map((m) => (
-              <li key={m.id} className="flex items-center gap-2 border-b border-zinc-100 py-2 last:border-0 dark:border-zinc-800">
+              <li key={m.id} className="flex items-center gap-2 border-b border-border py-2 last:border-0">
                 <span
                   className={cn(
                     "flex h-6 w-6 items-center justify-center rounded-md text-[10px] font-black",
                     m.status === "done" && "text-white",
-                    m.status === "active" && "bg-zinc-950 text-white",
-                    m.status === "locked" && "bg-zinc-100 text-zinc-400 dark:bg-zinc-800",
+                    m.status === "active" && "bg-accent text-accent-foreground",
+                    m.status === "locked" && "bg-surface-muted text-foreground-muted",
                   )}
                   style={m.status === "done" ? { background: brand.primaryColor } : undefined}
                 >
@@ -65,7 +66,7 @@ export function TrainingTab({ snapshot }: { snapshot: Snapshot }) {
                     "text-[10px] font-bold",
                     m.status === "done" && "text-success",
                     m.status === "active" && "text-[var(--brand)]",
-                    m.status === "locked" && "text-zinc-400",
+                    m.status === "locked" && "text-foreground-muted",
                   )}
                 >
                   {m.status === "done"

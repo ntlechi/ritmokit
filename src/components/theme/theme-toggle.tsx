@@ -2,6 +2,7 @@
 
 import { Moon, Sun, Monitor } from "lucide-react";
 import { useTheme, type Theme } from "./theme-provider";
+import { dna } from "@/lib/design/dna";
 import { cn } from "@/lib/utils";
 
 const options: { value: Theme; icon: typeof Sun; labelKey: "themeLight" | "themeDark" | "themeSystem" }[] = [
@@ -18,7 +19,7 @@ export function ThemeToggle({
   const { theme, setTheme } = useTheme();
 
   return (
-    <div className="inline-flex rounded-full border border-zinc-200/80 bg-zinc-100/80 p-1 shadow-xs dark:border-white/10 dark:bg-white/5">
+    <div className={cn(dna.pillTrack, "shadow-xs")}>
       {options.map(({ value, icon: Icon, labelKey }) => (
         <button
           key={value}
@@ -29,9 +30,7 @@ export function ThemeToggle({
           aria-label={labels[labelKey]}
           className={cn(
             "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium",
-            theme === value
-              ? "bg-zinc-900 text-white shadow-xs dark:bg-white dark:text-zinc-900"
-              : "text-foreground-muted hover:text-foreground",
+            theme === value ? dna.pillActive : dna.pillIdle,
           )}
         >
           <Icon className="h-4 w-4" aria-hidden />

@@ -7,6 +7,8 @@ import { SopDocumentsStrip } from "@/components/training/SopDocumentsStrip";
 import type { FormationCatalog } from "@/lib/data/training";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
+import { dna } from "@/lib/design/dna";
+import { cn } from "@/lib/utils";
 
 /**
  * Server Component shell — only SopCategorySidebar is a client island.
@@ -59,7 +61,7 @@ export function TrainingPortal({
             {canManage && (
               <Link
                 href={`/${lang}/settings/training`}
-                className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200/80 bg-white px-3 py-1.5 text-xs font-semibold text-foreground shadow-xs hover:bg-zinc-50 dark:border-white/10 dark:bg-zinc-900 dark:hover:bg-white/5"
+                className={cn(dna.ctaGhost, "px-3 py-1.5 text-xs font-semibold shadow-xs")}
               >
                 <Settings2 className="h-3.5 w-3.5" aria-hidden />
                 {dict.training.manageCatalog}
