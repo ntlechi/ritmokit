@@ -168,9 +168,10 @@ export async function capturePayPalOrder(orderId: string): Promise<{
 
   const raw = await res.json().catch(() => ({}));
   if (!res.ok) {
-    // ORDER_ALREADY_CAPTURED is fine — treat as success path via GET
+    // Only already-captured is a safe success path — never treat generic
+    // UNPROCESSABLE_ENTITY as paid (that can include failed captures).
     const name = (raw as { name?: string }).name;
-    if (name === "ORDER_ALREADY_CAPTURED" || name === "UNPROCESSABLE_ENTITY") {
+    if (name === "ORDER_ALREADY_CAPTURED") {
       return getPayPalOrder(orderId);
     }
     console.error("[paypal] capture failed", res.status, JSON.stringify(raw).slice(0, 600));
@@ -178,6 +179,15 @@ export async function capturePayPalOrder(orderId: string): Promise<{
   }
 
   return parseOrderPayload(raw);
+}
+
+/** True when PayPal order/capture is safely settled for marking enrollment PAID. */
+export function isPayPalCaptureComplete(order: {
+  status: string;
+  captureId: string | null;
+}): boolean {
+  const status = order.status.toUpperCase();
+  return status === "COMPLETED" || (status === "APPROVED" && Boolean(order.captureId));
 }
 
 export async function getPayPalOrder(orderId: string): Promise<{

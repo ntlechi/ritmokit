@@ -5,6 +5,7 @@ import {
   capturePayPalOrder,
   extractPayPalWebhookRefs,
   getPayPalOrder,
+  isPayPalCaptureComplete,
   verifyPayPalWebhook,
 } from "@/lib/payments/paypal";
 
@@ -62,22 +63,42 @@ export async function POST(request: NextRequest) {
     let captureId = refs.captureId;
     let amountCad: number | null = null;
 
+    let orderStatus = "";
+
     if (eventType === "CHECKOUT.ORDER.APPROVED" && orderId) {
       const captured = await capturePayPalOrder(orderId);
       enrollmentId = enrollmentId ?? captured.enrollmentId;
       captureId = captured.captureId ?? captureId;
       amountCad = captured.amountCad;
+      orderStatus = captured.status;
       if (!orderId) orderId = refs.orderId;
     } else if (orderId) {
       const order = await getPayPalOrder(orderId);
       enrollmentId = enrollmentId ?? order.enrollmentId;
       captureId = order.captureId ?? captureId;
       amountCad = order.amountCad;
+      orderStatus = order.status;
+    } else if (eventType === "PAYMENT.CAPTURE.COMPLETED" && captureId) {
+      // Capture-only event — treat as settled when we have a capture id.
+      orderStatus = "COMPLETED";
     }
 
     if (!enrollmentId) {
       console.error("[webhooks:paypal] missing enrollmentId", { eventType, orderId, eventId: event.id });
       return NextResponse.json({ error: "missing_enrollment" }, { status: 422 });
+    }
+
+    if (
+      !isPayPalCaptureComplete({ status: orderStatus || "UNKNOWN", captureId }) &&
+      eventType !== "PAYMENT.CAPTURE.COMPLETED"
+    ) {
+      console.error("[webhooks:paypal] capture not complete — refusing PAID", {
+        eventType,
+        orderId,
+        orderStatus,
+        captureId,
+      });
+      return NextResponse.json({ error: "capture_incomplete", orderStatus }, { status: 422 });
     }
 
     const externalId = captureId ?? orderId ?? event.id ?? `paypal_${Date.now()}`;

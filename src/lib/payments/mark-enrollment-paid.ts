@@ -43,6 +43,31 @@ export async function markEnrollmentPaid(input: MarkPaidInput): Promise<MarkPaid
     return { ok: false, error: "enrollment_not_found" };
   }
 
+  const amountCad =
+    input.amountCad != null && Number.isFinite(input.amountCad)
+      ? input.amountCad
+      : enrollment.amountCad != null
+        ? asPlainNumber(enrollment.amountCad)
+        : null;
+
+  async function healPaidIfNeeded(): Promise<number> {
+    if (enrollment.paid && enrollment.paymentStatus === "PAID") return 0;
+    // Event already recorded but enrollment never flipped — heal so webhooks
+    // cannot leave a permanently unpaid seat after PayPal success.
+    await prisma.enrollment.update({
+      where: { id: enrollment.id },
+      data: {
+        paid: true,
+        paymentStatus: "PAID",
+        paidAt: enrollment.paidAt ?? new Date(),
+        paymentRef: input.externalTransactionId,
+        ...(amountCad != null ? { amountCad } : {}),
+      },
+    });
+    const promoted = await tryPromoteWaitlist(enrollment.sessionId);
+    return promoted.length;
+  }
+
   // Fast path: already recorded this exact event.
   const existingEvent = await prisma.paymentEvent.findUnique({
     where: {
@@ -55,7 +80,8 @@ export async function markEnrollmentPaid(input: MarkPaidInput): Promise<MarkPaid
     select: { id: true },
   });
   if (existingEvent) {
-    return { ok: true, alreadyProcessed: true, promoted: 0 };
+    const promoted = await healPaidIfNeeded();
+    return { ok: true, alreadyProcessed: true, promoted };
   }
 
   try {
@@ -69,20 +95,14 @@ export async function markEnrollmentPaid(input: MarkPaidInput): Promise<MarkPaid
       },
     });
   } catch (error) {
-    // Unique race — another worker won.
+    // Unique race — another worker won; still heal unpaid if needed.
     const code = (error as { code?: string }).code;
     if (code === "P2002") {
-      return { ok: true, alreadyProcessed: true, promoted: 0 };
+      const promoted = await healPaidIfNeeded();
+      return { ok: true, alreadyProcessed: true, promoted };
     }
     throw error;
   }
-
-  const amountCad =
-    input.amountCad != null && Number.isFinite(input.amountCad)
-      ? input.amountCad
-      : enrollment.amountCad != null
-        ? asPlainNumber(enrollment.amountCad)
-        : null;
 
   const wasPaid = enrollment.paid && enrollment.paymentStatus === "PAID";
 
