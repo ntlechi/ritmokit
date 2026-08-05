@@ -12,6 +12,11 @@ import {
 } from "@/lib/dance/pricing";
 import { createEnrollmentCheckout, type PaymentProvider } from "@/lib/public-api/payments";
 import { loadSessionCapacity } from "@/lib/public-api/capacity";
+import {
+  notifyStaffPendingInterac,
+  publicPaymentStatus,
+  ticketCodeForEnrollment,
+} from "@/lib/payments/interac";
 import { prisma } from "@/lib/prisma";
 
 export { resolveEnrollmentAmountCad } from "@/lib/dance/pricing";
@@ -25,7 +30,7 @@ export const publicEnrollSchema = z.object({
   locale: z.enum(["fr", "en", "es"]).optional().default("fr"),
   allowWaitlist: z.boolean().optional().default(true),
   pricingTier: z.enum(["REGULAR", "STUDENT", "COUPLE", "UNLIMITED_PASS"]).optional().default("REGULAR"),
-  paymentProvider: z.enum(["paypal", "stripe", "none"]).optional(),
+  paymentProvider: z.enum(["paypal", "stripe", "interac", "cash", "none"]).optional(),
   returnUrl: z.string().url().optional().nullable(),
   cancelUrl: z.string().url().optional().nullable(),
   /** When true, mark paid immediately (offline / test). Default false. */
@@ -42,7 +47,12 @@ export type PublicEnrollResult =
       studentId: string;
       waitlisted: boolean;
       paid: boolean;
+      ticketCode: string;
+      paymentStatus: string;
       payment: Awaited<ReturnType<typeof createEnrollmentCheckout>>;
+      interacInstructions?: NonNullable<
+        Awaited<ReturnType<typeof createEnrollmentCheckout>>["interacInstructions"]
+      >;
     }
   | { ok: false; error: string; status: number };
 
@@ -96,6 +106,7 @@ export async function createPublicEnrollment(
     include: {
       season: { select: { id: true, status: true, bookingOpen: true, locationId: true } },
       room: { select: { locationId: true } },
+      course: { select: { title: true } },
     },
   });
 
@@ -150,8 +161,18 @@ export async function createPublicEnrollment(
     },
     pricingTier,
   );
+
+  const locationId = session.season?.locationId ?? session.room.locationId;
+  const courseTitle = session.course.title;
+
+  // Pre-generate id so ticket code is stable at insert time.
+  const enrollmentId = randomUUID();
+  const ticketCode = ticketCodeForEnrollment(enrollmentId);
+  const interacHint = `${input.fullName.trim()}, ${courseTitle}`;
+
   const enrollment = await prisma.enrollment.create({
     data: {
+      id: enrollmentId,
       sessionId: session.id,
       studentId: student.id,
       danceRole: input.danceRole,
@@ -159,10 +180,14 @@ export async function createPublicEnrollment(
       waitlistedAt: decision.waitlisted ? new Date() : null,
       paid,
       paymentStatus: paid ? "PAID" : "NONE",
+      paymentProvider: paid ? "CASH" : null,
       paidAt: paid ? new Date() : null,
       pricingTier,
       amountCad,
+      currency: "CAD",
       paymentRef: input.paymentRef ?? null,
+      ticketCode,
+      interacReferenceHint: interacHint,
     },
   });
 
@@ -185,16 +210,49 @@ export async function createPublicEnrollment(
         enrollmentId: enrollment.id,
         sessionId: session.id,
         studentEmail: input.email.trim().toLowerCase(),
+        studentName: input.fullName.trim(),
+        courseName: courseTitle,
+        locationId,
         returnUrl: input.returnUrl,
         cancelUrl: input.cancelUrl,
       });
 
-      if (payment.paymentRef) {
+      if (payment.status === "pending_interac") {
+        const now = new Date();
+        await prisma.enrollment.update({
+          where: { id: enrollment.id },
+          data: {
+            paymentRef: payment.paymentRef,
+            paymentStatus: "PENDING_INTERAC",
+            paymentProvider: "INTERAC",
+            paymentPendingAt: now,
+            interacReferenceHint:
+              payment.interacInstructions?.referenceHint ?? interacHint,
+          },
+        });
+
+        void notifyStaffPendingInterac({
+          locationId,
+          enrollmentId: enrollment.id,
+          studentName: input.fullName.trim(),
+          courseName: courseTitle,
+          amountCad,
+        });
+      } else if (payment.paymentRef || payment.status === "pending") {
         await prisma.enrollment.update({
           where: { id: enrollment.id },
           data: {
             paymentRef: payment.paymentRef,
             paymentStatus: payment.status === "pending" ? "PENDING" : "NONE",
+            paymentProvider:
+              payment.provider === "paypal"
+                ? "PAYPAL"
+                : payment.provider === "stripe"
+                  ? "STRIPE"
+                  : payment.provider === "cash"
+                    ? "CASH"
+                    : null,
+            ...(payment.status === "pending" ? { paymentPendingAt: new Date() } : {}),
           },
         });
       }
@@ -209,6 +267,11 @@ export async function createPublicEnrollment(
       };
     }
   }
+
+  const refreshed = await prisma.enrollment.findUnique({
+    where: { id: enrollment.id },
+    select: { paymentStatus: true, paymentProvider: true },
+  });
 
   const nextCap = {
     ...capacity,
@@ -260,6 +323,14 @@ export async function createPublicEnrollment(
     studentId: student.id,
     waitlisted: decision.waitlisted,
     paid,
+    ticketCode,
+    paymentStatus: publicPaymentStatus(
+      refreshed?.paymentStatus ?? (paid ? "PAID" : "NONE"),
+      refreshed?.paymentProvider,
+    ),
     payment,
+    ...(payment.interacInstructions
+      ? { interacInstructions: payment.interacInstructions }
+      : {}),
   };
 }

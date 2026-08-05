@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { publicCorsPreflight, publicJson } from "@/lib/public-api/cors";
 import { asPlainNumber } from "@/lib/data/serialize";
+import { publicPaymentStatus } from "@/lib/payments/interac";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
@@ -11,7 +12,7 @@ export async function OPTIONS(request: NextRequest) {
 
 /**
  * GET /api/public/enrollments/:id/payment-status
- * Lightweight poll for BookingModal after PayPal return.
+ * Lightweight poll for BookingModal after PayPal return / Interac confirm.
  */
 export async function GET(
   request: NextRequest,
@@ -28,11 +29,13 @@ export async function GET(
       id: true,
       paid: true,
       paymentStatus: true,
+      paymentProvider: true,
       paymentRef: true,
       amountCad: true,
       waitlisted: true,
       pricingTier: true,
       paidAt: true,
+      ticketCode: true,
     },
   });
 
@@ -44,8 +47,10 @@ export async function GET(
     ok: true,
     enrollmentId: enrollment.id,
     paid: enrollment.paid,
-    paymentStatus: enrollment.paymentStatus,
+    paymentStatus: publicPaymentStatus(enrollment.paymentStatus, enrollment.paymentProvider),
+    paymentProvider: enrollment.paymentProvider?.toLowerCase() ?? null,
     paymentRef: enrollment.paymentRef,
+    ticketCode: enrollment.ticketCode,
     amountCad: enrollment.amountCad != null ? asPlainNumber(enrollment.amountCad) : null,
     waitlisted: enrollment.waitlisted,
     pricingTier: enrollment.pricingTier,

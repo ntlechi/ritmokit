@@ -15,7 +15,10 @@ export async function loadSessionCapacity(sessionId: string): Promise<RoleCapaci
       maxLeads: true,
       maxFollows: true,
       enrollments: {
-        where: { waitlisted: false },
+        where: {
+          waitlisted: false,
+          paymentStatus: { not: "CANCELLED_INTERAC" },
+        },
         select: { danceRole: true },
       },
     },

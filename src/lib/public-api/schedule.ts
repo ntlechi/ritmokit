@@ -52,12 +52,17 @@ export type PublicScheduleClass = {
 };
 
 function countRoles(
-  enrollments: Array<{ danceRole: "LEAD" | "FOLLOW" | "SOLO"; waitlisted: boolean }>,
+  enrollments: Array<{
+    danceRole: "LEAD" | "FOLLOW" | "SOLO";
+    waitlisted: boolean;
+    paymentStatus?: string;
+  }>,
 ): Pick<RoleCapacity, "filledLeads" | "filledFollows"> {
   let filledLeads = 0;
   let filledFollows = 0;
   for (const e of enrollments) {
     if (e.waitlisted) continue;
+    if (e.paymentStatus === "CANCELLED_INTERAC") continue;
     if (e.danceRole === "LEAD") filledLeads += 1;
     else if (e.danceRole === "FOLLOW") filledFollows += 1;
   }
@@ -106,7 +111,7 @@ export async function getPublicSchedule(
       season: { select: { id: true, name: true } },
       room: true,
       instructor: { select: { id: true, fullName: true } },
-      enrollments: { select: { danceRole: true, waitlisted: true } },
+      enrollments: { select: { danceRole: true, waitlisted: true, paymentStatus: true } },
     },
   });
 

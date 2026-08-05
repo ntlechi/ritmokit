@@ -32,7 +32,10 @@ async function loadActiveCapacity(
       maxLeads: true,
       maxFollows: true,
       enrollments: {
-        where: { waitlisted: false },
+        where: {
+          waitlisted: false,
+          paymentStatus: { not: "CANCELLED_INTERAC" },
+        },
         select: { danceRole: true },
       },
     },

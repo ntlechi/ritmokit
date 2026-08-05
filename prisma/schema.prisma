@@ -63,14 +63,19 @@ enum InstructorPayrollStatus {
   PAID
 }
 
-/// Public enrollment checkout lifecycle (Phase A payments).
+/// Public enrollment checkout lifecycle (Phase A payments + Interac reconciliation).
 enum PaymentStatus {
   /// No checkout expected yet (offline, waitlist hold, provider=none).
   NONE
+  /// Card / PayPal awaiting capture (legacy + pending_paypal).
   PENDING
+  /// Seat reserved; Interac e-Transfer expected — QR BLOCK.
+  PENDING_INTERAC
   PAID
   FAILED
   REFUNDED
+  /// Owner cancelled pending Interac; seat released — QR BLOCK.
+  CANCELLED_INTERAC
 }
 
 /// Price list applied at enrollment time — stored so cockpit yield uses real money.
@@ -84,6 +89,8 @@ enum PricingTier {
 enum PaymentProvider {
   PAYPAL
   STRIPE
+  INTERAC
+  CASH
 }
 
 /// Public / staff room rental booking kind.
@@ -418,9 +425,30 @@ model Location {
   floors                 Floor[]
   rentalSettings         LocationRentalSettings?
   rentalBookings         RentalBooking[]
+  interacSettings        LocationInteracSettings?
 
   @@unique([organizationId, slug])
   @@map("locations")
+}
+
+/// Per-location Interac e-Transfer checkout copy + staff alert targets.
+model LocationInteracSettings {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  locationId        String   @unique @map("location_id") @db.Uuid
+  location          Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  /// Deposit email shown on tenant checkout (e.g. studio Hotmail).
+  depositEmail      String?  @map("deposit_email")
+  securityQuestion  String?  @map("security_question")
+  passwordHint      String?  @map("password_hint")
+  /// Deep link for “Ouvrir courriel Interac” (mailto: or webmail URL).
+  inboxUrl          String?  @map("inbox_url")
+  /// Staff alert recipient when a new pending_interac enrollment arrives.
+  notifyStaffEmail  String?  @map("notify_staff_email")
+  alertOnPending    Boolean  @default(true) @map("alert_on_pending")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@map("location_interac_settings")
 }
 
 /// Optional grouping for rentable rooms (e.g. Rez-de-chaussée / Sous-sol).
@@ -676,6 +704,8 @@ model User {
   instructorPayrollLogs         InstructorPayrollLog[]
   rentalBookingsConfirmed       RentalBooking[]                @relation("RentalBookingConfirmedBy")
   rentalBookingsCancelled       RentalBooking[]                @relation("RentalBookingCancelledBy")
+  enrollmentsPaymentConfirmed   Enrollment[]                   @relation("EnrollmentPaymentConfirmedBy")
+  enrollmentsPaymentCancelled   Enrollment[]                   @relation("EnrollmentPaymentCancelledBy")
 
   @@map("users")
 }
@@ -2208,10 +2238,23 @@ model Enrollment {
   paymentRef    String?       @map("payment_ref")
   /// Checkout lifecycle — keep `paid` in sync for legacy readers until A1b.
   paymentStatus PaymentStatus @default(NONE) @map("payment_status")
+  paymentProvider PaymentProvider? @map("payment_provider")
   pricingTier   PricingTier   @default(REGULAR) @map("pricing_tier")
   /// Exact CAD amount for this enrollment (tier price at checkout time).
   amountCad     Decimal?      @map("amount_cad") @db.Decimal(10, 2)
+  currency      String        @default("CAD")
   paidAt        DateTime?     @map("paid_at")
+  paymentPendingAt   DateTime? @map("payment_pending_at")
+  paymentConfirmedById String? @map("payment_confirmed_by_id") @db.Uuid
+  paymentConfirmedBy   User?   @relation("EnrollmentPaymentConfirmedBy", fields: [paymentConfirmedById], references: [id], onDelete: SetNull)
+  paymentCancelledAt   DateTime? @map("payment_cancelled_at")
+  paymentCancelledById String? @map("payment_cancelled_by_id") @db.Uuid
+  paymentCancelledBy   User?   @relation("EnrollmentPaymentCancelledBy", fields: [paymentCancelledById], references: [id], onDelete: SetNull)
+  cancellationReason   String? @map("cancellation_reason") @db.Text
+  /// Guest name + course — helps owners match Hotmail Interac subjects.
+  interacReferenceHint String? @map("interac_reference_hint")
+  /// Door/QR ticket — e.g. RK|<enrollmentId>.
+  ticketCode    String?       @unique @map("ticket_code")
   /// Set when waitlisted=true; used by A3 promotion queue ordering.
   waitlistedAt  DateTime?     @map("waitlisted_at")
   promotedAt    DateTime?     @map("promoted_at")
@@ -2226,6 +2269,7 @@ model Enrollment {
   @@index([sessionId, danceRole, waitlisted])
   @@index([sessionId, paymentStatus, paid])
   @@index([sessionId, waitlisted, waitlistedAt])
+  @@index([paymentStatus, paymentPendingAt])
   @@map("enrollments")
 }
 

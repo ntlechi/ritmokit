@@ -16,7 +16,7 @@ import {
   isPayPalConfigured,
 } from "@/lib/payments/paypal";
 
-export type PaymentProvider = "paypal" | "stripe" | "none";
+export type PaymentProvider = "paypal" | "stripe" | "interac" | "cash" | "none";
 
 export type PaymentCheckoutRequest = {
   provider?: PaymentProvider;
@@ -25,20 +25,30 @@ export type PaymentCheckoutRequest = {
   enrollmentId: string;
   sessionId: string;
   studentEmail: string;
+  studentName?: string;
+  courseName?: string;
   description?: string;
   returnUrl?: string | null;
   cancelUrl?: string | null;
   /** Optional — resolved from enrollment/session when omitted. */
   organizationId?: string | null;
+  locationId?: string | null;
 };
 
 export type PaymentCheckoutResult = {
-  status: "pending" | "paid" | "deferred";
+  status: "pending" | "pending_interac" | "paid" | "deferred";
   provider: PaymentProvider;
   /** Hosted checkout URL when provider requires redirect (PayPal/Stripe). */
   checkoutUrl: string | null;
   paymentRef: string | null;
   message: string;
+  interacInstructions?: {
+    depositEmail: string | null;
+    securityQuestion: string | null;
+    passwordHint: string | null;
+    amountCad: number;
+    referenceHint: string;
+  };
 };
 
 function envDefaultProvider(): PaymentProvider {
@@ -89,6 +99,41 @@ export async function createEnrollmentCheckout(
       checkoutUrl: null,
       paymentRef: null,
       message: "Enrollment recorded unpaid — collect payment offline or connect PayPal in Integrations.",
+    };
+  }
+
+  if (provider === "cash") {
+    return {
+      status: "deferred",
+      provider: "cash",
+      checkoutUrl: null,
+      paymentRef: null,
+      message: "Enrollment recorded — collect cash at the studio.",
+    };
+  }
+
+  if (provider === "interac") {
+    const settings = input.locationId
+      ? await prisma.locationInteracSettings.findUnique({
+          where: { locationId: input.locationId },
+        })
+      : null;
+    const referenceHint = [input.studentName, input.courseName].filter(Boolean).join(", ");
+    const paymentRef = `interac_${input.enrollmentId.slice(0, 8)}_${Date.now()}`;
+    return {
+      status: "pending_interac",
+      provider: "interac",
+      checkoutUrl: null,
+      paymentRef,
+      message:
+        "Virement Interac en attente — instructions envoyées. Le billet s'active dès confirmation du studio.",
+      interacInstructions: {
+        depositEmail: settings?.depositEmail ?? process.env.INTERAC_DEPOSIT_EMAIL?.trim() ?? null,
+        securityQuestion: settings?.securityQuestion ?? null,
+        passwordHint: settings?.passwordHint ?? null,
+        amountCad: input.amountCad,
+        referenceHint: referenceHint || input.studentEmail,
+      },
     };
   }
 

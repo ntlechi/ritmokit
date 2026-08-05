@@ -30,7 +30,10 @@ async function loadSessionCapacity(sessionId: string | null) {
       maxFollows: true,
       course: { select: { title: true } },
       enrollments: {
-        where: { waitlisted: false },
+        where: {
+          waitlisted: false,
+          paymentStatus: { not: "CANCELLED_INTERAC" },
+        },
         select: { danceRole: true },
       },
     },

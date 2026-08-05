@@ -12,11 +12,14 @@ import { asPlainNumber } from "@/lib/data/serialize";
 
 export type MarkPaidInput = {
   enrollmentId: string;
-  provider: "PAYPAL" | "STRIPE";
+  provider: "PAYPAL" | "STRIPE" | "INTERAC" | "CASH";
   externalTransactionId: string;
   eventType: string;
   payload: unknown;
   amountCad?: number | null;
+  confirmedById?: string | null;
+  /** When false, skip student confirmation email (staff chose confirm without email). */
+  skipStudentEmail?: boolean;
 };
 
 export type MarkPaidResult =
@@ -61,8 +64,10 @@ export async function markEnrollmentPaid(input: MarkPaidInput): Promise<MarkPaid
       data: {
         paid: true,
         paymentStatus: "PAID",
+        paymentProvider: input.provider,
         paidAt: row.paidAt ?? new Date(),
         paymentRef: input.externalTransactionId,
+        ...(input.confirmedById ? { paymentConfirmedById: input.confirmedById } : {}),
         ...(amountCad != null ? { amountCad } : {}),
       },
     });
@@ -113,40 +118,44 @@ export async function markEnrollmentPaid(input: MarkPaidInput): Promise<MarkPaid
     data: {
       paid: true,
       paymentStatus: "PAID",
+      paymentProvider: input.provider,
       paidAt: row.paidAt ?? new Date(),
       paymentRef: input.externalTransactionId,
+      ...(input.confirmedById ? { paymentConfirmedById: input.confirmedById } : {}),
       ...(amountCad != null ? { amountCad } : {}),
       // Paying a waitlisted seat does not auto-seat them — promotion owns that.
     },
   });
 
   if (!wasPaid) {
-    const locale = row.student.locale === "EN" ? "en" : row.student.locale === "ES" ? "es" : "fr";
-    const title = row.session.course.title;
-    const subject =
-      locale === "en"
-        ? `Payment confirmed — ${title}`
-        : locale === "es"
-          ? `Pago confirmado — ${title}`
-          : `Paiement confirmé — ${title}`;
-    const text =
-      locale === "en"
-        ? `Hi ${row.student.fullName},\n\nYour payment for ${title} is confirmed. See you in class!\n\n— RitmoKit`
-        : locale === "es"
-          ? `Hola ${row.student.fullName},\n\nTu pago para ${title} está confirmado. ¡Nos vemos en clase!\n\n— RitmoKit`
-          : `Bonjour ${row.student.fullName},\n\nVotre paiement pour ${title} est confirmé. À bientôt en cours!\n\n— RitmoKit`;
+    if (!input.skipStudentEmail) {
+      const locale = row.student.locale === "EN" ? "en" : row.student.locale === "ES" ? "es" : "fr";
+      const title = row.session.course.title;
+      const subject =
+        locale === "en"
+          ? `Payment confirmed — ${title}`
+          : locale === "es"
+            ? `Pago confirmado — ${title}`
+            : `Paiement confirmé — ${title}`;
+      const text =
+        locale === "en"
+          ? `Hi ${row.student.fullName},\n\nYour payment for ${title} is confirmed. Your ticket is active — see you in class!\n\n— RitmoKit`
+          : locale === "es"
+            ? `Hola ${row.student.fullName},\n\nTu pago para ${title} está confirmado. Tu billete está activo. ¡Nos vemos en clase!\n\n— RitmoKit`
+            : `Bonjour ${row.student.fullName},\n\nVotre paiement pour ${title} est confirmé. Votre billet est actif. À bientôt en cours!\n\n— RitmoKit`;
 
-    await sendEnrollmentEmail({
-      to: row.student.email,
-      kind: "payment_confirmed",
-      subject,
-      text,
-      meta: {
-        enrollmentId: row.id,
-        amountCad,
-        provider: input.provider,
-      },
-    });
+      await sendEnrollmentEmail({
+        to: row.student.email,
+        kind: "payment_confirmed",
+        subject,
+        text,
+        meta: {
+          enrollmentId: row.id,
+          amountCad,
+          provider: input.provider,
+        },
+      });
+    }
 
     await enqueueAndRunDanceAgent({
       eventType: "enrollment.paid",

@@ -13,6 +13,7 @@ export interface Dictionary {
     sessions: string;
     rooms: string;
     rentals: string;
+    interac: string;
     accueil: string;
     sops: string;
     team: string;
@@ -420,6 +421,46 @@ export interface Dictionary {
     totalCapacity: string;
     totalSurface: string;
     avgOccupancy: string;
+  };
+  interac: {
+    badge: string;
+    intro: string;
+    badgeCount: string;
+    ownerHint: string;
+    openInbox: string;
+    empty: string;
+    statusPending: string;
+    confirm: string;
+    confirmEmail: string;
+    cancel: string;
+    cancelConfirm: string;
+    copyAmount: string;
+    copyEmail: string;
+    copied: string;
+    waitingUnderHour: string;
+    waitingHours: string;
+    waitingDay: string;
+    waitingDays: string;
+    roleLead: string;
+    roleFollow: string;
+    roleSolo: string;
+    settingsTitle: string;
+    settingsHint: string;
+    depositEmail: string;
+    securityQuestion: string;
+    passwordHint: string;
+    inboxUrl: string;
+    notifyStaffEmail: string;
+    alertOnPending: string;
+    saveSettings: string;
+    errors: {
+      unauthorized: string;
+      databaseError: string;
+      notPending: string;
+      alreadyPaid: string;
+      notFound: string;
+      invalidPayload: string;
+    };
   };
   rentals: {
     badge: string;

@@ -557,21 +557,42 @@ export async function listInteracPending(input: {
           label: `${stationLabel(r.room, "fr")} · ${civilDateFromDbDate(r.date)} ${r.timeStart}`,
         }));
 
-  // Enrollment Interac is not modeled yet — return empty enrollment slice.
-  const enrollments: Array<{
-    kind: "enrollment";
-    id: string;
-    clientName: string;
-    clientEmail: string;
-    amountCents: number;
-    currency: string;
-    createdAt: string;
-    label: string;
-  }> = [];
+  const enrollments =
+    kind === "rental"
+      ? []
+      : (
+          await prisma.enrollment.findMany({
+            where: {
+              paymentStatus: "PENDING_INTERAC",
+              waitlisted: false,
+              session: {
+                OR: [
+                  { season: { locationId: membership.locationId } },
+                  { seasonId: null, room: { locationId: membership.locationId } },
+                ],
+              },
+            },
+            orderBy: [{ paymentPendingAt: "asc" }, { createdAt: "asc" }],
+            include: {
+              student: { select: { fullName: true, email: true } },
+              session: { select: { course: { select: { title: true } } } },
+            },
+            take: 100,
+          })
+        ).map((e) => ({
+          kind: "enrollment" as const,
+          id: e.id,
+          clientName: e.student.fullName,
+          clientEmail: e.student.email,
+          amountCents: Math.round(Number(e.amountCad ?? 0) * 100),
+          currency: e.currency || "CAD",
+          createdAt: e.createdAt.toISOString(),
+          label: e.session.course.title,
+        }));
 
   return {
     ok: true as const,
-    items: kind === "rental" ? rentals : kind === "enrollment" ? enrollments : [...rentals, ...enrollments],
+    items: kind === "rental" ? rentals : kind === "enrollment" ? enrollments : [...enrollments, ...rentals],
   };
 }
 

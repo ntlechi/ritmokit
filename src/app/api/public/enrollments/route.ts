@@ -57,8 +57,11 @@ export async function POST(request: NextRequest) {
         studentId: result.studentId,
         waitlisted: result.waitlisted,
         paid: result.paid,
+        ticketCode: result.ticketCode,
+        paymentStatus: result.paymentStatus,
         checkoutUrl: result.payment.checkoutUrl,
         payment: result.payment,
+        interacInstructions: result.interacInstructions,
       },
       { status: 201 },
     );
