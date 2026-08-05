@@ -12,6 +12,7 @@ export interface Dictionary {
     calendar: string;
     sessions: string;
     rooms: string;
+    rentals: string;
     accueil: string;
     sops: string;
     team: string;
@@ -63,6 +64,7 @@ export interface Dictionary {
     agentChurnHint: string;
     releaseSeat: string;
     promotedUnpaid: string;
+    cheatSheetLink: string;
   };
   opsDashboard: {
     title: string;
@@ -418,6 +420,47 @@ export interface Dictionary {
     totalCapacity: string;
     totalSurface: string;
     avgOccupancy: string;
+  };
+  rentals: {
+    badge: string;
+    intro: string;
+    b2bQueue: string;
+    b2bQueueHint: string;
+    emptyPending: string;
+    upcoming: string;
+    upcomingHint: string;
+    emptyUpcoming: string;
+    staffBooking: string;
+    staffBookingHint: string;
+    ratesHours: string;
+    ratesHoursHint: string;
+    approve: string;
+    reject: string;
+    statusPending: string;
+    typeStaff: string;
+    waived: string;
+    room: string;
+    instructor: string;
+    date: string;
+    start: string;
+    end: string;
+    notes: string;
+    bookStaff: string;
+    moduleEnabled: string;
+    openHour: string;
+    closeHour: string;
+    bufferMinutes: string;
+    minLeadHours: string;
+    b2bRequiresApproval: string;
+    roomRates: string;
+    saveSettings: string;
+    errors: {
+      unauthorized: string;
+      databaseError: string;
+      slotUnavailable: string;
+      invalidPayload: string;
+      notPending: string;
+    };
   };
   team: {
     badge: string;
@@ -1905,7 +1948,10 @@ export interface Dictionary {
     manageCatalog: string;
     polyvalenceHint: string;
     importantDocs: string;
-    kind: Record<"SOP" | "SAFETY" | "RECIPE" | "ONBOARDING", string>;
+    kind: Record<
+      "CLASS_PLAN" | "MOVES" | "CHOREOGRAPHY" | "STUDIO_GUIDE" | "SAFETY" | "ONBOARDING",
+      string
+    >;
     complianceTitle: string;
     complianceSubtitle: string;
     startModule: string;
@@ -1962,12 +2008,14 @@ export interface Dictionary {
     openGuide: string;
     relatedTitle: string;
     categories: {
-      clock: string;
-      schedule: string;
-      money: string;
-      learning: string;
-      team: string;
+      studio: string;
+      payments: string;
       manage: string;
+      team: string;
+      schedule: string;
+      clock: string;
+      learning: string;
+      money: string;
     };
     supportTitle: string;
     supportSubtitle: string;
@@ -1983,7 +2031,52 @@ export interface Dictionary {
     recentEmpty: string;
     changelogTitle: string;
     changelogNew: string;
+    mockups: {
+      paypal: string;
+      season: string;
+      accueilTap: string;
+      accueilFilters: string;
+    };
+    cheatSheet: {
+      badge: string;
+      title: string;
+      subtitle: string;
+      printButton: string;
+      steps: string[];
+      remindersTitle: string;
+      reminders: string[];
+      footer: string;
+    };
+    studioSetup: {
+      title: string;
+      subtitle: string;
+      progress: string;
+      dismiss: string;
+      continue: string;
+      printSheet: string;
+      markAccueilTried: string;
+      bannerEyebrow: string;
+      bannerTitle: string;
+      bannerSubtitle: string;
+      bannerNext: string;
+      hubPillTitle: string;
+      visualsTitle: string;
+      visualsSubtitle: string;
+      steps: {
+        paypal: { title: string; description: string; cta: string };
+        season: { title: string; description: string; cta: string };
+        classes: { title: string; description: string; cta: string };
+        accueil: { title: string; description: string; cta: string };
+      };
+    };
     topics: {
+      gettingStarted: HelpTopicCopy;
+      accueil: HelpTopicCopy;
+      sessions: HelpTopicCopy;
+      cockpit: HelpTopicCopy;
+      integrations: HelpTopicCopy;
+      agentics: HelpTopicCopy;
+      enrollmentsWaitlist: HelpTopicCopy;
       schedule: HelpTopicCopy;
       punch: HelpTopicCopy;
       training: HelpTopicCopy;

@@ -21,6 +21,7 @@ import {
   PanelLeftOpen,
   Music2,
   DoorOpen,
+  KeyRound,
   ClipboardCheck,
 } from "lucide-react";
 import type { Locale } from "@/lib/i18n/config";
@@ -48,6 +49,7 @@ const navItems = [
   { key: "accueil" as const, href: "/accueil", icon: ClipboardCheck, accueilOnly: true },
   { key: "sessions" as const, href: "/sessions", icon: Music2, managerOnly: true },
   { key: "rooms" as const, href: "/rooms", icon: DoorOpen, managerOnly: true },
+  { key: "rentals" as const, href: "/rentals", icon: KeyRound, managerOnly: true },
   { key: "calendar" as const, href: "/calendar/week", icon: Calendar },
   { key: "team" as const, href: "/team", icon: Users },
   { key: "messages" as const, href: "/messages", icon: MessagesSquare },

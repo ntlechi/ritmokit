@@ -86,6 +86,36 @@ enum PaymentProvider {
   STRIPE
 }
 
+/// Public / staff room rental booking kind.
+enum RentalBookingType {
+  PRIVE
+  B2B
+  STAFF
+}
+
+enum RentalBookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+/// Orthogonal to booking status — Interac/PayPal reconciliation for rentals.
+enum RentalPaymentStatus {
+  NONE
+  PENDING_APPROVAL
+  PENDING_INTERAC
+  PENDING_PAYPAL
+  PAID
+  WAIVED_STAFF
+  CANCELLED
+}
+
+enum RentalPaymentProvider {
+  INTERAC
+  PAYPAL
+  CASH
+}
+
 /// External connectors managed in Integration Hub (per organization).
 enum IntegrationProvider {
   PAYPAL
@@ -154,10 +184,19 @@ enum SopScope {
 }
 
 /// Type de contenu d'un module de formation interactif.
+/// Dance-studio teaching content (not QSR recipes).
 enum FormationModuleKind {
-  SOP
+  /// What to teach in a class / week.
+  CLASS_PLAN
+  /// Figures & technique for a style/level.
+  MOVES
+  /// Combinations & full choreographies.
+  CHOREOGRAPHY
+  /// Studio procedures (accueil, check-in, house rules).
+  STUDIO_GUIDE
+  /// Safety / CNESST when needed.
   SAFETY
-  RECIPE
+  /// New teacher or staff welcome path.
   ONBOARDING
 }
 
@@ -376,9 +415,48 @@ model Location {
   punchAttempts          PunchAttempt[]
   operationalGoals       OperationalGoal[]
   sessionSeasons         SessionSeason[]
+  floors                 Floor[]
+  rentalSettings         LocationRentalSettings?
+  rentalBookings         RentalBooking[]
 
   @@unique([organizationId, slug])
   @@map("locations")
+}
+
+/// Optional grouping for rentable rooms (e.g. Rez-de-chaussée / Sous-sol).
+model Floor {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  locationId  String   @map("location_id") @db.Uuid
+  location    Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  label       String
+  shortLabel  String?  @map("short_label")
+  description String?  @db.Text
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  rooms Station[]
+
+  @@index([locationId, sortOrder])
+  @@map("floors")
+}
+
+/// Per-location room rental module knobs (open hours, buffer, B2B approval).
+model LocationRentalSettings {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  locationId           String   @unique @map("location_id") @db.Uuid
+  location             Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  openHour             Int      @default(8) @map("open_hour")
+  closeHour            Int      @default(23) @map("close_hour")
+  bufferMinutes        Int      @default(15) @map("buffer_minutes")
+  minLeadHours         Int      @default(24) @map("min_lead_hours")
+  b2bRequiresApproval  Boolean  @default(true) @map("b2b_requires_approval")
+  durationOptions      Int[]    @default([60, 90, 120, 180, 240]) @map("duration_options")
+  moduleEnabled        Boolean  @default(false) @map("module_enabled")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  @@map("location_rental_settings")
 }
 
 /// Poste / zone opérationnelle configurable par succursale (SaaS multi-bannière).
@@ -402,6 +480,19 @@ model Station {
   /// Floor area m² — class profitability $/m².
   surfaceSqm Float?      @map("surface_sqm")
 
+  /// Optional floor grouping for the rental catalog.
+  floorId          String?  @map("floor_id") @db.Uuid
+  floor            Floor?   @relation(fields: [floorId], references: [id], onDelete: SetNull)
+  /// When true, room appears in public rental catalog (requires moduleEnabled).
+  rentable         Boolean  @default(false)
+  hourlyRateCents  Int?     @map("hourly_rate_cents")
+  currency         String   @default("CAD")
+  /// Legacy horaires.json `course.room` index → this physical room.
+  courseRoomIndex  Int?     @map("course_room_index")
+  rentalDescription String? @map("rental_description") @db.Text
+  dimensions       String?
+  amenities        String[] @default([])
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -418,12 +509,60 @@ model Station {
   payrollLineItems     PayrollLineItem[]
   templateShifts       ScheduleTemplateShift[]
   classSessions        ClassSession[]
+  rentalBookings       RentalBooking[]
 
   @@unique([locationId, nameFr])
   @@unique([locationId, slug])
   @@index([locationId, isActive, sortOrder])
   @@index([locationId, kind, isActive, sortOrder])
+  @@index([locationId, rentable, isActive])
+  @@index([locationId, courseRoomIndex])
   @@map("stations")
+}
+
+/// Room / studio space booking (privé, B2B, staff).
+model RentalBooking {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  locationId String   @map("location_id") @db.Uuid
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  roomId     String   @map("room_id") @db.Uuid
+  room       Station  @relation(fields: [roomId], references: [id], onDelete: Restrict)
+
+  /// Civil date in the location timezone (YYYY-MM-DD stored as Date).
+  date      DateTime @db.Date
+  timeStart String   @map("time_start")
+  timeEnd   String   @map("time_end")
+
+  type          RentalBookingType
+  status        RentalBookingStatus
+  paymentStatus RentalPaymentStatus   @map("payment_status")
+  paymentProvider RentalPaymentProvider? @map("payment_provider")
+
+  priceCents Int    @map("price_cents")
+  currency   String @default("CAD")
+
+  clientName  String  @map("client_name")
+  clientEmail String  @map("client_email")
+  clientPhone String? @map("client_phone")
+  clientOrg   String? @map("client_org")
+  notes       String? @db.Text
+
+  confirmedAt   DateTime? @map("confirmed_at")
+  confirmedById String?   @map("confirmed_by_id") @db.Uuid
+  confirmedBy   User?     @relation("RentalBookingConfirmedBy", fields: [confirmedById], references: [id], onDelete: SetNull)
+  cancelledAt   DateTime? @map("cancelled_at")
+  cancelledById String?   @map("cancelled_by_id") @db.Uuid
+  cancelledBy   User?     @relation("RentalBookingCancelledBy", fields: [cancelledById], references: [id], onDelete: SetNull)
+  cancellationReason String? @map("cancellation_reason") @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([locationId, status, date])
+  @@index([roomId, date, status])
+  @@index([locationId, paymentStatus, createdAt])
+  @@index([locationId, type, status, createdAt])
+  @@map("rental_bookings")
 }
 
 /// Départ d'un employé — alimente le taux de roulement sans soft-delete des membres.
@@ -535,6 +674,8 @@ model User {
   assistedClassSessions         ClassSession[]                 @relation("AssistantInstructor")
   enrollments                   Enrollment[]
   instructorPayrollLogs         InstructorPayrollLog[]
+  rentalBookingsConfirmed       RentalBooking[]                @relation("RentalBookingConfirmedBy")
+  rentalBookingsCancelled       RentalBooking[]                @relation("RentalBookingCancelledBy")
 
   @@map("users")
 }
