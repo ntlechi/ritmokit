@@ -68,6 +68,7 @@ export default async function HelpTopicPage({
 
           <HelpArticleBody
             topic={copy}
+            topicKey={topic}
             dict={dict}
             ctaHref={meta.href(lang)}
             className="mt-6 border-t border-border pt-6"

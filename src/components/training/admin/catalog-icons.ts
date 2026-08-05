@@ -1,55 +1,66 @@
 import {
   BookOpen,
-  ChefHat,
   ClipboardCheck,
-  Coffee,
-  Flame,
+  ClipboardList,
+  Footprints,
   HeartHandshake,
-  Recycle,
+  Music2,
   ShieldCheck,
-  Snowflake,
   Sparkles,
-  Truck,
   Users,
   type LucideIcon,
 } from "lucide-react";
 
 /**
- * Palette d'icônes proposée aux rayons du catalogue. Les clés sont persistées
- * en base (`TrainingCategory.icon`), donc elles ne doivent pas être renommées.
+ * Folder icons for the teaching catalog. Keys are persisted in DB
+ * (`TrainingCategory.icon`) — keep legacy keys mapped so old rows still resolve.
  */
 export const CATEGORY_ICONS = {
   book: BookOpen,
   shield: ShieldCheck,
-  chef: ChefHat,
-  coffee: Coffee,
-  flame: Flame,
-  snowflake: Snowflake,
   clipboard: ClipboardCheck,
+  plan: ClipboardList,
+  moves: Footprints,
+  choreo: Music2,
   sparkles: Sparkles,
   people: Users,
   service: HeartHandshake,
-  delivery: Truck,
-  recycle: Recycle,
+  /** Legacy QSR keys → dance-friendly icons (same key for DB rows). */
+  chef: Music2,
+  coffee: BookOpen,
+  flame: Sparkles,
+  snowflake: ShieldCheck,
+  delivery: Users,
+  recycle: HeartHandshake,
 } satisfies Record<string, LucideIcon>;
 
 export type CategoryIconKey = keyof typeof CATEGORY_ICONS;
 
-export const CATEGORY_ICON_KEYS = Object.keys(CATEGORY_ICONS) as CategoryIconKey[];
+export const CATEGORY_ICON_KEYS = [
+  "plan",
+  "moves",
+  "choreo",
+  "book",
+  "shield",
+  "clipboard",
+  "sparkles",
+  "people",
+  "service",
+] as CategoryIconKey[];
 
 export function categoryIcon(key: string | null): LucideIcon {
   if (key && key in CATEGORY_ICONS) return CATEGORY_ICONS[key as CategoryIconKey];
   return BookOpen;
 }
 
-/** Teintes prêtes à l'emploi, cohérentes avec les couleurs de poste RitmoKit. */
+/** Soft studio palette — avoid default purple AI look. */
 export const CATEGORY_COLORS = [
-  "#52525b",
   "#0f766e",
-  "#1d4ed8",
-  "#7c3aed",
+  "#0369a1",
   "#be123c",
-  "#c2410c",
-  "#a16207",
+  "#52525b",
+  "#b45309",
   "#15803d",
+  "#9f1239",
+  "#1e3a5f",
 ] as const;

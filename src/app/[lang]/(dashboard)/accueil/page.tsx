@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import Link from "next/link";
 import { ClipboardCheck } from "lucide-react";
 import { AccueilRosterView } from "@/components/accueil/accueil-roster";
 import { AgentActionRail } from "@/components/accueil/agent-action-rail";
@@ -45,11 +46,11 @@ export default async function AccueilPage({
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-background">
       <header className="sticky top-0 z-10 border-b border-border bg-surface/90 px-4 py-4 backdrop-blur-xl sm:px-6">
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex w-full flex-wrap items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-accent text-accent-foreground">
             <ClipboardCheck className="h-5 w-5" aria-hidden />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-accent">
               {dict.accueil.lineupBadge}
             </p>
@@ -58,6 +59,12 @@ export default async function AccueilPage({
             </h1>
             <p className={dna.subtitle}>{dict.accueil.subtitle}</p>
           </div>
+          <Link
+            href={`/${lang}/help/feuille-accueil`}
+            className="ml-auto inline-flex items-center gap-2 rounded-full border border-border bg-surface px-4 py-2 text-xs font-semibold hover:bg-surface-muted print:hidden"
+          >
+            {dict.accueil.cheatSheetLink}
+          </Link>
         </div>
       </header>
 

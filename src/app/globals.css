@@ -652,6 +652,28 @@ a,
   background: linear-gradient(105deg, transparent 40%, rgb(255 255 255 / 0.04) 50%, transparent 60%);
 }
 
+@media print {
+  .premium-shell > aside,
+  .premium-shell > nav,
+  header[class*="sticky"],
+  .pb-nav-safe + nav,
+  nav[class*="pb-nav"],
+  button[class*="print:hidden"],
+  a[class*="print:hidden"] {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  .premium-card {
+    box-shadow: none !important;
+    border-color: rgb(0 0 0 / 0.15) !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

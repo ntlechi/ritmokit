@@ -2,6 +2,13 @@ import type { Role } from "@/generated/prisma/enums";
 
 /** Clés stables — liées aux entrées `dict.help.topics`. */
 export const HELP_TOPIC_KEYS = [
+  "gettingStarted",
+  "accueil",
+  "sessions",
+  "cockpit",
+  "integrations",
+  "agentics",
+  "enrollmentsWaitlist",
   "schedule",
   "punch",
   "training",
@@ -16,14 +23,19 @@ export type HelpTopicKey = (typeof HELP_TOPIC_KEYS)[number];
 
 /** Regroupements du rail de gauche — liés aux entrées `dict.help.categories`. */
 export const HELP_CATEGORY_KEYS = [
-  "clock",
-  "schedule",
-  "learning",
-  "team",
+  "studio",
+  "payments",
   "manage",
+  "team",
+  "schedule",
+  "clock",
+  "learning",
 ] as const;
 
 export type HelpCategoryKey = (typeof HELP_CATEGORY_KEYS)[number];
+
+const STUDIO_OPS_ROLES: Role[] = ["OWNER", "MANAGER", "ADMIN"];
+const FRONT_DESK_ROLES: Role[] = [...STUDIO_OPS_ROLES, "FRONT_DESK"];
 
 export type HelpTopicMeta = {
   key: HelpTopicKey;
@@ -36,9 +48,57 @@ export type HelpTopicMeta = {
 
 export const HELP_TOPICS: HelpTopicMeta[] = [
   {
+    key: "gettingStarted",
+    href: (lang) => `/${lang}/settings/manager/integrations`,
+    roles: STUDIO_OPS_ROLES,
+    category: "studio",
+    managerOnly: true,
+  },
+  {
+    key: "accueil",
+    href: (lang) => `/${lang}/accueil`,
+    roles: FRONT_DESK_ROLES,
+    category: "studio",
+  },
+  {
+    key: "sessions",
+    href: (lang) => `/${lang}/sessions`,
+    roles: STUDIO_OPS_ROLES,
+    category: "studio",
+    managerOnly: true,
+  },
+  {
+    key: "cockpit",
+    href: (lang) => `/${lang}/dashboard`,
+    roles: STUDIO_OPS_ROLES,
+    category: "studio",
+    managerOnly: true,
+  },
+  {
+    key: "agentics",
+    href: (lang) => `/${lang}/accueil`,
+    roles: FRONT_DESK_ROLES,
+    category: "studio",
+  },
+  {
+    key: "integrations",
+    href: (lang) => `/${lang}/settings/manager/integrations`,
+    roles: STUDIO_OPS_ROLES,
+    category: "payments",
+    managerOnly: true,
+  },
+  {
+    key: "enrollmentsWaitlist",
+    href: (lang) => `/${lang}/sessions`,
+    roles: STUDIO_OPS_ROLES,
+    category: "payments",
+    managerOnly: true,
+  },
+  {
     key: "punch",
     href: (lang) => `/${lang}/pointeuse`,
-    roles: "all",
+    /** Hourly staff only — most dance studios don't use day-to-day clock-in. */
+    roles: ["EMPLOYEE"],
     category: "clock",
   },
   {
@@ -68,21 +128,21 @@ export const HELP_TOPICS: HelpTopicMeta[] = [
   {
     key: "managerSchedule",
     href: (lang) => `/${lang}/calendar/manager/schedule`,
-    roles: ["MANAGER", "OWNER", "ADMIN"],
+    roles: STUDIO_OPS_ROLES,
     category: "manage",
     managerOnly: true,
   },
   {
     key: "weekTemplates",
     href: (lang) => `/${lang}/calendar/manager/schedule`,
-    roles: ["MANAGER", "OWNER", "ADMIN"],
+    roles: STUDIO_OPS_ROLES,
     category: "manage",
     managerOnly: true,
   },
   {
     key: "managerSops",
     href: (lang) => `/${lang}/settings/training`,
-    roles: ["MANAGER", "OWNER", "ADMIN"],
+    roles: STUDIO_OPS_ROLES,
     category: "manage",
     managerOnly: true,
   },
@@ -94,24 +154,49 @@ export const HELP_TOPICS: HelpTopicMeta[] = [
  * longueur est vérifiée au rendu du centre d'aide.
  */
 export const HELP_FAQ_CATEGORIES: HelpCategoryKey[] = [
-  "schedule", // Je ne vois pas mon quart
-  "clock", // La pointeuse me bloque
-  "team", // Qu'est-ce que Pulse
-  "team", // Où changer la langue
-  "manage", // Enregistrer un modèle de semaine
-  "manage", // Déplacer un quart publié
-  "team", // Send a private message
-  "schedule", // Sick report / replacement
+  "studio", // Not tech savvy — where to start
+  "studio", // Check in students at the front desk
+  "studio", // Follow can't enroll online
+  "payments", // Connect PayPal
+  "studio", // Agentics rail
+  "studio", // Lead/Follow balance
+  "payments", // Waitlist auto-promote
+  "team", // Students in Messages
+  "team", // Change language
+  "studio", // Yield vs head count
+  "studio", // Release no-show seat
+  "schedule", // Don't see my shift
+  "team", // Time clock optional for dance studios
 ];
 
 /** Les gestes du quotidien mis en avant en haut du centre d'aide. */
-const QUICK_START_EMPLOYEE: HelpTopicKey[] = ["punch", "schedule", "availability", "messages"];
+const QUICK_START_EMPLOYEE: HelpTopicKey[] = ["schedule", "messages", "training", "availability"];
 const QUICK_START_MANAGER: HelpTopicKey[] = [
-  "managerSchedule",
-  "weekTemplates",
-  "punch",
-  "managerSops",
+  "gettingStarted",
+  "accueil",
+  "integrations",
+  "sessions",
 ];
+const QUICK_START_FRONT_DESK: HelpTopicKey[] = ["accueil", "agentics", "messages"];
+const QUICK_START_INSTRUCTOR: HelpTopicKey[] = ["schedule", "messages", "training"];
+
+export const POPULAR_EMPLOYEE: HelpTopicKey[] = [
+  "schedule",
+  "messages",
+  "training",
+  "availability",
+  "punch",
+];
+export const POPULAR_MANAGER: HelpTopicKey[] = [
+  "gettingStarted",
+  "accueil",
+  "sessions",
+  "integrations",
+  "agentics",
+  "enrollmentsWaitlist",
+];
+export const POPULAR_FRONT_DESK: HelpTopicKey[] = ["accueil", "agentics", "messages"];
+export const POPULAR_INSTRUCTOR: HelpTopicKey[] = ["schedule", "messages", "training"];
 
 export function isHelpTopicKey(value: string): value is HelpTopicKey {
   return (HELP_TOPIC_KEYS as readonly string[]).includes(value);
@@ -129,7 +214,17 @@ export function topicsForRole(role: Role): HelpTopicMeta[] {
 }
 
 export function quickStartForRole(role: Role): HelpTopicKey[] {
-  return isManagerRole(role) ? QUICK_START_MANAGER : QUICK_START_EMPLOYEE;
+  if (isManagerRole(role)) return QUICK_START_MANAGER;
+  if (role === "FRONT_DESK") return QUICK_START_FRONT_DESK;
+  if (role === "INSTRUCTOR") return QUICK_START_INSTRUCTOR;
+  return QUICK_START_EMPLOYEE;
+}
+
+export function popularForRole(role: Role): HelpTopicKey[] {
+  if (isManagerRole(role)) return POPULAR_MANAGER;
+  if (role === "FRONT_DESK") return POPULAR_FRONT_DESK;
+  if (role === "INSTRUCTOR") return POPULAR_INSTRUCTOR;
+  return POPULAR_EMPLOYEE;
 }
 
 export type HelpCategoryGroup = {

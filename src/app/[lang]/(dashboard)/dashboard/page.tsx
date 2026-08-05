@@ -3,8 +3,10 @@ import { notFound, redirect } from "next/navigation";
 import { DbErrorBanner } from "@/components/db-error-banner";
 import { PageBodyFallback } from "@/components/errors/page-body-fallback";
 import { StudioCockpit } from "@/components/dashboard/dance/studio-cockpit";
+import { StudioSetupBanner } from "@/components/studio/studio-setup-banner";
 import { canAccessManagerSettings, getSessionUser } from "@/lib/auth/session";
 import { getStudioCockpitData } from "@/lib/data/studio-cockpit";
+import { getStudioSetupStatus } from "@/lib/data/studio-setup";
 import { safeQuery } from "@/lib/data/safe";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
@@ -46,7 +48,10 @@ async function StudioCockpitBody({
   role: Role;
   dict: Dictionary;
 }) {
-  const { data, dbError } = await safeQuery(() => getStudioCockpitData(userId, role), null);
+  const [{ data, dbError }, { data: setupStatus }] = await Promise.all([
+    safeQuery(() => getStudioCockpitData(userId, role), null),
+    safeQuery(() => getStudioSetupStatus(userId, role), null),
+  ]);
 
   if (!data) {
     redirect(`/${lang}/settings/manager`);
@@ -57,6 +62,11 @@ async function StudioCockpitBody({
       {dbError && (
         <div className="px-4 pt-4 sm:px-6">
           <DbErrorBanner label={dict.common.dbDisconnected} />
+        </div>
+      )}
+      {setupStatus && (
+        <div className="px-4 pt-4 sm:px-6">
+          <StudioSetupBanner dict={dict} lang={lang} status={setupStatus} />
         </div>
       )}
       <StudioCockpit lang={lang} data={data} dict={dict} />

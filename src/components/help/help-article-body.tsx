@@ -1,8 +1,17 @@
 import Link from "next/link";
 import { ArrowRight, Lightbulb } from "lucide-react";
+import type { HelpTopicKey } from "@/lib/help/config";
+import { HELP_TOPIC_MOCKUPS, HelpStepMockup } from "@/components/help/help-step-mockup";
 import type { Dictionary, HelpTopicCopy } from "@/lib/i18n/dictionaries";
 import { dna } from "@/lib/design/dna";
 import { cn } from "@/lib/utils";
+
+const MOCKUP_CAPTIONS: Record<string, keyof Dictionary["help"]["mockups"]> = {
+  paypal: "paypal",
+  season: "season",
+  "accueil-tap": "accueilTap",
+  "accueil-filters": "accueilFilters",
+};
 
 /**
  * Corps d'une fiche d'aide, partagé entre l'accordéon du centre d'aide et la
@@ -10,18 +19,34 @@ import { cn } from "@/lib/utils";
  */
 export function HelpArticleBody({
   topic,
+  topicKey,
   dict,
   ctaHref,
   className,
 }: {
   topic: HelpTopicCopy;
+  topicKey?: HelpTopicKey;
   dict: Dictionary;
   ctaHref: string;
   className?: string;
 }) {
+  const mockups = topicKey ? HELP_TOPIC_MOCKUPS[topicKey] : undefined;
+
   return (
     <div className={cn("space-y-5", className)}>
       <p className="max-w-2xl text-sm leading-relaxed text-foreground-muted">{topic.whatIs}</p>
+
+      {mockups && mockups.length > 0 && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {mockups.map(({ variant }) => (
+            <HelpStepMockup
+              key={variant}
+              variant={variant}
+              caption={dict.help.mockups[MOCKUP_CAPTIONS[variant]]}
+            />
+          ))}
+        </div>
+      )}
 
       <div>
         <p className="premium-eyebrow">{dict.help.howTo}</p>

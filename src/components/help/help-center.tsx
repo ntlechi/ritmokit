@@ -12,6 +12,7 @@ import {
   HelpCircle,
   Loader2,
   MessagesSquare,
+  Printer,
   Search,
   Sparkles,
   X,
@@ -23,7 +24,7 @@ import type { Locale } from "@/lib/i18n/config";
 import {
   HELP_FAQ_CATEGORIES,
   categoriesForRole,
-  isManagerRole,
+  popularForRole,
   quickStartForRole,
   topicMeta,
   topicsForRole,
@@ -39,16 +40,6 @@ import { HelpArticleBody } from "@/components/help/help-article-body";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { dna } from "@/lib/design/dna";
 import { cn } from "@/lib/utils";
-
-/** Suggestions du hero : de vrais titres de fiches, donc toujours cliquables vers un résultat. */
-const POPULAR_EMPLOYEE: HelpTopicKey[] = ["punch", "schedule", "availability", "messages", "training"];
-const POPULAR_MANAGER: HelpTopicKey[] = [
-  "managerSchedule",
-  "weekTemplates",
-  "punch",
-  "managerSops",
-  "schedule",
-];
 
 type ArticleId = { kind: "topic"; key: HelpTopicKey } | { kind: "faq"; index: number };
 
@@ -231,7 +222,7 @@ function SearchHero({
   inputRef: React.RefObject<HTMLInputElement | null>;
   onPickPopular: (key: HelpTopicKey) => void;
 }) {
-  const popular = isManagerRole(role) ? POPULAR_MANAGER : POPULAR_EMPLOYEE;
+  const popular = popularForRole(role);
   const allowed = new Set(topicsForRole(role).map((topic) => topic.key));
 
   return (
@@ -694,6 +685,7 @@ function CategoryCard({
                     <div className="bg-surface-muted/40 px-5 pb-5 pt-1">
                       <HelpArticleBody
                         topic={topic}
+                        topicKey={key}
                         dict={dict}
                         ctaHref={topicMeta(key).href(lang)}
                       />
@@ -792,6 +784,12 @@ function SupportPanel({
           </p>
         )}
 
+        <SupportLink
+          href={`/${lang}/help/feuille-accueil`}
+          icon={<Printer className="h-[18px] w-[18px]" aria-hidden />}
+          title={dict.help.studioSetup.printSheet}
+          hint={dict.help.cheatSheet.subtitle}
+        />
         <SupportLink
           href={`/${lang}/messages`}
           icon={<MessagesSquare className="h-[18px] w-[18px]" aria-hidden />}

@@ -1,26 +1,12 @@
 import Link from "next/link";
-import {
-  BookOpen,
-  Check,
-  Lock,
-  PlayCircle,
-  Shield,
-  UtensilsCrossed,
-  Layers,
-} from "lucide-react";
+import { Check, Lock, PlayCircle } from "lucide-react";
 import type { FormationCatalog, FormationModuleSummary } from "@/lib/data/training";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
 import { stationLabel } from "@/lib/stations/display";
+import { FORMATION_KIND_ICONS } from "@/lib/training/kinds";
 import { moduleIconTone, modulePastel, resolveLockedLabel } from "@/lib/training/lms-ui";
 import { cn } from "@/lib/utils";
-
-const kindIcon = {
-  SAFETY: Shield,
-  SOP: BookOpen,
-  RECIPE: UtensilsCrossed,
-  ONBOARDING: Layers,
-} as const;
 
 function CourseCard({
   module,
@@ -35,7 +21,7 @@ function CourseCard({
   trackLabel: string;
   isFeatured?: boolean;
 }) {
-  const Icon = kindIcon[module.kind] ?? BookOpen;
+  const Icon = FORMATION_KIND_ICONS[module.kind] ?? FORMATION_KIND_ICONS.STUDIO_GUIDE;
   const locked = !module.unlocked;
   const completed = module.status === "COMPLETED";
   const inProgress = Boolean(isFeatured && !completed && !locked);
@@ -50,7 +36,7 @@ function CourseCard({
           : completed
             ? "border-emerald-500/25 bg-surface"
             : inProgress
-              ? "border-red-500/35 bg-surface ring-1 ring-red-500/15"
+              ? "border-accent/40 bg-surface ring-1 ring-accent/20"
               : "border-border bg-surface hover:-translate-y-0.5 hover:shadow-sm",
       )}
     >
@@ -73,12 +59,12 @@ function CourseCard({
       <div className="flex flex-1 flex-col gap-2 p-4">
         <div className="flex flex-wrap gap-1.5">
           {module.isMandatory && (
-            <span className="rounded-full border border-red-500/20 bg-red-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-red-600">
+            <span className="rounded-full border border-accent/25 bg-accent/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-accent">
               {dict.training.mandatory}
             </span>
           )}
           {module.kind === "SAFETY" && (
-            <span className="rounded-full border border-red-500/20 bg-red-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-red-600">
+            <span className="rounded-full border border-amber-500/25 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-200">
               {dict.training.cnesstBadge}
             </span>
           )}
@@ -112,7 +98,7 @@ function CourseCard({
             {lockedText}
           </p>
         ) : inProgress ? (
-          <p className="mt-auto pt-2 text-[11px] font-semibold text-red-600 dark:text-red-300">
+          <p className="mt-auto pt-2 text-[11px] font-semibold text-accent">
             {dict.training.inProgress}
             {module.stepCount > 0 &&
               ` · ${dict.training.stepCount.replace("{count}", String(module.stepCount))}`}
@@ -176,7 +162,6 @@ export function SopCardGrid({
   const primaryId = catalog.primaryStationId;
   const primary = stationCards.filter((c) => c.module.stationId === primaryId);
   const others = stationCards.filter((c) => c.module.stationId !== primaryId);
-  // Polyvalence: primary station first, then core, then other stations
   const ordered = [...primary, ...core, ...others];
 
   return (

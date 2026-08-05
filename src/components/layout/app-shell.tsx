@@ -20,11 +20,11 @@ export function AppShell({
   const role = user?.role ?? "EMPLOYEE";
 
   return (
-    <div className="premium-shell flex min-h-full flex-1">
+    <div className="premium-shell flex min-h-full flex-1 print:block">
       <Sidebar lang={lang} shell={shell} role={role} />
-      <div className="flex min-h-full min-w-0 flex-1 flex-col pb-nav-safe lg:pb-0">
+      <div className="flex min-h-full min-w-0 flex-1 flex-col pb-nav-safe lg:pb-0 print:block print:pb-0">
         <AppHeader lang={lang} shell={shell} user={user} />
-        <div className="flex flex-1 flex-col">{children}</div>
+        <div className="flex flex-1 flex-col print:block">{children}</div>
       </div>
       <MobileNav lang={lang} shell={shell} role={role} />
     </div>

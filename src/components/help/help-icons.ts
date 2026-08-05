@@ -1,19 +1,34 @@
 import {
   BookOpen,
+  Bot,
   Calendar,
   CalendarClock,
   CalendarDays,
+  CreditCard,
   GraduationCap,
+  LayoutDashboard,
+  LayoutGrid,
   LayoutTemplate,
   MessageSquare,
   MessagesSquare,
+  Music2,
+  Rocket,
   Timer,
+  UserCheck,
   Users,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import type { HelpCategoryKey, HelpTopicKey } from "@/lib/help/config";
 
 export const HELP_TOPIC_ICONS: Record<HelpTopicKey, LucideIcon> = {
+  gettingStarted: Rocket,
+  accueil: UserCheck,
+  sessions: LayoutGrid,
+  cockpit: LayoutDashboard,
+  integrations: CreditCard,
+  agentics: Bot,
+  enrollmentsWaitlist: Users,
   schedule: Calendar,
   punch: Timer,
   training: BookOpen,
@@ -25,9 +40,11 @@ export const HELP_TOPIC_ICONS: Record<HelpTopicKey, LucideIcon> = {
 };
 
 export const HELP_CATEGORY_ICONS: Record<HelpCategoryKey, LucideIcon> = {
-  clock: Timer,
-  schedule: CalendarDays,
-  learning: GraduationCap,
-  team: MessagesSquare,
+  studio: Music2,
+  payments: Wallet,
   manage: Users,
+  team: MessagesSquare,
+  schedule: CalendarDays,
+  clock: Timer,
+  learning: GraduationCap,
 };

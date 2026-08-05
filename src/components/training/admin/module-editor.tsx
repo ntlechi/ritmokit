@@ -23,11 +23,12 @@ import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
 import { categoryName } from "@/components/training/admin/category-name";
 import { stationLabel, type StationRecord } from "@/lib/stations/display";
+import { FORMATION_MODULE_KINDS } from "@/lib/training/kinds";
 import { parseVideoUrl } from "@/lib/training/video";
 import type { FormationStep } from "@/lib/training/types";
 import { cn } from "@/lib/utils";
 
-const KINDS: FormationModuleKind[] = ["SOP", "SAFETY", "RECIPE", "ONBOARDING"];
+const KINDS = FORMATION_MODULE_KINDS;
 
 type Draft = {
   title: string;
@@ -50,11 +51,11 @@ function emptyDraft(categoryId: string | null): Draft {
     summary: "",
     body: "",
     steps: [],
-    kind: "SOP",
+    kind: "CLASS_PLAN",
     categoryId,
     stationId: null,
-    isMandatory: true,
-    requiresSignature: true,
+    isMandatory: false,
+    requiresSignature: false,
     estimatedMinutes: 5,
     videoUrl: "",
     unlockDay: 0,

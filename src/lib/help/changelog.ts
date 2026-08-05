@@ -20,6 +20,102 @@ export type HelpChangelogEntry = {
 
 export const HELP_CHANGELOG: HelpChangelogEntry[] = [
   {
+    id: "teaching-hub",
+    month: "2026-07",
+    audience: "all",
+    title: {
+      fr: "Cahier du professeur",
+      en: "Teaching hub",
+      es: "Guía del profesor",
+    },
+    body: {
+      fr: "Plans de cours, figures, chorés et vidéos — plus de fiches « recette ». Pour que chaque nouveau prof sache quoi enseigner.",
+      en: "Class plans, moves, choreography, and video — no more recipe cards. So every new teacher knows what to teach.",
+      es: "Planes de clase, figuras, coreos y video — sin fichas de «receta». Para que cada profe nuevo sepa qué enseñar.",
+    },
+    href: (lang) => `/${lang}/sops`,
+  },
+  {
+    id: "getting-started",
+    month: "2026-07",
+    audience: "manager",
+    title: {
+      fr: "Premiers pas — 5 étapes",
+      en: "Getting started — 5 steps",
+      es: "Primeros pasos — 5 pasos",
+    },
+    body: {
+      fr: "PayPal, publier le trimestre, Accueil, pointer Présent — dans l'ordre, sans jargon.",
+      en: "PayPal, publish your season, Accueil, Check in — in order, no jargon.",
+      es: "PayPal, publicar temporada, Accueil, Presente — en orden, sin tecnicismos.",
+    },
+    href: (lang) => `/${lang}/help/gettingStarted`,
+  },
+  {
+    id: "accueil-checkin",
+    month: "2026-07",
+    audience: "all",
+    title: {
+      fr: "Accueil — pointer en un tap",
+      en: "Accueil — check in with one tap",
+      es: "Accueil — registrar con un toque",
+    },
+    body: {
+      fr: "La liste du soir, qui a payé, qui attend — fait pour la tablette à l'accueil.",
+      en: "Tonight's list, who paid, who's waiting — built for the front-desk tablet.",
+      es: "Lista de esta noche, quién pagó, quién espera — hecho para la tablet de recepción.",
+    },
+    href: (lang) => `/${lang}/accueil`,
+  },
+  {
+    id: "dance-agentics",
+    month: "2026-07",
+    audience: "all",
+    title: {
+      fr: "Suggestions sur Accueil et Sessions",
+      en: "Smart tips on Accueil & Sessions",
+      es: "Consejos en Accueil y Sessions",
+    },
+    body: {
+      fr: "La liste d'attente et les impayés se gèrent seuls. Le reste, vous confirmez ou ignorez.",
+      en: "Waitlist and unpaid reminders run on their own. Everything else, you confirm or skip.",
+      es: "Lista de espera e impagos van solos. Lo demás, tú confirmas o descartas.",
+    },
+    href: (lang) => `/${lang}/accueil`,
+  },
+  {
+    id: "integration-hub-paypal",
+    month: "2026-07",
+    audience: "manager",
+    title: {
+      fr: "PayPal dans Réglages → Intégrations",
+      en: "PayPal in Settings → Integrations",
+      es: "PayPal en Ajustes → Integraciones",
+    },
+    body: {
+      fr: "Branchez le PayPal de votre école. Test en un clic. Les élèves paient par courriel.",
+      en: "Connect your school's PayPal. One-click test. Students pay by email link.",
+      es: "Conecta el PayPal de tu escuela. Prueba en un clic. Los alumnos pagan por email.",
+    },
+    href: (lang) => `/${lang}/settings/manager/integrations`,
+  },
+  {
+    id: "sessions-dance-grid",
+    month: "2026-07",
+    audience: "manager",
+    title: {
+      fr: "Sessions — voir Leads et Follows",
+      en: "Sessions — see Leads and Follows",
+      es: "Sessions — ver Leads y Follows",
+    },
+    body: {
+      fr: "Toute la semaine en un coup d'œil. Rouge = même prof ou salle en double.",
+      en: "Your whole week at a glance. Red = same teacher or room booked twice.",
+      es: "Toda la semana de un vistazo. Rojo = mismo profe o sala dos veces.",
+    },
+    href: (lang) => `/${lang}/sessions`,
+  },
+  {
     id: "profile-dossier",
     month: "2026-07",
     audience: "all",

@@ -11,8 +11,8 @@ import { dna } from "@/lib/design/dna";
 import { cn } from "@/lib/utils";
 
 /**
- * Server Component shell — only SopCategorySidebar is a client island.
- * Hero / card grid / documents stay RSC to keep the SOP page JS small.
+ * Teaching hub shell — only SopCategorySidebar is a client island.
+ * Hero / card grid / documents stay RSC to keep the page JS small.
  */
 export function TrainingPortal({
   catalog,

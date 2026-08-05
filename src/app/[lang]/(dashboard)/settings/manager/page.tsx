@@ -24,7 +24,10 @@ import { dna } from "@/lib/design/dna";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { isLocale, type Locale } from "@/lib/i18n/config";
+import { StudioSetupHubPill } from "@/components/studio/studio-setup-checklist";
 import { canAccessManagerSettings, getSessionUser } from "@/lib/auth/session";
+import { getStudioSetupStatus } from "@/lib/data/studio-setup";
+import { safeQuery } from "@/lib/data/safe";
 import { cn } from "@/lib/utils";
 
 type HubLink = {
@@ -114,12 +117,6 @@ function buildGroups(lang: Locale, dict: Dictionary): { label: string; links: Hu
           title: dict.manager.integration.title,
           subtitle: dict.manager.integration.subtitle,
         },
-        {
-          href: `/${lang}/settings/manager/punches`,
-          icon: Clock,
-          title: dict.manager.punches.title,
-          subtitle: dict.manager.punches.subtitle,
-        },
       ],
     },
     {
@@ -167,6 +164,12 @@ function buildGroups(lang: Locale, dict: Dictionary): { label: string; links: Hu
           subtitle: dict.manager.assiduity.subtitle,
         },
         {
+          href: `/${lang}/settings/manager/punches`,
+          icon: Clock,
+          title: dict.manager.punches.title,
+          subtitle: dict.manager.punches.subtitle,
+        },
+        {
           href: `/${lang}/settings/manager/skills`,
           icon: Award,
           title: dict.manager.skills.title,
@@ -208,6 +211,11 @@ export default async function ManagerSettingsPage({
     redirect(`/${lang}/settings`);
   }
 
+  const { data: setupStatus } = await safeQuery(
+    () => getStudioSetupStatus(user.id, user.role),
+    null,
+  );
+
   const groups = buildGroups(lang, dict);
 
   return (
@@ -245,6 +253,9 @@ export default async function ManagerSettingsPage({
         </nav>
 
         <div className={cn("min-w-0 flex-1 space-y-8")}>
+          {setupStatus && (
+            <StudioSetupHubPill dict={dict} lang={lang} status={setupStatus} />
+          )}
           {groups.map((group) => (
             <HubGroup key={group.label} label={group.label} links={group.links} />
           ))}
