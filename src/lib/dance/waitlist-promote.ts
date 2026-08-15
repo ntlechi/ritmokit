@@ -179,7 +179,15 @@ async function promoteOne(sessionId: string): Promise<PromoteResult | null> {
   let checkoutUrl: string | null = null;
 
   if (!locked.paid) {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "";
+    const sessionMeta = await prisma.classSession.findUnique({
+      where: { id: locked.sessionId },
+      select: {
+        season: { select: { locationId: true } },
+        room: { select: { locationId: true } },
+      },
+    });
+    const locationId = sessionMeta?.season?.locationId ?? sessionMeta?.room.locationId ?? null;
+
     const payment = await createEnrollmentCheckout({
       provider: "paypal",
       amountCad: locked.amountCad,
@@ -187,8 +195,7 @@ async function promoteOne(sessionId: string): Promise<PromoteResult | null> {
       sessionId: locked.sessionId,
       studentEmail: locked.email,
       description: locked.courseTitle,
-      returnUrl: `${appUrl}/fr/login?paid=1&enrollmentId=${locked.enrollmentId}`,
-      cancelUrl: `${appUrl}/fr/login?cancelled=1&enrollmentId=${locked.enrollmentId}`,
+      locationId,
     });
 
     if (payment.paymentRef) {
@@ -197,6 +204,8 @@ async function promoteOne(sessionId: string): Promise<PromoteResult | null> {
         data: {
           paymentRef: payment.paymentRef,
           paymentStatus: payment.status === "pending" ? "PENDING" : "NONE",
+          paymentProvider: "PAYPAL",
+          ...(payment.status === "pending" ? { paymentPendingAt: new Date() } : {}),
         },
       });
     }

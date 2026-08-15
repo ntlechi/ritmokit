@@ -1,36 +1,37 @@
-# KORE Memory — Mirok
+# KORE Memory — RitmoKit
 
 > Living ops brief. Update after each successful session.
 
-**Last updated:** 2026-07-20
-**Brand id:** `mirok` · **Project id:** `mirok`
-**First franchise:** Bati Québec — target cutover Oct 2026
+**Last updated:** 2026-08-05  
+**Brand id:** `ritmokit` · **Project id:** `ritmokit`  
+**First pilot:** Salsa Attitude (Québec)
 
 ---
 
 ## North star
 
-Mirok is **Quebec HR & scheduling SaaS** with CNESST compliance baked into Postgres triggers and an **agentic event bus** (late arrival, crisis replacement, chat intents) — PWA for floor staff.
+RitmoKit is **dance-studio ops SaaS** (schedule, lead/follow parity, Accueil tablet, public booking API, PayPal/Interac, room rentals) forked from Mirok HR infrastructure. Pilot green = live PayPal + Resend UAT + Salsa Attitude env pointing at the Salsa tenant.
 
-**UI DNA:** Modernist Organic / Apple–Claude Era (Fable) — zinc neutrals, floating capsules, station matrix tints, frosted glass, monospace metrics. Tokens in `src/app/globals.css` + `src/lib/design/`.
+**UI DNA:** Modernist Organic / Apple–Claude Era — zinc neutrals, frosted glass, monospace metrics. Tokens in `src/app/globals.css` + `src/lib/design/`.
 
 ---
 
-## Definition of done
+## Definition of done (Phase A pilot)
 
-- CNESST triggers enforced in SQL (weekly hours, 30min break after 5h, 32h rest)
-- `npm run lint` passes
-- Migrations 0001–0005 applied on target Supabase project
-- Agent webhook `/api/agents/webhook` receives `pg_notify` events
+- Public Pay: live PayPal + webhook proven on Vercel (`docs/SANDBOX_UAT_SCRIPT.md`)
+- Accueil tablet: FRONT_DESK 1-tap check-in (code GREEN)
+- Waitlist promote: Resend delivers pay-link email
+- Yield cockpit: Σ paid `amountCad` matches captures (code GREEN)
+- See `docs/PHASE_A_DOD_GATE.md`
 
 ---
 
 ## Human gates
 
-- ❌ Relax CNESST rules in application code to "fix" scheduling conflicts
-- ❌ Run k6 load tests against production
-- ❌ Shift mutations without session auth (TODO in `shifts.ts` — enforce before prod)
-- ✅ Calendar UI, agent handlers, franchise provisioning on staging
+- ❌ Ship PayPal without Integration Hub credentials (or verified env fallback) + webhook
+- ❌ Point Salsa site at `bati`/`quebec` slugs for the Salsa pilot
+- ❌ Force-push main / skip migrate on production
+- ✅ Accueil, public enroll + checkout, Interac queue, room rentals APIs
 
 ---
 
@@ -38,44 +39,21 @@ Mirok is **Quebec HR & scheduling SaaS** with CNESST compliance baked into Postg
 
 | What | Where |
 |------|--------|
-| Setup | `README.md` |
-| Staging → prod | `docs/PROVISIONING.md` |
-| CNESST + agent bus SQL | `supabase/migrations/0001*.sql` … `0005*.sql` |
-| Prisma schema | `prisma/schema.prisma` |
-| Agent handlers | `src/lib/agents/` |
-| Franchise seed | `scripts/provision-franchise.ts` |
-| Load tests (staging) | `tests/load/` |
+| Phase A DoD | `docs/PHASE_A_DOD_GATE.md` |
+| Project brief | `docs/RITMOKIT_PROJECT_BRIEF.md` |
+| Public schedule / enroll | `src/lib/public-api/` |
+| PayPal | `src/lib/payments/paypal.ts` |
+| Booking return URLs | `src/lib/public-api/booking-return.ts` |
+| Accueil | `src/app/[lang]/(dashboard)/accueil/` |
+| Salsa frontend (sibling) | `C:\Users\Ntlechi\Salsa Attitude` |
 
 ---
 
-## Current sprint — top 3
+## Env notes (pilot)
 
-1. **Bati cutover prep** — staging mirror checklist in `docs/PROVISIONING.md`
-2. **Auth on shift actions** — resolve Supabase session in `src/lib/actions/shifts.ts`
-3. **Agent expansion** — chat intent router beyond `late_arrival` `(verify)`
-
----
-
-## Anti-patterns
-
-- CNESST logic duplicated in TS instead of honoring SQL triggers
-- Provisioning prod without PITR + migration review
-- Treating Mirok as Kompul financial dashboard
-
----
-
-## Validate
-
-```bash
-npm run lint
-```
-
----
-
-## Session log
-
-| Date | Shipped |
-|------|---------|
-| 2026-07-15 | Nexus onboarding — KORE + projects.json registered |
-
-**Next session:** Audit `shifts.ts` auth seam + staging webhook config for agent bus.
+- `RITMOKIT_FIELD_ENCRYPTION_KEY` — Integration Hub
+- `RITMOKIT_PUBLIC_ORIGINS` — Salsa Attitude origins
+- `RITMOKIT_PUBLIC_BOOKING_RETURN_BASE` — tenant site for PayPal return (`/?booking=confirmation`)
+- `RITMOKIT_STUDIO_ROSTER_SECRET` — Bearer for Salsa `/api/ritmokit-roster` proxy (Inscrits)
+- `RESEND_API_KEY` + `EMAIL_FROM` — waitlist promote emails
+- Hub PayPal CONNECTED for Salsa org (prefer over legacy `PAYPAL_*`)

@@ -6,8 +6,8 @@
 **Tagline (EN):** The complete operating toolkit for dance studios.  
 **Tagline (ES):** El kit operativo completo para escuelas de danza.
 
-**Status:** Greenfield product fork — not yet started as a separate repo.  
-**Last updated:** July 2026
+**Status:** Active codebase (forked from Mirok). Phase A dance layer + public API are code-ready; pilot green depends on live PayPal/Resend UAT + Salsa Attitude env cutover.  
+**Last updated:** August 2026
 
 ---
 

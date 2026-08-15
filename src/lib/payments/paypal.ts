@@ -5,6 +5,9 @@
 import "server-only";
 
 import type { PayPalIntegrationConfig } from "@/lib/integrations/types";
+import { buildPayPalInvoiceId } from "@/lib/payments/paypal-invoice-id";
+
+export { buildPayPalInvoiceId } from "@/lib/payments/paypal-invoice-id";
 
 export type PayPalMode = "sandbox" | "live";
 
@@ -130,10 +133,13 @@ export async function createPayPalOrder(input: {
   returnUrl: string;
   cancelUrl: string;
   credentials?: PayPalCredentials | null;
+  /** Optional override for tests; defaults to time+random nonce. */
+  invoiceNonce?: string;
 }): Promise<PayPalOrderResult> {
   const creds = requireCreds(input.credentials);
   const token = await getPayPalAccessToken(creds);
   const value = formatCad(input.amountCad);
+  const invoiceId = buildPayPalInvoiceId(input.enrollmentId, input.invoiceNonce);
 
   const res = await fetch(`${paypalApiBase(creds.mode)}/v2/checkout/orders`, {
     method: "POST",
@@ -148,7 +154,7 @@ export async function createPayPalOrder(input: {
         {
           reference_id: input.sessionId.slice(0, 36),
           custom_id: input.enrollmentId,
-          invoice_id: `rk_${input.enrollmentId.replace(/-/g, "").slice(0, 20)}`,
+          invoice_id: invoiceId,
           description: (input.description ?? "RitmoKit inscription").slice(0, 127),
           amount: {
             currency_code: "CAD",

@@ -1,7 +1,7 @@
 import "server-only";
 
 import { asPlainNumber } from "@/lib/data/serialize";
-import { getClassAvailability, type RoleCapacity } from "@/lib/dance/parity";
+import { getClassAvailability, getPackagePeers, type RoleCapacity } from "@/lib/dance/parity";
 import { prisma } from "@/lib/prisma";
 import { stationLabel } from "@/lib/stations/display";
 import type { CourseLevel } from "@/generated/prisma/enums";
@@ -49,6 +49,10 @@ export type PublicScheduleClass = {
     imbalance: number;
     full: boolean;
   };
+  /** Same course title across weekdays — one payment package. */
+  packageClassIds: string[];
+  isPackage: boolean;
+  packageCount: number;
 };
 
 function countRoles(
@@ -115,6 +119,11 @@ export async function getPublicSchedule(
     },
   });
 
+  const peerInput = rows.map((row) => ({
+    id: row.id,
+    courseTitle: row.course.title,
+  }));
+
   const classes: PublicScheduleClass[] = rows.map((row) => {
     const filled = countRoles(row.enrollments);
     const cap: RoleCapacity = {
@@ -123,6 +132,10 @@ export async function getPublicSchedule(
       ...filled,
     };
     const availability = getClassAvailability(cap);
+    const peers = getPackagePeers(peerInput, {
+      id: row.id,
+      courseTitle: row.course.title,
+    });
 
     return {
       id: row.id,
@@ -160,6 +173,9 @@ export async function getPublicSchedule(
         imbalance: availability.imbalance,
         full: availability.full,
       },
+      packageClassIds: peers.map((p) => p.id),
+      isPackage: peers.length > 1,
+      packageCount: peers.length,
     };
   });
 

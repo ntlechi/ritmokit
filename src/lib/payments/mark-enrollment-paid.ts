@@ -71,6 +71,19 @@ export async function markEnrollmentPaid(input: MarkPaidInput): Promise<MarkPaid
         ...(amountCad != null ? { amountCad } : {}),
       },
     });
+    await prisma.enrollment.updateMany({
+      where: {
+        paymentRef: `pkg:${row.id}`,
+        paid: false,
+        paymentStatus: { not: "CANCELLED_INTERAC" },
+      },
+      data: {
+        paid: true,
+        paymentStatus: "PAID",
+        paymentProvider: input.provider,
+        paidAt: new Date(),
+      },
+    });
     const promoted = await tryPromoteWaitlist(row.sessionId);
     return promoted.length;
   }
@@ -169,6 +182,22 @@ export async function markEnrollmentPaid(input: MarkPaidInput): Promise<MarkPaid
       },
     });
   }
+
+  // Package siblings (paymentRef = pkg:<primaryId>) share one charge.
+  await prisma.enrollment.updateMany({
+    where: {
+      paymentRef: `pkg:${row.id}`,
+      paid: false,
+      paymentStatus: { not: "CANCELLED_INTERAC" },
+    },
+    data: {
+      paid: true,
+      paymentStatus: "PAID",
+      paymentProvider: input.provider,
+      paidAt: new Date(),
+      ...(amountCad != null ? { amountCad: 0 } : {}),
+    },
+  });
 
   // A paid seat can unlock the opposite waitlist.
   const promoted = await tryPromoteWaitlist(row.sessionId);

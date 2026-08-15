@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-29  
 **Scope:** Code + config readiness for Steve / Salsa Attitude Vercel launch  
-**Verdict:** **NOT GREEN** — DoD 2 & 4 are code-ready; DoD 1 & 3 need live env proof + small bugfixes before signature.
+**Verdict:** **NOT GREEN** — DoD 2 & 4 are code-ready; DoD 1 & 3 payment code gaps closed — still need live env proof (PayPal webhook + Resend) before signature.
 
 ---
 
@@ -10,9 +10,9 @@
 
 | # | Box | Status | One-line |
 |---|-----|--------|----------|
-| 1 | Public Pay | **YELLOW** | PayPal path exists; live env + webhook + BookingModal + capture edge bugs block green |
+| 1 | Public Pay | **YELLOW** | Code hardened (unique invoice, checkout errors); live PayPal + webhook UAT blocks green |
 | 2 | Accueil Tablet | **GREEN** | FRONT_DESK can 1-tap check-in; Sessions admin blocked |
-| 3 | Waitlist Promote | **YELLOW** | Promote + pay-link email coded; Resend + invoice_id retry + live UAT required |
+| 3 | Waitlist Promote | **YELLOW** | Promote + public return URLs coded; Resend env + live UAT required |
 | 4 | Yield Accuracy | **GREEN** | Cockpit revenue = Σ `amountCad` for paid seats (tier-aware) |
 
 **Ship rule:** all four must be **GREEN on Vercel** with PayPal live. Until then, polish Accueil chrome is optional.
@@ -57,8 +57,8 @@ Events: `CHECKOUT.ORDER.APPROVED`, `PAYMENT.CAPTURE.COMPLETED`
 | P0 | BookingModal redirect (A1c) is on **Salsa Attitude site**, not RitmoKit | Wire `returnUrl` / `cancelUrl` + redirect to `checkoutUrl` |
 | P0 | ~~`capturePayPalOrder` treats broad `UNPROCESSABLE_ENTITY` as success~~ | **Fixed 2026-07-29** — only `ORDER_ALREADY_CAPTURED` + `isPayPalCaptureComplete` gate |
 | P0 | ~~`markEnrollmentPaid` heal gap~~ | **Fixed 2026-07-29** — replay/`P2002` heals unpaid enrollment |
-| P1 | Checkout regenerate can collide PayPal `invoice_id` | Unique invoice per attempt |
-| P1 | Failed checkout still returns 201 with `checkoutUrl: null` | Surface error to BookingModal |
+| P1 | ~~Checkout regenerate can collide PayPal `invoice_id`~~ | **Fixed** — unique `rk_<id>_<nonce>` per attempt |
+| P1 | ~~Failed checkout still returns 201 with silent null URL~~ | **Fixed** — `checkoutError` + `retryCheckout` on enroll response |
 
 ### Manual UAT (sandbox → live)
 
@@ -89,7 +89,7 @@ Events: `CHECKOUT.ORDER.APPROVED`, `PAYMENT.CAPTURE.COMPLETED`
 
 ### Minor polish (not launch blockers)
 
-- Unpaid copy is “En attente / Pending” vs spec “À encaisser”
+- ~~Unpaid copy “En attente / Pending”~~ → **Fixed** (“À encaisser” / “Collect payment”)
 - No dedicated kiosk full-bleed chrome (lg sidebar already hidden on tablet width)
 
 ### Manual UAT
@@ -118,8 +118,8 @@ Events: `CHECKOUT.ORDER.APPROVED`, `PAYMENT.CAPTURE.COMPLETED`
 | Sev | Gap | Action |
 |-----|-----|--------|
 | P0 | `RESEND_API_KEY` + `EMAIL_FROM` unset → email **no-ops** (logs only) | Set on Vercel or DoD fails “email” clause |
-| P1 | Promote return URLs hardcode `/fr/login?paid=1` | Prefer public BookingModal return URLs |
-| P1 | Same `invoice_id` collision risk on promote checkout | Share fix with DoD 1 |
+| P1 | ~~Promote return URLs hardcode `/fr/login?paid=1`~~ | **Fixed** — `RITMOKIT_PUBLIC_BOOKING_RETURN_BASE` or hub `allowedOrigins` → `/?booking=confirmation` |
+| P1 | ~~Same `invoice_id` collision risk on promote checkout~~ | **Fixed** with DoD 1 unique invoice |
 | P2 | Spec “Lead signup” — unpaid Lead hold may promote before PayPal completes (by design after seated create); confirm Steve accepts promote-on-seat vs promote-on-pay only | Product confirm |
 
 ### Manual UAT

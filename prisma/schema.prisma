@@ -426,9 +426,55 @@ model Location {
   rentalSettings         LocationRentalSettings?
   rentalBookings         RentalBooking[]
   interacSettings        LocationInteracSettings?
+  publicAnnouncements    StudioAnnouncement[]
+  publicEvents           StudioPublicEvent[]
 
   @@unique([organizationId, slug])
   @@map("locations")
+}
+
+/// Public site announcement (tenant marketing / ops notice).
+model StudioAnnouncement {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  locationId  String    @map("location_id") @db.Uuid
+  location    Location  @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  title       String
+  body        String    @db.Text
+  publishedAt DateTime  @default(now()) @map("published_at")
+  expiresAt   DateTime? @map("expires_at")
+  isActive    Boolean   @default(true) @map("is_active")
+  sortOrder   Int       @default(0) @map("sort_order")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([locationId, isActive, publishedAt])
+  @@map("studio_announcements")
+}
+
+/// Public special / social event (congress, soirée, workshop weekend).
+model StudioPublicEvent {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  locationId   String    @map("location_id") @db.Uuid
+  location     Location  @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  title        String
+  shortLabel   String?   @map("short_label")
+  description  String?   @db.Text
+  scale        String    @default("local")
+  status       String    @default("active")
+  bookingOpen  Boolean   @default(true) @map("booking_open")
+  startsOn     DateTime  @map("starts_on") @db.Date
+  endsOn       DateTime  @map("ends_on") @db.Date
+  venue        String?
+  ticketUrl    String?   @map("ticket_url")
+  /// Optional JSON slots / pricing payload for tenant display.
+  payload      Json      @default("{}")
+  isActive     Boolean   @default(true) @map("is_active")
+  sortOrder    Int       @default(0) @map("sort_order")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@index([locationId, isActive, startsOn])
+  @@map("studio_public_events")
 }
 
 /// Per-location Interac e-Transfer checkout copy + staff alert targets.

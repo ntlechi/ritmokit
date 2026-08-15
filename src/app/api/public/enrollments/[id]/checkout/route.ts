@@ -66,6 +66,22 @@ export async function POST(
       cancelUrl: body.cancelUrl,
     });
 
+    if (payment.status === "error") {
+      return publicJson(
+        request,
+        {
+          ok: false,
+          error: payment.error ?? "checkout_failed",
+          checkoutError: payment.error ?? "checkout_failed",
+          retryCheckout: true,
+          enrollmentId: enrollment.id,
+          checkoutUrl: null,
+          payment,
+        },
+        { status: 502 },
+      );
+    }
+
     if (payment.paymentRef) {
       await prisma.enrollment.update({
         where: { id: enrollment.id },
@@ -84,6 +100,14 @@ export async function POST(
     });
   } catch (error) {
     console.error("[public:checkout]", error);
-    return publicJson(request, { error: "checkout_failed" }, { status: 502 });
+    return publicJson(
+      request,
+      {
+        error: "checkout_failed",
+        checkoutError: "checkout_failed",
+        retryCheckout: true,
+      },
+      { status: 502 },
+    );
   }
 }

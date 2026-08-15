@@ -15,6 +15,7 @@ import {
   createPayPalOrder,
   isPayPalConfigured,
 } from "@/lib/payments/paypal";
+import { resolvePublicBookingReturnUrls } from "@/lib/public-api/booking-return";
 
 export type PaymentProvider = "paypal" | "stripe" | "interac" | "cash" | "none";
 
@@ -36,12 +37,15 @@ export type PaymentCheckoutRequest = {
 };
 
 export type PaymentCheckoutResult = {
-  status: "pending" | "pending_interac" | "paid" | "deferred";
+  status: "pending" | "pending_interac" | "paid" | "deferred" | "error";
   provider: PaymentProvider;
   /** Hosted checkout URL when provider requires redirect (PayPal/Stripe). */
   checkoutUrl: string | null;
   paymentRef: string | null;
   message: string;
+  /** Set when status === "error" — BookingModal should show + offer /checkout retry. */
+  error?: string;
+  retryCheckout?: boolean;
   interacInstructions?: {
     depositEmail: string | null;
     securityQuestion: string | null;
@@ -138,25 +142,25 @@ export async function createEnrollmentCheckout(
   }
 
   const base = appBaseUrl();
-  const returnUrl = withEnrollmentId(
-    input.returnUrl?.trim() ||
-      `${base}/api/public/enrollments/${input.enrollmentId}/payment-status?paid=1`,
-    input.enrollmentId,
-  );
-  const cancelUrl = withEnrollmentId(
-    input.cancelUrl?.trim() ||
-      `${base}/api/public/enrollments/${input.enrollmentId}/payment-status?cancelled=1`,
-    input.enrollmentId,
-  );
+  const resolved = await resolvePublicBookingReturnUrls({
+    enrollmentId: input.enrollmentId,
+    locationId: input.locationId,
+    returnUrl: input.returnUrl,
+    cancelUrl: input.cancelUrl,
+  });
+  const returnUrl = withEnrollmentId(resolved.returnUrl, input.enrollmentId);
+  const cancelUrl = withEnrollmentId(resolved.cancelUrl, input.enrollmentId);
 
   if (provider === "paypal") {
     if (!isPayPalConfigured(creds)) {
       if (!allowPayPalStub()) {
         return {
-          status: "deferred",
+          status: "error",
           provider: "paypal",
           checkoutUrl: null,
           paymentRef: null,
+          error: "paypal_not_connected",
+          retryCheckout: true,
           message:
             "PayPal not connected — open Settings → Integrations (or set PAYPAL_* env fallback / PAYPAL_ALLOW_STUB=1 for local).",
         };
@@ -172,45 +176,59 @@ export async function createEnrollmentCheckout(
       };
     }
 
-    const order = await createPayPalOrder({
-      amountCad: input.amountCad,
-      enrollmentId: input.enrollmentId,
-      sessionId: input.sessionId,
-      studentEmail: input.studentEmail,
-      description: input.description,
-      returnUrl,
-      cancelUrl,
-      credentials: creds,
-    });
-
-    await prisma.paymentEvent
-      .create({
-        data: {
-          enrollmentId: input.enrollmentId,
-          provider: "PAYPAL",
-          externalTransactionId: order.orderId,
-          eventType: "checkout.created",
-          payload: {
-            amountCad: input.amountCad,
-            approveUrl: order.approveUrl,
-            sessionId: input.sessionId,
-            credentialSource: creds?.source ?? "unknown",
-            organizationId: creds?.organizationId ?? null,
-          },
-        },
-      })
-      .catch((error) => {
-        const code = (error as { code?: string }).code;
-        if (code !== "P2002") throw error;
+    try {
+      const order = await createPayPalOrder({
+        amountCad: input.amountCad,
+        enrollmentId: input.enrollmentId,
+        sessionId: input.sessionId,
+        studentEmail: input.studentEmail,
+        description: input.description,
+        returnUrl,
+        cancelUrl,
+        credentials: creds,
       });
 
-    return {
-      status: "pending",
-      provider: "paypal",
-      checkoutUrl: order.approveUrl,
-      paymentRef: order.orderId,
-      message: "PayPal checkout created — redirect the student to checkoutUrl.",
-    };
+      await prisma.paymentEvent
+        .create({
+          data: {
+            enrollmentId: input.enrollmentId,
+            provider: "PAYPAL",
+            externalTransactionId: order.orderId,
+            eventType: "checkout.created",
+            payload: {
+              amountCad: input.amountCad,
+              approveUrl: order.approveUrl,
+              sessionId: input.sessionId,
+              credentialSource: creds?.source ?? "unknown",
+              organizationId: creds?.organizationId ?? null,
+            },
+          },
+        })
+        .catch((error) => {
+          const code = (error as { code?: string }).code;
+          if (code !== "P2002") throw error;
+        });
+
+      return {
+        status: "pending",
+        provider: "paypal",
+        checkoutUrl: order.approveUrl,
+        paymentRef: order.orderId,
+        message: "PayPal checkout created — redirect the student to checkoutUrl.",
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "paypal_order_failed";
+      console.error("[payments] paypal checkout error", message);
+      return {
+        status: "error",
+        provider: "paypal",
+        checkoutUrl: null,
+        paymentRef: null,
+        error: message.startsWith("paypal_") ? message : "paypal_order_failed",
+        retryCheckout: true,
+        message: "PayPal checkout failed — retry via POST /api/public/enrollments/:id/checkout.",
+      };
+    }
   }
 
   const paymentRef = `stripe_${input.enrollmentId.slice(0, 8)}_${Date.now()}`;

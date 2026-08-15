@@ -49,6 +49,22 @@ export async function POST(request: NextRequest) {
       return publicJson(request, { ok: false, error: result.error }, { status: result.status });
     }
 
+    const wantsHostedCheckout =
+      !result.waitlisted &&
+      !result.paid &&
+      (parsed.data.paymentProvider === "paypal" ||
+        parsed.data.paymentProvider === "stripe" ||
+        parsed.data.paymentProvider == null);
+
+    // Seat is reserved, but surface checkout failure clearly for BookingModal.
+    const checkoutBroken =
+      wantsHostedCheckout &&
+      (result.payment.status === "error" ||
+        (result.payment.provider === "paypal" &&
+          !result.payment.checkoutUrl &&
+          result.payment.status !== "deferred" &&
+          result.payment.status !== "pending_interac"));
+
     return publicJson(
       request,
       {
@@ -61,7 +77,14 @@ export async function POST(request: NextRequest) {
         paymentStatus: result.paymentStatus,
         checkoutUrl: result.payment.checkoutUrl,
         payment: result.payment,
+        packageEnrollmentIds: result.packageEnrollmentIds,
         interacInstructions: result.interacInstructions,
+        ...(checkoutBroken || result.checkoutError
+          ? {
+              checkoutError: result.checkoutError ?? result.payment.error ?? "checkout_failed",
+              retryCheckout: true,
+            }
+          : {}),
       },
       { status: 201 },
     );

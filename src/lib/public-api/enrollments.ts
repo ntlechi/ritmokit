@@ -4,7 +4,11 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { enqueueAndRunDanceAgent } from "@/lib/agents/dance-enqueue";
 import { asPlainNumber } from "@/lib/data/serialize";
-import { evaluateParityEnrollment, isParityAlert } from "@/lib/dance/parity";
+import {
+  evaluateParityEnrollment,
+  getPackagePeers,
+  isParityAlert,
+} from "@/lib/dance/parity";
 import { tryPromoteWaitlist } from "@/lib/dance/waitlist-promote";
 import {
   resolveEnrollmentAmountCad,
@@ -36,6 +40,11 @@ export const publicEnrollSchema = z.object({
   /** When true, mark paid immediately (offline / test). Default false. */
   markPaid: z.boolean().optional().default(false),
   paymentRef: z.string().max(120).optional().nullable(),
+  /**
+   * Multi-day same-course package: sibling ClassSession ids.
+   * Primary (`sessionId`) gets checkout; siblings are unpaid holds linked via paymentRef.
+   */
+  packageSessionIds: z.array(z.string().uuid()).max(14).optional(),
 });
 
 export type PublicEnrollInput = z.infer<typeof publicEnrollSchema>;
@@ -50,6 +59,9 @@ export type PublicEnrollResult =
       ticketCode: string;
       paymentStatus: string;
       payment: Awaited<ReturnType<typeof createEnrollmentCheckout>>;
+      packageEnrollmentIds?: string[];
+      checkoutError?: string;
+      retryCheckout?: boolean;
       interacInstructions?: NonNullable<
         Awaited<ReturnType<typeof createEnrollmentCheckout>>["interacInstructions"]
       >;
@@ -259,12 +271,78 @@ export async function createPublicEnrollment(
     } catch (error) {
       console.error("[public:enrollments] checkout failed", error);
       payment = {
-        status: "deferred",
+        status: "error",
         provider: (input.paymentProvider as PaymentProvider | undefined) ?? "paypal",
         checkoutUrl: null,
         paymentRef: null,
+        error: "checkout_failed",
+        retryCheckout: true,
         message: "Enrollment saved unpaid — checkout provider failed. Retry via /checkout.",
       };
+    }
+  }
+
+  // Package siblings: same course title across weekdays = one payment (Salsa parity).
+  // Auto-resolve peers in the season; if client sends packageSessionIds, intersect for safety.
+  const packageEnrollmentIds: string[] = [enrollment.id];
+  let siblingIds: string[] = [];
+  if (!decision.waitlisted && session.seasonId) {
+    const seasonClasses = await prisma.classSession.findMany({
+      where: { seasonId: session.seasonId },
+      select: { id: true, course: { select: { title: true } } },
+    });
+    const peerIds = getPackagePeers(
+      seasonClasses.map((c) => ({ id: c.id, courseTitle: c.course.title })),
+      { id: session.id, courseTitle: courseTitle },
+    )
+      .map((p) => p.id)
+      .filter((id) => id !== session.id);
+    const requested = (input.packageSessionIds ?? []).filter((id) => id !== session.id);
+    siblingIds =
+      requested.length > 0
+        ? requested.filter((id) => peerIds.includes(id))
+        : peerIds;
+  }
+  if (siblingIds.length && !decision.waitlisted) {
+    for (const siblingSessionId of siblingIds) {
+      const siblingCap = await loadSessionCapacity(siblingSessionId);
+      if (!siblingCap) continue;
+      const siblingDecision = evaluateParityEnrollment(siblingCap, input.danceRole, {
+        allowWaitlist: false,
+      });
+      if (!siblingDecision.ok || siblingDecision.waitlisted) continue;
+
+      const existingSibling = await prisma.enrollment.findUnique({
+        where: {
+          sessionId_studentId: { sessionId: siblingSessionId, studentId: student.id },
+        },
+        select: { id: true },
+      });
+      if (existingSibling) {
+        packageEnrollmentIds.push(existingSibling.id);
+        continue;
+      }
+
+      const siblingEnrollmentId = randomUUID();
+      await prisma.enrollment.create({
+        data: {
+          id: siblingEnrollmentId,
+          sessionId: siblingSessionId,
+          studentId: student.id,
+          danceRole: input.danceRole,
+          waitlisted: false,
+          paid: false,
+          paymentStatus: "NONE",
+          paymentProvider: null,
+          pricingTier,
+          amountCad: 0,
+          currency: "CAD",
+          paymentRef: `pkg:${enrollment.id}`,
+          ticketCode: ticketCodeForEnrollment(siblingEnrollmentId),
+          interacReferenceHint: interacHint,
+        },
+      });
+      packageEnrollmentIds.push(siblingEnrollmentId);
     }
   }
 
@@ -329,6 +407,14 @@ export async function createPublicEnrollment(
       refreshed?.paymentProvider,
     ),
     payment,
+    packageEnrollmentIds:
+      packageEnrollmentIds.length > 1 ? packageEnrollmentIds : undefined,
+    ...(payment.status === "error"
+      ? {
+          checkoutError: payment.error ?? "checkout_failed",
+          retryCheckout: true,
+        }
+      : {}),
     ...(payment.interacInstructions
       ? { interacInstructions: payment.interacInstructions }
       : {}),
