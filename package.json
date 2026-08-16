@@ -12,7 +12,7 @@
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:migrate:status": "prisma migrate status",
     "prisma:seed": "prisma db seed",
-    "vercel-build": "prisma generate && prisma migrate deploy && next build",
+    "vercel-build": "prisma generate && next build",
     "provision:franchise": "tsx scripts/provision-franchise.ts",
     "provision:owner": "tsx scripts/provision-owner-auth.mjs",
     "import:horaires": "tsx scripts/import-horaires.ts",
