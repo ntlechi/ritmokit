@@ -37,6 +37,14 @@ enum CourseLevel {
   ADVANCED
 }
 
+/// Instructor / owner tag on a student's path through one course + season.
+enum ProgressionStatus {
+  IN_PROGRESS
+  READY_TO_ADVANCE
+  COMPLETED
+  NEEDS_REVIEW
+}
+
 /// A `Station` row is either a physical dance room (bookable by ClassSession)
 /// or a staff department used to group the roster. Rooms and departments are
 /// different axes: an instructor belongs to a department, teaches in a room.
@@ -425,6 +433,8 @@ model Location {
   floors                 Floor[]
   rentalSettings         LocationRentalSettings?
   rentalBookings         RentalBooking[]
+  studentNotes           StudentNote[]
+  studentProgressions    StudentProgression[]
   interacSettings        LocationInteracSettings?
   publicAnnouncements    StudioAnnouncement[]
   publicEvents           StudioPublicEvent[]
@@ -747,6 +757,10 @@ model User {
   taughtClassSessions           ClassSession[]                 @relation("PrimaryInstructor")
   assistedClassSessions         ClassSession[]                 @relation("AssistantInstructor")
   enrollments                   Enrollment[]
+  studentProgressions           StudentProgression[]           @relation("StudentProgressionSubject")
+  studentProgressionsEvaluated  StudentProgression[]           @relation("StudentProgressionEvaluator")
+  studentNotesAbout             StudentNote[]                  @relation("StudentNoteSubject")
+  studentNotesWritten           StudentNote[]                  @relation("StudentNoteAuthor")
   instructorPayrollLogs         InstructorPayrollLog[]
   rentalBookingsConfirmed       RentalBooking[]                @relation("RentalBookingConfirmedBy")
   rentalBookingsCancelled       RentalBooking[]                @relation("RentalBookingCancelledBy")
@@ -2214,7 +2228,8 @@ model SessionSeason {
   createdAt   DateTime            @default(now()) @map("created_at")
   updatedAt   DateTime            @updatedAt @map("updated_at")
 
-  classes ClassSession[]
+  classes      ClassSession[]
+  progressions StudentProgression[]
 
   @@index([locationId, status])
   @@map("session_seasons")
@@ -2230,10 +2245,105 @@ model Course {
   createdAt      DateTime     @default(now()) @map("created_at")
   updatedAt      DateTime     @updatedAt @map("updated_at")
 
-  sessions ClassSession[]
+  sessions     ClassSession[]
+  lessons      CourseLesson[]
+  progressions StudentProgression[]
 
   @@index([organizationId, style, level])
   @@map("courses")
+}
+
+/// Week-by-week teaching plan for a course (dance, fitness, or private).
+model CourseLesson {
+  id       String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  courseId String @map("course_id") @db.Uuid
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  weekNumber  Int     @map("week_number")
+  title       String
+  body        String  @db.Text
+  videoUrl    String? @map("video_url")
+  musicNote   String? @map("music_note")
+  leadFocus   String? @map("lead_focus")
+  followFocus String? @map("follow_focus")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([courseId, weekNumber])
+  @@index([courseId, weekNumber])
+  @@map("course_lessons")
+}
+
+/// Owner / desk notes on a student (CRM memory — not HR).
+model StudentNote {
+  id         String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId  String @map("student_id") @db.Uuid
+  student    User   @relation("StudentNoteSubject", fields: [studentId], references: [id], onDelete: Cascade)
+  locationId String @map("location_id") @db.Uuid
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  authorId   String @map("author_id") @db.Uuid
+  author     User   @relation("StudentNoteAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+
+  body String @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([studentId, locationId, createdAt])
+  @@index([locationId, createdAt])
+  @@map("student_notes")
+}
+
+/// One path through a course this season — attendance + ready-for-next-level.
+model StudentProgression {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId  String   @map("student_id") @db.Uuid
+  student    User     @relation("StudentProgressionSubject", fields: [studentId], references: [id], onDelete: Cascade)
+  courseId   String   @map("course_id") @db.Uuid
+  course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  seasonId   String   @map("season_id") @db.Uuid
+  season     SessionSeason @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  locationId String   @map("location_id") @db.Uuid
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  danceStyle   String
+  currentLevel CourseLevel       @map("current_level")
+  danceRole    DanceRole?        @map("dance_role")
+  status       ProgressionStatus @default(IN_PROGRESS)
+
+  attendanceRate Float @default(0) @map("attendance_rate")
+  attendedCount  Int   @default(0) @map("attended_count")
+  expectedWeeks  Int   @default(1) @map("expected_weeks")
+
+  instructorNote String?   @map("instructor_note") @db.Text
+  evaluatedById  String?   @map("evaluated_by_id") @db.Uuid
+  evaluatedBy    User?     @relation("StudentProgressionEvaluator", fields: [evaluatedById], references: [id], onDelete: SetNull)
+  evaluatedAt    DateTime? @map("evaluated_at")
+  inviteSentAt   DateTime? @map("invite_sent_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([studentId, courseId, seasonId])
+  @@index([locationId, status])
+  @@index([studentId, danceStyle])
+  @@index([locationId, danceStyle, status])
+  @@map("student_progressions")
+}
+
+/// Per-evening check-in so attendance is 9/10 weeks, not a single overwrite.
+model ClassAttendance {
+  id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  enrollmentId String     @map("enrollment_id") @db.Uuid
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  occurredOn   DateTime   @map("occurred_on") @db.Date
+  attended     Boolean    @default(true)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([enrollmentId, occurredOn])
+  @@index([enrollmentId, occurredOn])
+  @@map("class_attendance")
 }
 
 /// Weekly (or dated) class slot — distinct from staff `Shift` (hours on floor).
@@ -2309,7 +2419,8 @@ model Enrollment {
   createdAt     DateTime      @default(now()) @map("created_at")
   updatedAt     DateTime      @updatedAt @map("updated_at")
 
-  paymentEvents PaymentEvent[]
+  paymentEvents     PaymentEvent[]
+  attendanceMarks   ClassAttendance[]
 
   @@unique([sessionId, studentId])
   @@index([sessionId, danceRole, waitlisted])

@@ -10,7 +10,8 @@ export type EnrollmentEmailKind =
   | "waitlist_promoted_confirmed"
   | "waitlist_promoted_pay_reminder"
   | "interac_pending_staff"
-  | "interac_cancelled";
+  | "interac_cancelled"
+  | "progression_ready_invite";
 
 export async function sendEnrollmentEmail(input: {
   to: string;

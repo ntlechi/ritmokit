@@ -9,6 +9,7 @@ import { ProgressionFunnel } from "@/components/dashboard/dance/progression-funn
 import { RoomHeatmap } from "@/components/dashboard/dance/room-heatmap";
 import { StudioPulse } from "@/components/dashboard/dance/studio-pulse";
 import { TonightBoard } from "@/components/dashboard/dance/tonight-board";
+import { OwnerPulseStrip } from "@/components/dashboard/dance/owner-pulse";
 import { dna } from "@/lib/design/dna";
 import type { StudioCockpitData } from "@/lib/data/studio-cockpit";
 import type { Locale } from "@/lib/i18n/config";
@@ -81,6 +82,8 @@ export function StudioCockpit({
           {c.tools.sessions}
         </Link>
       </header>
+
+      <OwnerPulseStrip pulse={data.ownerPulse} lang={lang} dict={dict} />
 
       <TonightBoard
         classRows={analytics.classRows}

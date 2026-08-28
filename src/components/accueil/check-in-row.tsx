@@ -1,23 +1,30 @@
 "use client";
 
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { Check, Loader2 } from "lucide-react";
 import type { AccueilRosterRow } from "@/lib/data/accueil-roster";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
+import type { Locale } from "@/lib/i18n/config";
+import { evaluateProgressionAction } from "@/lib/actions/progression";
 import { cn } from "@/lib/utils";
 
 export function CheckInRow({
   row,
   dict,
+  lang,
   busy,
   onToggle,
   onReleaseSeat,
+  onEvaluated,
 }: {
   row: AccueilRosterRow;
   dict: Dictionary["accueil"];
+  lang: Locale;
   busy: boolean;
   onToggle: (enrollmentId: string, nextAttended: boolean) => void;
   onReleaseSeat?: (enrollmentId: string) => void;
+  onEvaluated?: () => void;
 }) {
   const waitlisted = row.waitlisted;
   const attended = row.attended;
@@ -40,9 +47,12 @@ export function CheckInRow({
     >
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-1.5">
-          <p className="truncate text-base font-bold tracking-tight sm:text-lg">
+          <Link
+            href={`/${lang}/students/${row.studentId}`}
+            className="truncate text-base font-bold tracking-tight underline-offset-2 hover:underline sm:text-lg"
+          >
             {row.studentName}
-          </p>
+          </Link>
           <RoleChip role={row.danceRole} label={roleLabel} />
           {waitlisted ? (
             <StatusBadge tone="waitlist">{dict.badgeWaitlist}</StatusBadge>
@@ -56,7 +66,44 @@ export function CheckInRow({
         </div>
         <p className="mt-0.5 truncate text-xs text-foreground-muted sm:text-sm">
           {row.studentEmail}
+          {row.attendanceLabel ? ` · ${row.attendanceLabel}` : ""}
+          {row.progressionStatus === "READY_TO_ADVANCE" ? ` · ${dict.readyForNext}` : ""}
+          {row.progressionStatus === "NEEDS_REVIEW" ? ` · ${dict.needsReview}` : ""}
         </p>
+        {row.showEval && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              data-interactive
+              disabled={busy}
+              className="min-h-10 rounded-xl bg-yield/15 px-2.5 text-xs font-semibold text-yield"
+              onClick={() => {
+                void evaluateProgressionAction({
+                  enrollmentId: row.enrollmentId,
+                  status: "READY_TO_ADVANCE",
+                  lang,
+                }).then(() => onEvaluated?.());
+              }}
+            >
+              {dict.readyForNext}
+            </button>
+            <button
+              type="button"
+              data-interactive
+              disabled={busy}
+              className="min-h-10 rounded-xl bg-surface-muted px-2.5 text-xs font-semibold text-foreground-muted"
+              onClick={() => {
+                void evaluateProgressionAction({
+                  enrollmentId: row.enrollmentId,
+                  status: "NEEDS_REVIEW",
+                  lang,
+                }).then(() => onEvaluated?.());
+              }}
+            >
+              {dict.needsReview}
+            </button>
+          </div>
+        )}
         {!waitlisted && !attended && onReleaseSeat ? (
           <button
             type="button"

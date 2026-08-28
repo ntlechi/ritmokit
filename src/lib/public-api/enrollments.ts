@@ -359,6 +359,13 @@ export async function createPublicEnrollment(
       capacity.filledFollows + (input.danceRole === "FOLLOW" && !decision.waitlisted ? 1 : 0),
   };
 
+  if (!decision.waitlisted) {
+    const { refreshProgressionForEnrollment } = await import("@/lib/dance/progression");
+    void refreshProgressionForEnrollment(enrollment.id).catch((error) => {
+      console.error("[public:enrollments] progression", error);
+    });
+  }
+
   await enqueueAndRunDanceAgent({
     eventType: "enrollment.created",
     payload: {

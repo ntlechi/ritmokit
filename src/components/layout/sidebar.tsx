@@ -24,6 +24,8 @@ import {
   KeyRound,
   Banknote,
   ClipboardCheck,
+  BookOpen,
+  ContactRound,
 } from "lucide-react";
 import type { Locale } from "@/lib/i18n/config";
 import type { ShellCopy } from "@/lib/i18n/shell-copy";
@@ -48,8 +50,10 @@ const DEFAULT_WIDTH = 240;
 const navItems = [
   { key: "cockpit" as const, href: "/dashboard", icon: LayoutDashboard, managerOnly: true },
   { key: "accueil" as const, href: "/accueil", icon: ClipboardCheck, accueilOnly: true },
+  { key: "students" as const, href: "/students", icon: ContactRound, accueilOnly: true },
   { key: "interac" as const, href: "/interac", icon: Banknote, managerOnly: true },
   { key: "sessions" as const, href: "/sessions", icon: Music2, managerOnly: true },
+  { key: "plans" as const, href: "/plans", icon: BookOpen, managerOnly: true },
   { key: "rooms" as const, href: "/rooms", icon: DoorOpen, managerOnly: true },
   { key: "rentals" as const, href: "/rentals", icon: KeyRound, managerOnly: true },
   { key: "calendar" as const, href: "/calendar/week", icon: Calendar },

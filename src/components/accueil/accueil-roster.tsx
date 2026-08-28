@@ -291,6 +291,29 @@ export function AccueilRosterView({
               </div>
             </div>
 
+            {selected.tonightPlan ? (
+              <div className="rounded-2xl border border-accent/20 bg-accent/5 px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-accent">
+                  {a.tonightPlan} · {a.weekLabel.replace("{week}", String(selected.tonightPlan.weekNumber))}
+                </p>
+                <p className="mt-1 font-semibold">{selected.tonightPlan.title}</p>
+                {selected.tonightPlan.body && (
+                  <p className="mt-1 whitespace-pre-wrap text-sm text-foreground-muted">
+                    {selected.tonightPlan.body}
+                  </p>
+                )}
+                <div className="mt-2 flex flex-wrap gap-3 text-xs text-foreground-muted">
+                  {selected.tonightPlan.musicNote && <span>{selected.tonightPlan.musicNote}</span>}
+                  {selected.tonightPlan.leadFocus && <span>Lead: {selected.tonightPlan.leadFocus}</span>}
+                  {selected.tonightPlan.followFocus && (
+                    <span>Follow: {selected.tonightPlan.followFocus}</span>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-foreground-muted">{a.tonightPlanEmpty}</p>
+            )}
+
             <RoleMeters
               leadsFilled={selected.leads.filled}
               leadsMax={selected.leads.max}
@@ -348,9 +371,11 @@ export function AccueilRosterView({
                             key={row.enrollmentId}
                             row={row}
                             dict={a}
+                            lang={lang}
                             busy={busyId === row.enrollmentId}
                             onToggle={onToggle}
                             onReleaseSeat={onReleaseSeat}
+                            onEvaluated={() => router.refresh()}
                           />
                         ))}
                       </ul>
@@ -364,13 +389,14 @@ export function AccueilRosterView({
                     </h3>
                     <ul className="space-y-2.5">
                       {waitlistRows.map((row) => (
-                        <CheckInRow
-                          key={row.enrollmentId}
-                          row={row}
-                          dict={a}
-                          busy={false}
-                          onToggle={onToggle}
-                        />
+                          <CheckInRow
+                            key={row.enrollmentId}
+                            row={row}
+                            dict={a}
+                            lang={lang}
+                            busy={false}
+                            onToggle={onToggle}
+                          />
                       ))}
                     </ul>
                   </section>

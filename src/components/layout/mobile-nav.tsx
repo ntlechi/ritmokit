@@ -9,8 +9,8 @@ import {
   LayoutDashboard,
   Users,
   Music2,
-  DoorOpen,
   ClipboardCheck,
+  ContactRound,
 } from "lucide-react";
 import type { Locale } from "@/lib/i18n/config";
 import type { ShellCopy } from "@/lib/i18n/shell-copy";
@@ -35,14 +35,14 @@ export function MobileNav({
     ? ([
         { key: "cockpit", href: "/dashboard", icon: LayoutDashboard, label: shell.nav.cockpit },
         { key: "accueil", href: "/accueil", icon: ClipboardCheck, label: shell.nav.accueil },
+        { key: "students", href: "/students", icon: ContactRound, label: shell.nav.students },
         { key: "sessions", href: "/sessions", icon: Music2, label: shell.nav.sessions },
-        { key: "rooms", href: "/rooms", icon: DoorOpen, label: shell.nav.rooms },
-        { key: "calendar", href: "/calendar/week", icon: Calendar, label: shell.nav.calendar },
         { key: "settings", href: "/settings", icon: Settings, label: shell.nav.settings },
       ] as const)
     : showAccueil
       ? ([
           { key: "accueil", href: "/accueil", icon: ClipboardCheck, label: shell.nav.accueil },
+          { key: "students", href: "/students", icon: ContactRound, label: shell.nav.students },
           { key: "calendar", href: "/calendar/week", icon: Calendar, label: shell.nav.calendar },
           { key: "messages", href: "/messages", icon: MessagesSquare, label: shell.nav.messages },
           { key: "team", href: "/team", icon: Users, label: shell.nav.team },

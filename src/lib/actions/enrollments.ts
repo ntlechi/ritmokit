@@ -5,6 +5,7 @@ import { z } from "zod";
 import { enqueueAndRunDanceAgent } from "@/lib/agents/dance-enqueue";
 import { evaluateParityEnrollment, isParityAlert, type RoleCapacity } from "@/lib/dance/parity";
 import { tryPromoteWaitlist } from "@/lib/dance/waitlist-promote";
+import { civilDateInTimeZone, recordClassAttendance } from "@/lib/dance/progression";
 import { actionDatabaseError, type SimpleActionResult } from "@/lib/actions/result";
 import { canAccessAccueil, canAccessManagerSettings, getSessionUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
@@ -157,7 +158,16 @@ export async function markAttendanceAction(input: {
   try {
     const enrollment = await prisma.enrollment.findUnique({
       where: { id: input.enrollmentId },
-      select: { id: true, waitlisted: true },
+      select: {
+        id: true,
+        waitlisted: true,
+        session: {
+          select: {
+            season: { select: { location: { select: { timezone: true } } } },
+            room: { select: { location: { select: { timezone: true } } } },
+          },
+        },
+      },
     });
     if (!enrollment) return { ok: false, error: "not_found" };
     if (enrollment.waitlisted) return { ok: false, error: "waitlisted" };
@@ -166,8 +176,22 @@ export async function markAttendanceAction(input: {
       where: { id: input.enrollmentId },
       data: { attended: input.attended },
     });
+
+    const timezone =
+      enrollment.session.season?.location.timezone ||
+      enrollment.session.room.location.timezone ||
+      "America/Toronto";
+    await recordClassAttendance({
+      enrollmentId: enrollment.id,
+      attended: input.attended,
+      occurredOn: civilDateInTimeZone(new Date(), timezone),
+    }).catch((error) => {
+      console.error("[markAttendance] progression", error);
+    });
+
     revalidatePath(`/${input.lang}/sessions`, "page");
     revalidatePath(`/${input.lang}/accueil`, "page");
+    revalidatePath(`/${input.lang}/students`, "page");
     return { ok: true };
   } catch (error) {
     return actionDatabaseError("markAttendance", error);

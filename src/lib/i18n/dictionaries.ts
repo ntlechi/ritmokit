@@ -23,6 +23,8 @@ export interface Dictionary {
     punch: string;
     help: string;
     cockpit: string;
+    students: string;
+    plans: string;
     franchiseSection: string;
   };
   accueil: {
@@ -66,6 +68,62 @@ export interface Dictionary {
     releaseSeat: string;
     promotedUnpaid: string;
     cheatSheetLink: string;
+    tonightPlan: string;
+    tonightPlanEmpty: string;
+    weekLabel: string;
+    readyForNext: string;
+    needsReview: string;
+  };
+  crm: {
+    badge: string;
+    subtitle: string;
+    search: string;
+    empty: string;
+    count: string;
+    filterAll: string;
+    filterUnpaid: string;
+    filterWaitlist: string;
+    filterReady: string;
+    filterChurn: string;
+    lastSeen: string;
+    lifetime: string;
+    unpaid: string;
+    waitlisted: string;
+    classes: string;
+    notes: string;
+    notePlaceholder: string;
+    addNote: string;
+    noNotes: string;
+    noteError: string;
+    history: string;
+    noHistory: string;
+    back: string;
+    noPhone: string;
+    paid: string;
+    pending: string;
+    journey: string;
+    journeyEmpty: string;
+    inviteNext: string;
+    inviteSent: string;
+    inviteError: string;
+  };
+  plans: {
+    badge: string;
+    subtitle: string;
+    pickCourse: string;
+    emptyCourses: string;
+    emptyLessons: string;
+    addWeek: string;
+    week: string;
+    title: string;
+    body: string;
+    music: string;
+    video: string;
+    lead: string;
+    follow: string;
+    save: string;
+    delete: string;
+    saveError: string;
   };
   opsDashboard: {
     title: string;
@@ -132,6 +190,23 @@ export interface Dictionary {
       subtitle: string;
       badge: string;
       cta: string;
+    };
+    owner: {
+      title: string;
+      collected: string;
+      collectedHint: string;
+      pending: string;
+      pendingHint: string;
+      unpaid: string;
+      unpaidHint: string;
+      rentals: string;
+      rentalsHint: string;
+      students: string;
+      studentsHint: string;
+      ready: string;
+      readyHint: string;
+      churn: string;
+      churnHint: string;
     };
     pulse: {
       title: string;

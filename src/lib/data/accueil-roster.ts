@@ -1,11 +1,13 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
+import { findTonightLesson, seasonWeekNumber } from "@/lib/data/course-lessons";
 import { stationLabel } from "@/lib/stations/display";
 import type { Locale } from "@/lib/i18n/config";
 
 export type AccueilRosterRow = {
   enrollmentId: string;
+  studentId: string;
   studentName: string;
   studentEmail: string;
   danceRole: "LEAD" | "FOLLOW" | "SOLO";
@@ -15,6 +17,9 @@ export type AccueilRosterRow = {
   /** Waitlist promote unpaid chase priority. */
   promotedUnpaid: boolean;
   pricingTier: "REGULAR" | "STUDENT" | "COUPLE" | "UNLIMITED_PASS";
+  progressionStatus: "IN_PROGRESS" | "READY_TO_ADVANCE" | "COMPLETED" | "NEEDS_REVIEW" | null;
+  attendanceLabel: string | null;
+  showEval: boolean;
 };
 
 export type AccueilClassCard = {
@@ -38,6 +43,15 @@ export type AccueilClassCard = {
   /** upcoming | live | done */
   status: "upcoming" | "live" | "done";
   roster: AccueilRosterRow[];
+  tonightPlan: {
+    weekNumber: number;
+    title: string;
+    body: string;
+    musicNote: string | null;
+    leadFocus: string | null;
+    followFocus: string | null;
+  } | null;
+  planWeek: number;
 };
 
 export type AccueilRoster = {
@@ -153,6 +167,21 @@ export async function getAccueilRosterForUser(
   const civil = civilInTimeZone(now, timeZone);
   const nowMin = civil.hour * 60 + civil.minute;
 
+  const progressions = await prisma.studentProgression.findMany({
+    where: { locationId: membership.locationId },
+    select: {
+      studentId: true,
+      courseId: true,
+      seasonId: true,
+      status: true,
+      attendedCount: true,
+      expectedWeeks: true,
+    },
+  });
+  const progressionByKey = new Map(
+    progressions.map((p) => [`${p.studentId}:${p.courseId}:${p.seasonId}`, p]),
+  );
+
   const sessions = await prisma.classSession.findMany({
     where: {
       OR: [
@@ -161,7 +190,8 @@ export async function getAccueilRosterForUser(
       ],
     },
     include: {
-      course: { select: { title: true, style: true, level: true } },
+      course: { select: { id: true, title: true, style: true, level: true } },
+      season: { select: { id: true, startsOn: true } },
       room: {
         select: {
           nameFr: true,
@@ -174,7 +204,7 @@ export async function getAccueilRosterForUser(
       instructor: { select: { fullName: true } },
       enrollments: {
         include: {
-          student: { select: { fullName: true, email: true } },
+          student: { select: { id: true, fullName: true, email: true } },
         },
         orderBy: [{ waitlisted: "asc" }, { createdAt: "asc" }],
         // promotedAt used for Accueil unpaid priority (agent chase).
@@ -239,8 +269,13 @@ export async function getAccueilRosterForUser(
         if (!e.attended) notCheckedInCount += 1;
       }
 
+      const prog = session.seasonId
+        ? progressionByKey.get(`${e.student.id}:${session.course.id}:${session.seasonId}`)
+        : undefined;
+
       return {
         enrollmentId: e.id,
+        studentId: e.student.id,
         studentName: e.student.fullName,
         studentEmail: e.student.email,
         danceRole: e.danceRole,
@@ -249,6 +284,9 @@ export async function getAccueilRosterForUser(
         attended: e.attended,
         promotedUnpaid: Boolean(e.promotedAt) && !e.paid && !e.waitlisted,
         pricingTier: e.pricingTier,
+        progressionStatus: prog?.status ?? null,
+        attendanceLabel: prog ? `${prog.attendedCount}/${prog.expectedWeeks}` : null,
+        showEval: !e.waitlisted,
       };
     });
 
@@ -262,6 +300,11 @@ export async function getAccueilRosterForUser(
 
     const startMin = startHm.h * 60 + startHm.m;
     const endMin = endHm.h * 60 + endHm.m;
+
+    const planWeek = session.season?.startsOn
+      ? seasonWeekNumber(session.season.startsOn, new Date(`${civil.date}T12:00:00`))
+      : 1;
+    const lesson = await findTonightLesson(session.course.id, planWeek);
 
     cards.push({
       sessionId: session.id,
@@ -290,6 +333,17 @@ export async function getAccueilRosterForUser(
       notCheckedInCount,
       status: classStatus(nowMin, startMin, endMin),
       roster,
+      planWeek,
+      tonightPlan: lesson
+        ? {
+            weekNumber: lesson.weekNumber,
+            title: lesson.title,
+            body: lesson.body,
+            musicNote: lesson.musicNote,
+            leadFocus: lesson.leadFocus,
+            followFocus: lesson.followFocus,
+          }
+        : null,
     });
   }
 
