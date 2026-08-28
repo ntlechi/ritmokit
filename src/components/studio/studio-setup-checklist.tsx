@@ -5,8 +5,8 @@ import { useEffect, useState } from "react";
 import { ArrowRight, Check, Circle, Printer } from "lucide-react";
 import type { Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
-import type { StudioSetupStatus, StudioSetupStepId } from "@/lib/data/studio-setup";
-import { STUDIO_SETUP_STEP_IDS } from "@/lib/data/studio-setup";
+import type { StudioSetupStatus, StudioSetupStepId } from "@/lib/studio-setup/types";
+import { STUDIO_SETUP_STEP_IDS } from "@/lib/studio-setup/types";
 import {
   isAccueilStepMarked,
   markAccueilStepTried,

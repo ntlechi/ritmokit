@@ -5,8 +5,8 @@ import { useEffect, useState } from "react";
 import { ArrowRight, Printer, X } from "lucide-react";
 import type { Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
-import type { StudioSetupStatus } from "@/lib/data/studio-setup";
-import { STUDIO_SETUP_STEP_IDS } from "@/lib/data/studio-setup";
+import type { StudioSetupStatus } from "@/lib/studio-setup/types";
+import { STUDIO_SETUP_STEP_IDS } from "@/lib/studio-setup/types";
 import {
   dismissStudioSetupBanner,
   isAccueilStepMarked,

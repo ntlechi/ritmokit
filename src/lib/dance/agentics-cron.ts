@@ -4,6 +4,8 @@
 import "server-only";
 
 import { enqueueAndRunDanceAgent } from "@/lib/agents/dance-enqueue";
+import { ensureStudioOsSchema } from "@/lib/db/ensure-studio-os-schema";
+import { releaseExpiredVipHolds } from "@/lib/dance/vip-hold";
 import { sendEnrollmentEmail } from "@/lib/notifications/email";
 import { prisma } from "@/lib/prisma";
 
@@ -186,7 +188,16 @@ export async function runChurnRiskProducer(): Promise<{ enqueued: number }> {
 }
 
 export async function runDanceAgenticsCron(now = new Date()) {
-  const chase = await runUnpaidPromoteChase(now);
-  const churn = await runChurnRiskProducer();
-  return { chased: chase.chased, churnEnqueued: churn.enqueued };
+  await ensureStudioOsSchema().catch((error) => {
+    console.error("[cron] schema bootstrap", error);
+  });
+  const [chase, churn, holds] = await Promise.all([
+    runUnpaidPromoteChase(now),
+    runChurnRiskProducer(),
+    releaseExpiredVipHolds(now).catch((error) => {
+      console.error("[cron] vip hold expiry", error);
+      return { released: 0 };
+    }),
+  ]);
+  return { chased: chase.chased, churnEnqueued: churn.enqueued, holdsReleased: holds.released };
 }

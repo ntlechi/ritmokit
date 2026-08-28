@@ -39,6 +39,7 @@ export function StudentProfile({
   const c = dict.crm;
   const [body, setBody] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [flash, setFlash] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
   return (
@@ -78,6 +79,15 @@ export function StudentProfile({
                     {j.seasonName} · {j.attendedCount}/{j.expectedWeeks} · {j.status}
                     {j.danceRole ? ` · ${j.danceRole}` : ""}
                   </p>
+                  {j.holdWaitlisted && (
+                    <p className="mt-1 text-xs font-semibold text-warning">{c.holdWaitlist}</p>
+                  )}
+                  {j.holdUntil && !j.holdWaitlisted && (
+                    <p className="mt-1 text-xs font-semibold text-yield">
+                      {c.holdUntil.replace("{date}", formatDay(j.holdUntil, lang))}
+                      {j.holdTitle ? ` · ${j.holdTitle}` : ""}
+                    </p>
+                  )}
                 </div>
                 {j.status === "READY_TO_ADVANCE" && (
                   <button
@@ -86,11 +96,23 @@ export function StudentProfile({
                     className={cn(dna.cta, "min-h-11 text-xs")}
                     onClick={() => {
                       start(async () => {
+                        setError(null);
+                        setFlash(null);
                         const result = await inviteReadyStudentAction({
                           progressionId: j.id,
                           lang,
                         });
-                        if (!result.ok) setError(c.inviteError);
+                        if (!result.ok) {
+                          setError(c.inviteError);
+                          return;
+                        }
+                        setFlash(
+                          result.held
+                            ? c.inviteHeld
+                            : result.waitlisted
+                              ? c.inviteWaitlisted
+                              : c.inviteSentNoHold,
+                        );
                       });
                     }}
                   >
@@ -135,6 +157,7 @@ export function StudentProfile({
             rows={3}
             className={cn(dna.field, "min-h-[5.5rem] resize-y")}
           />
+          {flash && <p className="text-sm text-yield">{flash}</p>}
           {error && <p className="text-sm text-danger">{error}</p>}
           <button type="submit" disabled={pending || !body.trim()} className={cn(dna.cta, "min-h-11 w-fit")}>
             {c.addNote}

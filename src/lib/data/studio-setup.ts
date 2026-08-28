@@ -4,21 +4,13 @@ import { canAccessManagerSettings, getPrimaryMembership } from "@/lib/auth/sessi
 import { ACTIVE_INTEGRATION_STATUSES } from "@/lib/integrations/types";
 import { prisma } from "@/lib/prisma";
 import type { Role } from "@/generated/prisma/enums";
+import type { StudioSetupStatus, StudioSetupStepId } from "@/lib/studio-setup/types";
 
-export const STUDIO_SETUP_STEP_IDS = ["paypal", "season", "classes", "accueil"] as const;
-
-export type StudioSetupStepId = (typeof STUDIO_SETUP_STEP_IDS)[number];
-
-export type StudioSetupStatus = {
-  locationId: string;
-  locationName: string;
-  organizationId: string;
-  steps: Record<StudioSetupStepId, boolean>;
-  /** Server-verified steps only (excludes accueil — marked on device). */
-  serverComplete: boolean;
-  serverDoneCount: number;
-  serverTotal: number;
-};
+export {
+  STUDIO_SETUP_STEP_IDS,
+  type StudioSetupStatus,
+  type StudioSetupStepId,
+} from "@/lib/studio-setup/types";
 
 const SERVER_STEPS: StudioSetupStepId[] = ["paypal", "season", "classes"];
 

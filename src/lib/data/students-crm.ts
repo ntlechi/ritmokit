@@ -7,6 +7,7 @@ import "server-only";
 import { asPlainNumber } from "@/lib/data/serialize";
 import { canAccessManagerSettings, getPrimaryMembership } from "@/lib/auth/session";
 import { ensureProgressionsForLocation, isChurnRisk } from "@/lib/dance/progression";
+import { VIP_HOLD_PREFIX, vipHoldExpiresAt } from "@/lib/dance/vip-hold";
 import { prisma } from "@/lib/prisma";
 import type { CourseLevel, ProgressionStatus, Role } from "@/generated/prisma/enums";
 
@@ -60,6 +61,9 @@ export type CrmJourneyRow = {
   expectedWeeks: number;
   attendanceRate: number;
   inviteSentAt: string | null;
+  holdUntil: string | null;
+  holdTitle: string | null;
+  holdWaitlisted: boolean;
 };
 
 export type CrmStudentProfile = CrmStudentListItem & {
@@ -183,7 +187,7 @@ export async function getCrmStudentProfile(
   const summary = list.students.find((s) => s.studentId === studentId);
   if (!summary) return null;
 
-  const [enrollments, notes, journey] = await Promise.all([
+  const [enrollments, notes, journey, holds] = await Promise.all([
     prisma.enrollment.findMany({
       where: { studentId, ...locationEnrollmentWhere(list.locationId) },
       select: {
@@ -232,7 +236,37 @@ export async function getCrmStudentProfile(
       },
       orderBy: { updatedAt: "desc" },
     }),
+    prisma.enrollment.findMany({
+      where: {
+        studentId,
+        paid: false,
+        paymentRef: { startsWith: VIP_HOLD_PREFIX },
+        paymentStatus: { not: "CANCELLED_INTERAC" },
+      },
+      select: {
+        paymentRef: true,
+        paymentPendingAt: true,
+        waitlisted: true,
+        session: {
+          select: { course: { select: { title: true } } },
+        },
+      },
+    }),
   ]);
+
+  const holdByProgression = new Map(
+    holds.map((h) => {
+      const id = h.paymentRef?.slice(VIP_HOLD_PREFIX.length) ?? "";
+      return [
+        id,
+        {
+          until: h.paymentPendingAt ? vipHoldExpiresAt(h.paymentPendingAt).toISOString() : null,
+          title: h.session.course.title,
+          waitlisted: h.waitlisted,
+        },
+      ] as const;
+    }),
+  );
 
   return {
     locationId: list.locationId,
@@ -270,6 +304,9 @@ export async function getCrmStudentProfile(
         expectedWeeks: j.expectedWeeks,
         attendanceRate: j.attendanceRate,
         inviteSentAt: j.inviteSentAt?.toISOString() ?? null,
+        holdUntil: holdByProgression.get(j.id)?.until ?? null,
+        holdTitle: holdByProgression.get(j.id)?.title ?? null,
+        holdWaitlisted: holdByProgression.get(j.id)?.waitlisted ?? false,
       })),
     },
   };

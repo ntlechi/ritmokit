@@ -5,6 +5,7 @@ import { z } from "zod";
 import { actionDatabaseError, type SimpleActionResult } from "@/lib/actions/result";
 import { canAccessAccueil, canAccessManagerSettings, getSessionUser } from "@/lib/auth/session";
 import { nextCourseLevel, refreshProgressionForEnrollment } from "@/lib/dance/progression";
+import { holdNextLevelSeat, VIP_HOLD_HOURS } from "@/lib/dance/vip-hold";
 import { sendEnrollmentEmail } from "@/lib/notifications/email";
 import { resolvePublicBookingBaseUrl } from "@/lib/public-api/booking-return";
 import { prisma } from "@/lib/prisma";
@@ -69,7 +70,7 @@ const inviteSchema = z.object({
 
 export async function inviteReadyStudentAction(
   input: z.infer<typeof inviteSchema>,
-): Promise<SimpleActionResult & { sent?: boolean }> {
+): Promise<SimpleActionResult & { sent?: boolean; held?: boolean; waitlisted?: boolean }> {
   const parsed = inviteSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "invalid" };
 
@@ -84,12 +85,14 @@ export async function inviteReadyStudentAction(
       currentLevel: true,
       danceStyle: true,
       locationId: true,
+      studentId: true,
       student: { select: { fullName: true, email: true, locale: true } },
       course: { select: { title: true } },
     },
   });
   if (!row || row.status !== "READY_TO_ADVANCE") return { ok: false, error: "not_ready" };
 
+  const hold = await holdNextLevelSeat(row.id);
   const next = nextCourseLevel(row.currentLevel);
   const locale = row.student.locale === "EN" ? "en" : row.student.locale === "ES" ? "es" : "fr";
   const base =
@@ -115,6 +118,15 @@ export async function inviteReadyStudentAction(
           : locale === "es"
             ? "la próxima temporada"
             : "la prochaine session";
+  const holdTitle = hold.courseTitle ?? `${row.danceStyle} ${nextLabel}`;
+  const holdUntil = hold.expiresAt
+    ? hold.expiresAt.toLocaleString(locale === "en" ? "en-CA" : locale === "es" ? "es" : "fr-CA", {
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : null;
 
   const subject =
     locale === "en"
@@ -122,12 +134,30 @@ export async function inviteReadyStudentAction(
       : locale === "es"
         ? `Tu plaza en ${row.danceStyle} ${nextLabel}`
         : `Ta place en ${row.danceStyle} ${nextLabel}`;
+  const holdLine =
+    hold.held && holdUntil
+      ? locale === "en"
+        ? `Your seat in ${holdTitle} is reserved ${VIP_HOLD_HOURS} hours (until ${holdUntil}).`
+        : locale === "es"
+          ? `Tu plaza en ${holdTitle} está reservada ${VIP_HOLD_HOURS} h (hasta ${holdUntil}).`
+          : `Ta place en ${holdTitle} est retenue ${VIP_HOLD_HOURS} h (jusqu’au ${holdUntil}).`
+      : hold.waitlisted
+        ? locale === "en"
+          ? `${holdTitle} is full — you are first on the waitlist.`
+          : locale === "es"
+            ? `${holdTitle} está lleno — vas primero en la lista de espera.`
+            : `${holdTitle} est complet — tu es prioritaire sur la liste d’attente.`
+        : locale === "en"
+          ? `Your spot for ${row.danceStyle} ${nextLabel} is held in priority.`
+          : locale === "es"
+            ? `Tu plaza para ${row.danceStyle} ${nextLabel} está en prioridad.`
+            : `Ta place pour ${row.danceStyle} ${nextLabel} est prioritaire ${VIP_HOLD_HOURS} h.`;
   const text =
     locale === "en"
-      ? `Hi ${row.student.fullName},\n\nCongratulations on completing ${row.course.title}. Your spot for ${row.danceStyle} ${nextLabel} is held in priority — enroll here:\n${bookingUrl}\n\n— ${user.fullName}`
+      ? `Hi ${row.student.fullName},\n\nCongratulations on completing ${row.course.title}. ${holdLine}\nEnroll here:\n${bookingUrl}\n\n— ${user.fullName}`
       : locale === "es"
-        ? `Hola ${row.student.fullName},\n\nFelicidades por completar ${row.course.title}. Tu plaza para ${row.danceStyle} ${nextLabel} está en prioridad — inscríbete aquí:\n${bookingUrl}\n\n— ${user.fullName}`
-        : `Salut ${row.student.fullName},\n\nFélicitations pour ${row.course.title}. Ta place pour ${row.danceStyle} ${nextLabel} est prioritaire 48 h — inscris-toi ici :\n${bookingUrl}\n\n— ${user.fullName}`;
+        ? `Hola ${row.student.fullName},\n\nFelicidades por completar ${row.course.title}. ${holdLine}\nInscríbete aquí:\n${bookingUrl}\n\n— ${user.fullName}`
+        : `Salut ${row.student.fullName},\n\nFélicitations pour ${row.course.title}. ${holdLine}\nInscris-toi ici :\n${bookingUrl}\n\n— ${user.fullName}`;
 
   const email = await sendEnrollmentEmail({
     to: row.student.email,
@@ -142,10 +172,24 @@ export async function inviteReadyStudentAction(
       where: { id: row.id },
       data: { inviteSentAt: new Date() },
     });
+    const note =
+      hold.held && hold.courseTitle
+        ? `Invitation envoyée — place retenue ${VIP_HOLD_HOURS} h pour ${hold.courseTitle}.`
+        : hold.waitlisted && hold.courseTitle
+          ? `Invitation envoyée — priorité liste d’attente pour ${hold.courseTitle}.`
+          : `Invitation niveau suivant envoyée.`;
+    await prisma.studentNote.create({
+      data: {
+        studentId: row.studentId,
+        locationId: row.locationId,
+        authorId: user.id,
+        body: note,
+      },
+    });
   } catch (error) {
     return actionDatabaseError("invite-ready", error);
   }
 
   revalidatePath(`/${parsed.data.lang}/students`);
-  return { ok: true, sent: email.sent };
+  return { ok: true, sent: email.sent, held: hold.held, waitlisted: hold.waitlisted };
 }

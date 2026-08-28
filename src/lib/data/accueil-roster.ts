@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/lib/prisma";
 import { findTonightLesson, seasonWeekNumber } from "@/lib/data/course-lessons";
+import { ensureStudioOsSchema } from "@/lib/db/ensure-studio-os-schema";
 import { stationLabel } from "@/lib/stations/display";
 import type { Locale } from "@/lib/i18n/config";
 
@@ -167,6 +168,7 @@ export async function getAccueilRosterForUser(
   const civil = civilInTimeZone(now, timeZone);
   const nowMin = civil.hour * 60 + civil.minute;
 
+  await ensureStudioOsSchema();
   const progressions = await prisma.studentProgression.findMany({
     where: { locationId: membership.locationId },
     select: {

@@ -4,6 +4,7 @@
 import "server-only";
 
 import { asPlainNumber } from "@/lib/data/serialize";
+import { ensureStudioOsSchema } from "@/lib/db/ensure-studio-os-schema";
 import { prisma } from "@/lib/prisma";
 
 export type OwnerPulse = {
@@ -53,6 +54,7 @@ export async function loadOwnerPulse(
   timeZone = "America/Toronto",
   now = new Date(),
 ): Promise<OwnerPulse> {
+  await ensureStudioOsSchema();
   const weekStart = weekStartUtc(now, timeZone);
 
   const enrollmentWhere = {

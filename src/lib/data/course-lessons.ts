@@ -4,6 +4,7 @@
 import "server-only";
 
 import { canAccessManagerSettings, getPrimaryMembership } from "@/lib/auth/session";
+import { ensureStudioOsSchema } from "@/lib/db/ensure-studio-os-schema";
 import { prisma } from "@/lib/prisma";
 import type { Role } from "@/generated/prisma/enums";
 
@@ -44,6 +45,7 @@ export async function listCoursePlansForUser(
   if (!membership) return null;
 
   const organizationId = membership.location.organizationId;
+  await ensureStudioOsSchema();
   const courses = await prisma.course.findMany({
     where: { organizationId },
     select: {

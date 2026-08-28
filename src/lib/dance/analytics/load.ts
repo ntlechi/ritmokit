@@ -3,7 +3,9 @@ import "server-only";
 import { asPlainNumber } from "@/lib/data/serialize";
 import { aggregateDanceAnalytics, type RawClassForAnalytics } from "@/lib/dance/analytics/aggregates";
 import type { DanceAnalyticsBundle } from "@/lib/dance/analytics/types";
+import { isChurnRisk } from "@/lib/dance/progression";
 import type { PricingTier } from "@/lib/dance/pricing";
+import { ensureStudioOsSchema } from "@/lib/db/ensure-studio-os-schema";
 import { prisma } from "@/lib/prisma";
 import { stationLabel } from "@/lib/stations/display";
 
@@ -84,5 +86,81 @@ export async function loadDanceAnalyticsForLocation(
     })),
   }));
 
-  return aggregateDanceAnalytics(locationId, raw);
+  const bundle = aggregateDanceAnalytics(locationId, raw);
+  return overlayFunnelFromProgressions(locationId, bundle);
+}
+
+async function overlayFunnelFromProgressions(
+  locationId: string,
+  bundle: DanceAnalyticsBundle,
+): Promise<DanceAnalyticsBundle> {
+  try {
+    await ensureStudioOsSchema();
+    const rows = await prisma.studentProgression.findMany({
+      where: { locationId },
+      select: {
+        studentId: true,
+        currentLevel: true,
+        status: true,
+        attendanceRate: true,
+        expectedWeeks: true,
+        attendedCount: true,
+        danceStyle: true,
+        student: { select: { fullName: true, email: true } },
+      },
+    });
+    if (rows.length === 0) return bundle;
+
+    const byLevel = {
+      BEGINNER: rows.filter((r) => r.currentLevel === "BEGINNER"),
+      INTERMEDIATE: rows.filter((r) => r.currentLevel === "INTERMEDIATE"),
+      ADVANCED: rows.filter((r) => r.currentLevel === "ADVANCED"),
+    };
+    const completed = (status: (typeof rows)[number]["status"]) =>
+      status === "READY_TO_ADVANCE" || status === "COMPLETED";
+    const beginnerCompleters = byLevel.BEGINNER.filter((r) => completed(r.status)).length;
+    const intermediateCompleters = byLevel.INTERMEDIATE.filter((r) => completed(r.status)).length;
+
+    const churnRiskStudents = rows
+      .filter((r) =>
+        isChurnRisk({
+          status: r.status,
+          attendanceRate: r.attendanceRate,
+          expectedWeeks: r.expectedWeeks,
+        }),
+      )
+      .map((r) => ({
+        studentId: r.studentId,
+        fullName: r.student.fullName,
+        email: r.student.email,
+        unpaidAttendanceMisses: Math.max(0, r.expectedWeeks - r.attendedCount),
+        courseTitles: [r.danceStyle],
+      }))
+      .sort((a, b) => b.unpaidAttendanceMisses - a.unpaidAttendanceMisses || a.fullName.localeCompare(b.fullName));
+
+    return {
+      ...bundle,
+      progression: {
+        beginnerCompleters,
+        intermediateEnrolled: byLevel.INTERMEDIATE.length,
+        advancedEnrolled: byLevel.ADVANCED.length,
+        l1ToL2Rate:
+          byLevel.BEGINNER.length > 0
+            ? Math.round((beginnerCompleters / byLevel.BEGINNER.length) * 1000) / 10
+            : null,
+        l2ToL3Rate:
+          byLevel.INTERMEDIATE.length > 0
+            ? Math.round((intermediateCompleters / byLevel.INTERMEDIATE.length) * 1000) / 10
+            : null,
+      },
+      churnRiskStudents,
+      aggregates: {
+        ...bundle.aggregates,
+        churnRiskCount: churnRiskStudents.length,
+      },
+    };
+  } catch (error) {
+    console.error("[analytics] progression overlay", error);
+    return bundle;
+  }
 }

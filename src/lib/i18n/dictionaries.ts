@@ -106,6 +106,11 @@ export interface Dictionary {
     inviteNext: string;
     inviteSent: string;
     inviteError: string;
+    inviteHeld: string;
+    inviteWaitlisted: string;
+    inviteSentNoHold: string;
+    holdUntil: string;
+    holdWaitlist: string;
   };
   plans: {
     badge: string;

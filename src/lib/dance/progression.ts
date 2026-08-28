@@ -6,6 +6,7 @@ import "server-only";
 
 import type { CourseLevel, DanceRole, ProgressionStatus } from "@/generated/prisma/enums";
 import { seasonWeekNumber } from "@/lib/data/course-lessons";
+import { ensureStudioOsSchema } from "@/lib/db/ensure-studio-os-schema";
 import { prisma } from "@/lib/prisma";
 
 export function nextCourseLevel(level: CourseLevel): CourseLevel | null {
@@ -177,6 +178,7 @@ async function upsertProgressionAttendance(input: {
 
 /** Fill evolution rows from existing seated enrollments (CRM / first Accueil). */
 export async function ensureProgressionsForLocation(locationId: string): Promise<number> {
+  await ensureStudioOsSchema();
   const rows = await prisma.enrollment.findMany({
     where: {
       waitlisted: false,
