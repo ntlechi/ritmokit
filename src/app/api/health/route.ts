@@ -13,12 +13,21 @@ export async function GET() {
 
   let dbOk = false;
   let dbError: string | null = null;
+  let schemaApplied: string[] = [];
   try {
     const { prisma } = await import("@/lib/prisma");
     await prisma.$queryRaw`SELECT 1`;
     dbOk = true;
   } catch (err) {
     dbError = err instanceof Error ? err.message : "db_ping_failed";
+  }
+  if (dbOk) {
+    try {
+      const { ensureStudioOsSchema } = await import("@/lib/db/ensure-studio-os-schema");
+      schemaApplied = (await ensureStudioOsSchema()).applied;
+    } catch (err) {
+      dbError = err instanceof Error ? err.message : "schema_bootstrap_failed";
+    }
   }
 
   return NextResponse.json({
@@ -33,6 +42,7 @@ export async function GET() {
     },
     database: {
       ok: dbOk,
+      schemaApplied,
       ...dbShape,
       error: dbError,
       hint: !dbShape.startsWithPostgres
