@@ -89,8 +89,28 @@ export interface Dictionary {
     walkInSubmit: string;
     walkInCancel: string;
     walkInError: string;
+    walkInParity: string;
+    walkInFull: string;
     walkInOk: string;
     eventBadge: string;
+    conciergeTitle: string;
+    conciergeSubtitle: string;
+    conciergeStyle: string;
+    conciergeDay: string;
+    conciergeAnyDay: string;
+    conciergeWithPartner: string;
+    conciergeAsk: string;
+    conciergeError: string;
+    conciergeConfirmed: string;
+    conciergeWaitlist: string;
+    conciergePartner: string;
+    conciergeVerdict: {
+      confirmed: string;
+      alternate: string;
+      partner_unlocks: string;
+      waitlist: string;
+      no_match: string;
+    };
   };
   crm: {
     badge: string;

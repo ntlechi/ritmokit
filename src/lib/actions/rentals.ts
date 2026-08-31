@@ -26,6 +26,7 @@ export async function approveRentalBookingAction(bookingId: string) {
     });
     if (!result.ok) return { ok: false as const, error: result.error };
     revalidatePath("/[lang]/rentals", "page");
+    revalidatePath("/[lang]/planning", "page");
     return { ok: true as const };
   } catch (error) {
     return actionDatabaseError("rentals.approve", error);
@@ -46,6 +47,7 @@ export async function rejectRentalBookingAction(bookingId: string, reason?: stri
     });
     if (!result.ok) return { ok: false as const, error: result.error };
     revalidatePath("/[lang]/rentals", "page");
+    revalidatePath("/[lang]/planning", "page");
     return { ok: true as const };
   } catch (error) {
     return actionDatabaseError("rentals.reject", error);
@@ -67,6 +69,7 @@ export async function createStaffRentalBookingAction(raw: unknown) {
     });
     if (!result.ok) return { ok: false as const, error: result.error };
     revalidatePath("/[lang]/rentals", "page");
+    revalidatePath("/[lang]/planning", "page");
     return { ok: true as const, bookingId: result.booking.id };
   } catch (error) {
     return actionDatabaseError("rentals.staffCreate", error);
@@ -88,6 +91,7 @@ export async function saveRentalSettingsAction(raw: unknown) {
     });
     if (!result.ok) return { ok: false as const, error: result.error };
     revalidatePath("/[lang]/rentals", "page");
+    revalidatePath("/[lang]/planning", "page");
     return { ok: true as const };
   } catch (error) {
     return actionDatabaseError("rentals.settings", error);

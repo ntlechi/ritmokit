@@ -17,6 +17,7 @@ export function CheckInRow({
   onToggle,
   onReleaseSeat,
   onEvaluated,
+  highlighted = false,
 }: {
   row: AccueilRosterRow;
   dict: Dictionary["accueil"];
@@ -25,6 +26,7 @@ export function CheckInRow({
   onToggle: (enrollmentId: string, nextAttended: boolean) => void;
   onReleaseSeat?: (enrollmentId: string) => void;
   onEvaluated?: () => void;
+  highlighted?: boolean;
 }) {
   const waitlisted = row.waitlisted;
   const attended = row.attended;
@@ -37,12 +39,14 @@ export function CheckInRow({
 
   return (
     <li
+      id={`door-${row.enrollmentId}`}
       className={cn(
         "flex items-center gap-3 rounded-2xl border px-3 py-3 sm:gap-4 sm:px-4 sm:py-3.5",
         waitlisted && "border-border-subtle bg-surface-muted/50",
         !waitlisted && attended && "border-yield/35 bg-yield/8",
         !waitlisted && !attended && row.promotedUnpaid && "border-warning/45 bg-warning/10",
         !waitlisted && !attended && !row.promotedUnpaid && "border-border bg-surface",
+        highlighted && "ring-2 ring-accent ring-offset-2 ring-offset-background",
       )}
     >
       <div className="min-w-0 flex-1">

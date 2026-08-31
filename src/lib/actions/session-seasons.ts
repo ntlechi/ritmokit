@@ -53,6 +53,7 @@ export async function createSessionSeasonAction(
     });
 
     revalidatePath(`/${parsed.data.lang}/sessions`, "page");
+    revalidatePath(`/${parsed.data.lang}/planning`, "page");
     return { ok: true, id: season.id };
   } catch (error) {
     return actionDatabaseError("createSessionSeason", error) as { ok: false; error: string };
@@ -107,6 +108,7 @@ export async function publishSessionSeasonAction(input: {
     });
 
     revalidatePath(`/${input.lang}/sessions`, "page");
+    revalidatePath(`/${input.lang}/planning`, "page");
     return { ok: true };
   } catch (error) {
     return actionDatabaseError("publishSessionSeason", error);
@@ -172,6 +174,7 @@ export async function deleteSessionSeasonAction(input: {
 
     await prisma.sessionSeason.delete({ where: { id: input.seasonId } });
     revalidatePath(`/${input.lang}/sessions`, "page");
+    revalidatePath(`/${input.lang}/planning`, "page");
     return { ok: true };
   } catch (error) {
     return actionDatabaseError("deleteSessionSeason", error);

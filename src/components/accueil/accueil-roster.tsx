@@ -5,12 +5,20 @@ import { useRouter } from "next/navigation";
 import { ClipboardCheck, RefreshCw } from "lucide-react";
 import { CheckInRow } from "@/components/accueil/check-in-row";
 import { ClassTimeline } from "@/components/accueil/class-timeline";
+import {
+  collectDoorHits,
+  DoorCamera,
+  DoorSearchBar,
+  WalkInBar,
+} from "@/components/accueil/door-tools";
 import { RoleMeters } from "@/components/accueil/role-meters";
 import { dna } from "@/lib/design/dna";
 import {
   markAttendanceAction,
   releaseEnrollmentSeatAction,
 } from "@/lib/actions/enrollments";
+import { rowMatchesDoorQuery } from "@/lib/dance/door-search";
+import { parseTicketCode } from "@/lib/payments/interac-status";
 import type { AccueilClassCard, AccueilRoster, AccueilRosterRow } from "@/lib/data/accueil-roster";
 import type { Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
@@ -51,11 +59,13 @@ function applyOptimistic(
       followsPresent += attended ? 1 : -1;
     }
     notCheckedInCount += attended ? -1 : 1;
+    const presentCount = Math.max(0, cls.presentCount + (attended ? 1 : -1));
 
     return {
       ...cls,
       roster,
       notCheckedInCount: Math.max(0, notCheckedInCount),
+      presentCount,
       leads: { ...cls.leads, present: Math.max(0, leadsPresent) },
       follows: { ...cls.follows, present: Math.max(0, followsPresent) },
     };
@@ -97,6 +107,10 @@ export function AccueilRosterView({
   const [filter, setFilter] = useState<FilterKey>(prioritizeUnpaid ? "unpaid" : "all");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [flash, setFlash] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [scanning, setScanning] = useState(false);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
   const [isRefreshing, startRefresh] = useTransition();
 
   useEffect(() => {
@@ -113,6 +127,66 @@ export function AccueilRosterView({
     () => classes.find((c) => c.sessionId === selectedId) ?? classes[0] ?? null,
     [classes, selectedId],
   );
+
+  const doorHits = useMemo(
+    () => collectDoorHits(classes, query, rowMatchesDoorQuery),
+    [classes, query],
+  );
+
+  useEffect(() => {
+    if (query.trim().length < 2) {
+      setHighlightId(null);
+      return;
+    }
+    if (doorHits.length === 0) return;
+    const inSelected = doorHits.find((h) => h.sessionId === selectedId);
+    const pick = inSelected ?? doorHits[0]!;
+    if (pick.sessionId !== selectedId) setSelectedId(pick.sessionId);
+    setHighlightId(pick.row.enrollmentId);
+    window.requestAnimationFrame(() => {
+      document.getElementById(`door-${pick.row.enrollmentId}`)?.scrollIntoView({
+        block: "nearest",
+        behavior: "smooth",
+      });
+    });
+  }, [doorHits, query, selectedId]);
+
+  useEffect(() => {
+    const ticket = parseTicketCode(query);
+    if (!ticket || doorHits.length > 0) return;
+    const handle = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const res = await fetch(
+            `/api/studio/enrollments/lookup?ticket=${encodeURIComponent(query.trim())}`,
+          );
+          const json = (await res.json()) as {
+            ok?: boolean;
+            enrollment?: { id: string; attended: boolean; doorStatus: string };
+          };
+          if (!json.ok || !json.enrollment) {
+            setFlash(a.ticketNotFound);
+            return;
+          }
+          if (json.enrollment.attended) {
+            setFlash(a.alreadyCheckedIn);
+            setHighlightId(json.enrollment.id);
+            return;
+          }
+          if (json.enrollment.doorStatus === "WAITLIST" || json.enrollment.doorStatus === "CANCELLED") {
+            setError(a.waitlisted);
+            return;
+          }
+          await onToggle(json.enrollment.id, true);
+        } catch {
+          setFlash(a.ticketNotFound);
+        }
+      })();
+    }, 280);
+    return () => window.clearTimeout(handle);
+    // onToggle is recreated each render; ticket + hits are the real inputs
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, doorHits.length, a.alreadyCheckedIn, a.ticketNotFound, a.waitlisted]);
 
   const totalToCheckIn = classes.reduce((sum, c) => sum + c.notCheckedInCount, 0);
   const hasLive = classes.some((c) => c.status === "live");
@@ -139,6 +213,12 @@ export function AccueilRosterView({
         setClasses(snapshot);
         setError(result.error === "waitlisted" ? a.waitlisted : dict.dance.errors.generic);
         return;
+      }
+      if (result.alreadyAttended) {
+        setFlash(a.alreadyCheckedIn);
+        setHighlightId(enrollmentId);
+      } else {
+        setFlash(null);
       }
       router.refresh();
     } catch {
@@ -179,11 +259,12 @@ export function AccueilRosterView({
     );
   }
 
+  const searching = query.trim().length >= 2;
   const activeRows = selected
     ? filterRows(
         selected.roster.filter((r) => !r.waitlisted),
         filter === "waitlist" ? "all" : filter,
-      )
+      ).filter((r) => !searching || rowMatchesDoorQuery(r, query))
     : [];
   const waitlistRows = selected
     ? filter === "unpaid" || filter === "pending"
@@ -191,7 +272,7 @@ export function AccueilRosterView({
       : filterRows(
           selected.roster.filter((r) => r.waitlisted),
           filter === "waitlist" ? "waitlist" : "all",
-        )
+        ).filter((r) => !searching || rowMatchesDoorQuery(r, query))
     : [];
 
   const showEmpty =
@@ -265,6 +346,11 @@ export function AccueilRosterView({
                     {selected.courseTitle}
                   </h2>
                   <StatusPill status={selected.status} dict={a} />
+                  {selected.isSocial && (
+                    <span className="rounded-full bg-accent/15 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent">
+                      {a.eventBadge}
+                    </span>
+                  )}
                 </div>
                 <p className="mt-1 text-sm text-foreground-muted">
                   {selected.startLabel}–{selected.endLabel} · {selected.roomName} ·{" "}
@@ -286,10 +372,47 @@ export function AccueilRosterView({
                   </span>
                 )}
                 <span className="rounded-lg bg-yield/15 px-2.5 py-1 tabular-nums text-yield">
-                  {selected.leads.present + selected.follows.present} {a.present}
+                  {selected.presentCount} {a.present}
                 </span>
               </div>
             </div>
+
+            <DoorSearchBar
+              value={query}
+              onChange={(next) => {
+                setQuery(next);
+                setFlash(null);
+                setError(null);
+              }}
+              dict={a}
+              scanning={scanning}
+              onScan={() => setScanning((v) => !v)}
+            />
+            {scanning && (
+              <DoorCamera
+                active={scanning}
+                unsupportedLabel={a.scanUnsupported}
+                onCode={(code) => {
+                  setQuery(code);
+                  setScanning(false);
+                }}
+              />
+            )}
+            {searching && doorHits.length === 0 && (
+              <p className="text-sm text-foreground-muted">{a.ticketNotFound}</p>
+            )}
+
+            <WalkInBar
+              selected={selected}
+              lang={lang}
+              dict={a}
+              onDone={(enrollmentId) => {
+                setFlash(a.walkInOk);
+                setHighlightId(enrollmentId);
+                setQuery("");
+                router.refresh();
+              }}
+            />
 
             {selected.tonightPlan ? (
               <div className="rounded-2xl border border-accent/20 bg-accent/5 px-4 py-3">
@@ -310,21 +433,23 @@ export function AccueilRosterView({
                   )}
                 </div>
               </div>
-            ) : (
+            ) : selected.isSocial ? null : (
               <p className="text-sm text-foreground-muted">{a.tonightPlanEmpty}</p>
             )}
 
-            <RoleMeters
-              leadsFilled={selected.leads.filled}
-              leadsMax={selected.leads.max}
-              leadsPresent={selected.leads.present}
-              followsFilled={selected.follows.filled}
-              followsMax={selected.follows.max}
-              followsPresent={selected.follows.present}
-              leadsLabel={a.leads}
-              followsLabel={a.follows}
-              presentLabel={a.present}
-            />
+            {!selected.isSocial && (
+              <RoleMeters
+                leadsFilled={selected.leads.filled}
+                leadsMax={selected.leads.max}
+                leadsPresent={selected.leads.present}
+                followsFilled={selected.follows.filled}
+                followsMax={selected.follows.max}
+                followsPresent={selected.follows.present}
+                leadsLabel={a.leads}
+                followsLabel={a.follows}
+                presentLabel={a.present}
+              />
+            )}
 
             <div className="flex flex-wrap gap-1.5" role="tablist" aria-label={a.filterAll}>
               {filters.map(({ key, label }) => (
@@ -347,6 +472,11 @@ export function AccueilRosterView({
               ))}
             </div>
 
+            {flash && (
+              <p className="rounded-xl bg-yield/10 px-3 py-2 text-sm text-yield" role="status">
+                {flash}
+              </p>
+            )}
             {error && (
               <p className="rounded-xl bg-danger/10 px-3 py-2 text-sm text-danger" role="alert">
                 {error}
@@ -373,6 +503,7 @@ export function AccueilRosterView({
                             dict={a}
                             lang={lang}
                             busy={busyId === row.enrollmentId}
+                            highlighted={highlightId === row.enrollmentId}
                             onToggle={onToggle}
                             onReleaseSeat={onReleaseSeat}
                             onEvaluated={() => router.refresh()}
@@ -395,6 +526,7 @@ export function AccueilRosterView({
                             dict={a}
                             lang={lang}
                             busy={false}
+                            highlighted={highlightId === row.enrollmentId}
                             onToggle={onToggle}
                           />
                       ))}

@@ -95,11 +95,8 @@ export async function inviteReadyStudentAction(
   const hold = await holdNextLevelSeat(row.id);
   const next = nextCourseLevel(row.currentLevel);
   const locale = row.student.locale === "EN" ? "en" : row.student.locale === "ES" ? "es" : "fr";
-  const base =
-    (await resolvePublicBookingBaseUrl(row.locationId)) ||
-    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
-    "https://salsaquebec.com";
-  const bookingUrl = `${base.replace(/\/+$/, "")}/horaire`;
+  const base = await resolvePublicBookingBaseUrl(row.locationId);
+  const bookingUrl = base ?? "";
   const nextLabel =
     next === "INTERMEDIATE"
       ? locale === "en"

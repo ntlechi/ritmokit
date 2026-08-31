@@ -4,6 +4,7 @@
 import "server-only";
 
 import { asPlainNumber } from "@/lib/data/serialize";
+import { civilDateInTimeZone } from "@/lib/dance/progression";
 import { ensureStudioOsSchema } from "@/lib/db/ensure-studio-os-schema";
 import { prisma } from "@/lib/prisma";
 
@@ -17,6 +18,8 @@ export type OwnerPulse = {
   unpaidStudentCount: number;
   readyCount: number;
   churnCount: number;
+  tonightPresent: number;
+  tonightSeated: number;
 };
 
 function weekStartUtc(now: Date, timeZone: string): Date {
@@ -64,7 +67,13 @@ export async function loadOwnerPulse(
     },
   };
 
-  const [paidWeek, pendingInterac, unpaidSeated, rentals, students, progressions] = await Promise.all([
+  const today = civilDateInTimeZone(now, timeZone);
+  const tomorrow = new Date(today);
+  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+  const dow = today.getUTCDay();
+
+  const [paidWeek, pendingInterac, unpaidSeated, rentals, students, progressions, tonightPresent, tonightSeated] =
+    await Promise.all([
     prisma.enrollment.findMany({
       where: {
         ...enrollmentWhere,
@@ -106,6 +115,35 @@ export async function loadOwnerPulse(
       where: { locationId },
       select: { studentId: true, status: true, attendanceRate: true, expectedWeeks: true },
     }),
+    prisma.classAttendance.count({
+      where: {
+        attended: true,
+        occurredOn: today,
+        enrollment: {
+          waitlisted: false,
+          paymentStatus: { not: "CANCELLED_INTERAC" },
+          session: {
+            OR: [{ season: { locationId } }, { room: { locationId }, seasonId: null }],
+          },
+        },
+      },
+    }),
+    prisma.enrollment.count({
+      where: {
+        waitlisted: false,
+        paymentStatus: { not: "CANCELLED_INTERAC" },
+        session: {
+          OR: [
+            { dayOfWeek: dow, season: { locationId, status: "ACTIVE" } },
+            {
+              dayOfWeek: null,
+              startTime: { gte: today, lt: tomorrow },
+              room: { locationId },
+            },
+          ],
+        },
+      },
+    }),
   ]);
 
   let rentalCollectedCad = 0;
@@ -145,5 +183,7 @@ export async function loadOwnerPulse(
         p.expectedWeeks >= 3 &&
         p.attendanceRate < 0.4,
     ).length,
+    tonightPresent,
+    tonightSeated,
   };
 }

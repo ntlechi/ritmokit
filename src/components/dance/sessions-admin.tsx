@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { CalendarRange, Loader2, Plus, Trash2 } from "lucide-react";
 import { SessionEditDrawer } from "@/components/dance/session-edit-drawer";
 import { SessionsInstructorGrid } from "@/components/dance/sessions-instructor-grid";
@@ -184,6 +185,9 @@ export function SessionsAdmin({
             <p className="mt-0.5 text-xs text-foreground-muted">{d.gridHint}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <Link href={`/${lang}/planning`} data-interactive className={cn(dna.ctaGhost, "text-xs")}>
+              {dict.nav.planning}
+            </Link>
             <div className={dna.pillTrack}>
               {(
                 [

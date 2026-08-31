@@ -22,6 +22,7 @@
     "test:dance-analytics": "node scripts/test-dance-analytics.mjs",
     "test:public-api": "tsx scripts/test-public-api-unit.mjs",
     "test:rentals": "tsx scripts/test-room-rentals-unit.mjs",
+    "test:studio-calendar": "tsx scripts/test-studio-calendar.mjs",
     "test:interac": "tsx scripts/test-interac-unit.mjs",
     "test:load:seed": "node scripts/load-seed.mjs",
     "test:load": "k6 run tests/load/fin-de-shift.js"

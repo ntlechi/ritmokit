@@ -1,6 +1,7 @@
 import "server-only";
 
 import {
+  evaluateCoupleEnrollment,
   evaluateParityEnrollment,
   getClassAvailability,
   type RoleCapacity,
@@ -54,6 +55,7 @@ export function buildAvailabilityPayload(cap: RoleCapacity) {
   const lead = roleRegistrationFlags(cap, "LEAD");
   const follow = roleRegistrationFlags(cap, "FOLLOW");
   const solo = roleRegistrationFlags(cap, "SOLO");
+  const couple = evaluateCoupleEnrollment(cap);
 
   return {
     leadsFilled: availability.leadsFilled,
@@ -70,6 +72,7 @@ export function buildAvailabilityPayload(cap: RoleCapacity) {
     canWaitlistLead: lead.canWaitlist,
     canWaitlistFollow: follow.canWaitlist,
     canWaitlistSolo: solo.canWaitlist,
+    canRegisterCouple: couple.ok && !couple.waitlisted,
     waitlistActive: lead.canWaitlist || follow.canWaitlist || solo.canWaitlist,
   };
 }

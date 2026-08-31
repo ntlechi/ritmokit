@@ -11,6 +11,7 @@ import {
   FileText,
   Gift,
   Music2,
+  CalendarRange,
   Palette,
   Plug,
   Shield,
@@ -75,6 +76,12 @@ function buildGroups(lang: Locale, dict: Dictionary): { label: string; links: Hu
           icon: Music2,
           title: dict.nav.sessions,
           subtitle: dict.dance.sessionsIntro,
+        },
+        {
+          href: `/${lang}/planning`,
+          icon: CalendarRange,
+          title: dict.nav.planning,
+          subtitle: dict.planning.subtitle,
         },
         {
           href: `/${lang}/rooms`,

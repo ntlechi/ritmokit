@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { ClipboardCheck } from "lucide-react";
 import { AccueilRosterView } from "@/components/accueil/accueil-roster";
+import { InscriptionConcierge } from "@/components/accueil/inscription-concierge";
 import { AgentActionRail } from "@/components/accueil/agent-action-rail";
 import { DbErrorBanner } from "@/components/db-error-banner";
 import { dna } from "@/lib/design/dna";
@@ -72,6 +73,9 @@ export default async function AccueilPage({
         {dbError && <DbErrorBanner label={dict.manager.stations.errors.databaseError} />}
         {agentActions && agentActions.length > 0 && (
           <AgentActionRail actions={agentActions} lang={lang} dict={dict} />
+        )}
+        {roster && (
+          <InscriptionConcierge locationId={roster.locationId} dict={dict} />
         )}
         {roster && (
           <AccueilRosterView

@@ -73,7 +73,7 @@ export async function markEnrollmentPaid(input: MarkPaidInput): Promise<MarkPaid
     });
     await prisma.enrollment.updateMany({
       where: {
-        paymentRef: `pkg:${row.id}`,
+        paymentRef: { in: [`pkg:${row.id}`, `couple:${row.id}`] },
         paid: false,
         paymentStatus: { not: "CANCELLED_INTERAC" },
       },
@@ -183,10 +183,10 @@ export async function markEnrollmentPaid(input: MarkPaidInput): Promise<MarkPaid
     });
   }
 
-  // Package siblings (paymentRef = pkg:<primaryId>) share one charge.
+  // Package siblings and couple partner share one charge.
   await prisma.enrollment.updateMany({
     where: {
-      paymentRef: `pkg:${row.id}`,
+      paymentRef: { in: [`pkg:${row.id}`, `couple:${row.id}`] },
       paid: false,
       paymentStatus: { not: "CANCELLED_INTERAC" },
     },

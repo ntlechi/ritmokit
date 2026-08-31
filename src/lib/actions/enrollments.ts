@@ -140,6 +140,7 @@ export async function enrollStudentAction(input: z.infer<typeof enrollSchema>): 
 
     revalidatePath(`/${lang}/sessions`, "page");
     revalidatePath(`/${lang}/accueil`, "page");
+    revalidatePath(`/${lang}/planning`, "page");
     return { ok: true, enrollmentId: enrollment.id, waitlisted: decision.waitlisted };
   } catch (error) {
     return actionDatabaseError("enrollStudent", error) as EnrollResult;
@@ -150,7 +151,7 @@ export async function markAttendanceAction(input: {
   enrollmentId: string;
   attended: boolean;
   lang: string;
-}): Promise<SimpleActionResult> {
+}): Promise<SimpleActionResult & { alreadyAttended?: boolean }> {
   const user = await getSessionUser();
   if (!user) return { ok: false, error: "unauthorized" };
   if (!canAccessAccueil(user.role)) return { ok: false, error: "forbidden" };
@@ -161,6 +162,7 @@ export async function markAttendanceAction(input: {
       select: {
         id: true,
         waitlisted: true,
+        attended: true,
         session: {
           select: {
             season: { select: { location: { select: { timezone: true } } } },
@@ -171,6 +173,9 @@ export async function markAttendanceAction(input: {
     });
     if (!enrollment) return { ok: false, error: "not_found" };
     if (enrollment.waitlisted) return { ok: false, error: "waitlisted" };
+    if (input.attended && enrollment.attended) {
+      return { ok: true, alreadyAttended: true };
+    }
 
     await prisma.enrollment.update({
       where: { id: input.enrollmentId },
@@ -192,6 +197,7 @@ export async function markAttendanceAction(input: {
     revalidatePath(`/${input.lang}/sessions`, "page");
     revalidatePath(`/${input.lang}/accueil`, "page");
     revalidatePath(`/${input.lang}/students`, "page");
+    revalidatePath(`/${input.lang}/planning`, "page");
     return { ok: true };
   } catch (error) {
     return actionDatabaseError("markAttendance", error);

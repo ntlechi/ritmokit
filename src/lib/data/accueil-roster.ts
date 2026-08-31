@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { findTonightLesson, seasonWeekNumber } from "@/lib/data/course-lessons";
 import { ensureStudioOsSchema } from "@/lib/db/ensure-studio-os-schema";
+import { isSocialEvent } from "@/lib/dance/door-search";
 import { stationLabel } from "@/lib/stations/display";
 import type { Locale } from "@/lib/i18n/config";
 
@@ -21,6 +22,7 @@ export type AccueilRosterRow = {
   progressionStatus: "IN_PROGRESS" | "READY_TO_ADVANCE" | "COMPLETED" | "NEEDS_REVIEW" | null;
   attendanceLabel: string | null;
   showEval: boolean;
+  ticketCode: string | null;
 };
 
 export type AccueilClassCard = {
@@ -41,6 +43,8 @@ export type AccueilClassCard = {
   waitlistedCount: number;
   unpaidCount: number;
   notCheckedInCount: number;
+  presentCount: number;
+  isSocial: boolean;
   /** upcoming | live | done */
   status: "upcoming" | "live" | "done";
   roster: AccueilRosterRow[];
@@ -252,6 +256,7 @@ export async function getAccueilRosterForUser(
     let followsFilled = 0;
     let leadsPresent = 0;
     let followsPresent = 0;
+    let presentCount = 0;
     let waitlistedCount = 0;
     let unpaidCount = 0;
     let notCheckedInCount = 0;
@@ -267,6 +272,7 @@ export async function getAccueilRosterForUser(
           followsFilled += 1;
           if (e.attended) followsPresent += 1;
         }
+        if (e.attended) presentCount += 1;
         if (!e.paid) unpaidCount += 1;
         if (!e.attended) notCheckedInCount += 1;
       }
@@ -288,7 +294,8 @@ export async function getAccueilRosterForUser(
         pricingTier: e.pricingTier,
         progressionStatus: prog?.status ?? null,
         attendanceLabel: prog ? `${prog.attendedCount}/${prog.expectedWeeks}` : null,
-        showEval: !e.waitlisted,
+        showEval: !e.waitlisted && !isSocialEvent(session.course.style, session.course.title),
+        ticketCode: e.ticketCode,
       };
     });
 
@@ -333,6 +340,8 @@ export async function getAccueilRosterForUser(
       waitlistedCount,
       unpaidCount,
       notCheckedInCount,
+      presentCount,
+      isSocial: isSocialEvent(session.course.style, session.course.title),
       status: classStatus(nowMin, startMin, endMin),
       roster,
       planWeek,

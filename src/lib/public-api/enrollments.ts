@@ -5,6 +5,7 @@ import { z } from "zod";
 import { enqueueAndRunDanceAgent } from "@/lib/agents/dance-enqueue";
 import { asPlainNumber } from "@/lib/data/serialize";
 import {
+  evaluateCoupleEnrollment,
   evaluateParityEnrollment,
   getPackagePeers,
   isParityAlert,
@@ -45,6 +46,9 @@ export const publicEnrollSchema = z.object({
    * Primary (`sessionId`) gets checkout; siblings are unpaid holds linked via paymentRef.
    */
   packageSessionIds: z.array(z.string().uuid()).max(14).optional(),
+  partnerFullName: z.string().min(1).max(120).optional(),
+  partnerEmail: z.string().email().max(200).optional(),
+  partnerPhone: z.string().max(40).optional().nullable(),
 });
 
 export type PublicEnrollInput = z.infer<typeof publicEnrollSchema>;
@@ -60,6 +64,7 @@ export type PublicEnrollResult =
       paymentStatus: string;
       payment: Awaited<ReturnType<typeof createEnrollmentCheckout>>;
       packageEnrollmentIds?: string[];
+      partnerEnrollmentId?: string;
       checkoutError?: string;
       retryCheckout?: boolean;
       interacInstructions?: NonNullable<
@@ -134,9 +139,33 @@ export async function createPublicEnrollment(
   const capacity = await loadSessionCapacity(session.id);
   if (!capacity) return { ok: false, error: "session_not_found", status: 404 };
 
-  const decision = evaluateParityEnrollment(capacity, input.danceRole, {
-    allowWaitlist: input.allowWaitlist,
-  });
+  const wantsCouple =
+    input.pricingTier === "COUPLE" ||
+    Boolean(input.partnerFullName?.trim() && input.partnerEmail?.trim());
+  if (wantsCouple && input.danceRole === "SOLO") {
+    return { ok: false, error: "invalid_couple_role", status: 400 };
+  }
+  if (wantsCouple && (!input.partnerFullName?.trim() || !input.partnerEmail?.trim())) {
+    return { ok: false, error: "partner_required", status: 400 };
+  }
+  if (
+    wantsCouple &&
+    input.partnerEmail &&
+    input.partnerEmail.trim().toLowerCase() === input.email.trim().toLowerCase()
+  ) {
+    return { ok: false, error: "partner_same_email", status: 400 };
+  }
+
+  const coupleDecision = wantsCouple ? evaluateCoupleEnrollment(capacity) : null;
+  if (wantsCouple && (!coupleDecision?.ok || coupleDecision.waitlisted)) {
+    return { ok: false, error: "parity_couple_full", status: 409 };
+  }
+
+  const decision = wantsCouple
+    ? { ok: true as const, waitlisted: false }
+    : evaluateParityEnrollment(capacity, input.danceRole, {
+        allowWaitlist: input.allowWaitlist,
+      });
   if (!decision.ok) {
     return { ok: false, error: `parity_${decision.reason}`, status: 409 };
   }
@@ -159,10 +188,9 @@ export async function createPublicEnrollment(
   }
 
   const paid = Boolean(input.markPaid);
-  const pricingTier: PricingTier =
-    input.pricingTier === "STUDENT" ||
-    input.pricingTier === "COUPLE" ||
-    input.pricingTier === "UNLIMITED_PASS"
+  const pricingTier: PricingTier = wantsCouple
+    ? "COUPLE"
+    : input.pricingTier === "STUDENT" || input.pricingTier === "UNLIMITED_PASS"
       ? input.pricingTier
       : "REGULAR";
   const amountCad = resolveEnrollmentAmountCad(
@@ -303,6 +331,53 @@ export async function createPublicEnrollment(
         ? requested.filter((id) => peerIds.includes(id))
         : peerIds;
   }
+  const partnerRole =
+    wantsCouple && input.danceRole === "LEAD"
+      ? ("FOLLOW" as const)
+      : wantsCouple && input.danceRole === "FOLLOW"
+        ? ("LEAD" as const)
+        : null;
+  let partnerEnrollmentId: string | undefined;
+  if (partnerRole && input.partnerFullName && input.partnerEmail && !decision.waitlisted) {
+    const partner = await findOrCreateStudent({
+      email: input.partnerEmail,
+      fullName: input.partnerFullName,
+      phone: input.partnerPhone,
+      locale: input.locale,
+    });
+    const existingPartner = await prisma.enrollment.findUnique({
+      where: {
+        sessionId_studentId: { sessionId: session.id, studentId: partner.id },
+      },
+      select: { id: true },
+    });
+    if (existingPartner) {
+      partnerEnrollmentId = existingPartner.id;
+    } else {
+      const partnerId = randomUUID();
+      await prisma.enrollment.create({
+        data: {
+          id: partnerId,
+          sessionId: session.id,
+          studentId: partner.id,
+          danceRole: partnerRole,
+          waitlisted: false,
+          paid,
+          paymentStatus: paid ? "PAID" : "NONE",
+          paymentProvider: paid ? "CASH" : null,
+          paidAt: paid ? new Date() : null,
+          pricingTier: "COUPLE",
+          amountCad: 0,
+          currency: "CAD",
+          paymentRef: `couple:${enrollment.id}`,
+          ticketCode: ticketCodeForEnrollment(partnerId),
+          interacReferenceHint: `${input.partnerFullName.trim()}, ${courseTitle}`,
+        },
+      });
+      partnerEnrollmentId = partnerId;
+    }
+  }
+
   if (siblingIds.length && !decision.waitlisted) {
     for (const siblingSessionId of siblingIds) {
       const siblingCap = await loadSessionCapacity(siblingSessionId);
@@ -351,12 +426,17 @@ export async function createPublicEnrollment(
     select: { paymentStatus: true, paymentProvider: true },
   });
 
+  const seatedCouple = Boolean(partnerEnrollmentId && !decision.waitlisted);
   const nextCap = {
     ...capacity,
     filledLeads:
-      capacity.filledLeads + (input.danceRole === "LEAD" && !decision.waitlisted ? 1 : 0),
+      capacity.filledLeads +
+      (input.danceRole === "LEAD" && !decision.waitlisted ? 1 : 0) +
+      (seatedCouple && partnerRole === "LEAD" ? 1 : 0),
     filledFollows:
-      capacity.filledFollows + (input.danceRole === "FOLLOW" && !decision.waitlisted ? 1 : 0),
+      capacity.filledFollows +
+      (input.danceRole === "FOLLOW" && !decision.waitlisted ? 1 : 0) +
+      (seatedCouple && partnerRole === "FOLLOW" ? 1 : 0),
   };
 
   if (!decision.waitlisted) {
@@ -416,6 +496,7 @@ export async function createPublicEnrollment(
     payment,
     packageEnrollmentIds:
       packageEnrollmentIds.length > 1 ? packageEnrollmentIds : undefined,
+    ...(partnerEnrollmentId ? { partnerEnrollmentId } : {}),
     ...(payment.status === "error"
       ? {
           checkoutError: payment.error ?? "checkout_failed",

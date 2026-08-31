@@ -28,6 +28,18 @@ export type CoursePlanView = {
   lessons: CourseLessonView[];
 };
 
+export function pickLessonForWeek<T extends { weekNumber: number }>(
+  lessons: T[],
+  weekNumber: number,
+): T | null {
+  const exact = lessons.find((row) => row.weekNumber === weekNumber);
+  if (exact) return exact;
+  const prior = lessons
+    .filter((row) => row.weekNumber <= weekNumber)
+    .sort((a, b) => b.weekNumber - a.weekNumber)[0];
+  return prior ?? null;
+}
+
 export function seasonWeekNumber(startsOn: Date, today: Date): number {
   const start = Date.UTC(startsOn.getUTCFullYear(), startsOn.getUTCMonth(), startsOn.getUTCDate());
   const now = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());

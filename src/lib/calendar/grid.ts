@@ -43,6 +43,32 @@ export function getDayRange(anchor: Date): { start: Date; end: Date } {
   return { start, end };
 }
 
+export function getQuarterRange(anchor: Date): { start: Date; end: Date } {
+  const quarter = Math.floor(anchor.getMonth() / 3);
+  const start = new Date(anchor.getFullYear(), quarter * 3, 1);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(anchor.getFullYear(), quarter * 3 + 3, 1);
+  end.setHours(0, 0, 0, 0);
+  return { start, end };
+}
+
+export function getYearRange(anchor: Date): { start: Date; end: Date } {
+  const start = new Date(anchor.getFullYear(), 0, 1);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(anchor.getFullYear() + 1, 0, 1);
+  end.setHours(0, 0, 0, 0);
+  return { start, end };
+}
+
+export type StudioPeriodView = "week" | "month" | "quarter" | "year";
+
+export function parseStudioView(value: string | undefined): StudioPeriodView {
+  if (value === "month" || value === "quarter" || value === "year" || value === "week") {
+    return value;
+  }
+  return "week";
+}
+
 export function isSameDay(a: Date, b: Date): boolean {
   return (
     a.getFullYear() === b.getFullYear() &&

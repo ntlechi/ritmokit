@@ -55,7 +55,19 @@ export function ClassTimeline({
                 · {cls.roomName}
               </span>
             </p>
-            <p className="mt-1 line-clamp-2 text-sm font-semibold leading-snug">{cls.courseTitle}</p>
+            <p className="mt-1 line-clamp-2 text-sm font-semibold leading-snug">
+              {cls.courseTitle}
+              {cls.isSocial ? (
+                <span
+                  className={cn(
+                    "ml-1.5 align-middle text-[10px] font-bold uppercase tracking-wide",
+                    selected ? "opacity-90" : "text-accent",
+                  )}
+                >
+                  {dict.eventBadge}
+                </span>
+              ) : null}
+            </p>
             <p
               className={cn(
                 "mt-2 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide",
@@ -77,13 +89,21 @@ export function ClassTimeline({
                 selected ? "opacity-90" : "text-foreground-muted",
               )}
             >
-              <span className={selected ? undefined : "text-role-lead"}>
-                L {cls.leads.filled}/{cls.leads.max}
-              </span>
-              {" · "}
-              <span className={selected ? undefined : "text-role-follow"}>
-                F {cls.follows.filled}/{cls.follows.max}
-              </span>
+              {cls.isSocial ? (
+                <span>
+                  {cls.presentCount} {dict.present}
+                </span>
+              ) : (
+                <>
+                  <span className={selected ? undefined : "text-role-lead"}>
+                    L {cls.leads.filled}/{cls.leads.max}
+                  </span>
+                  {" · "}
+                  <span className={selected ? undefined : "text-role-follow"}>
+                    F {cls.follows.filled}/{cls.follows.max}
+                  </span>
+                </>
+              )}
             </p>
           </button>
         );

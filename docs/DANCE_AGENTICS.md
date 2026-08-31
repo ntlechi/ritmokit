@@ -1,7 +1,7 @@
 # Dance Agentics — Analytics → Agentics
 
 **Status:** Copilot-first (v1)  
-**Surfaces:** Accueil (tonight) · Sessions grid · `agent:dance` bus
+**Surfaces:** Accueil (tonight + inscription concierge) · Sessions grid · `agent:dance` bus · `GET /api/public/inscription-advice`
 
 Paper and spreadsheets tell owners what happened **yesterday**. RitmoKit detects conditions **tonight** and either acts safely or asks once.
 
@@ -14,6 +14,7 @@ Paper and spreadsheets tell owners what happened **yesterday**. RitmoKit detects
 | Waitlist promote + pay-link email | **Auto** | Seat frees (public enroll, payment, manager enroll, cancel/no-show release) |
 | Unpaid promote reminder email | **Auto** | Cron: promoted, unpaid, class within 24h |
 | Accueil / Sessions action cards | **Auto** (surface) | Handler writes UI payload on `agent_logs.result` |
+| Inscription advice (role + style + night + couple) | **Auto** (read) | Accueil concierge + public API — never invents seats |
 | Soft capacity open (+1 Lead or Follow max) | **Confirm** | Parity alert card → desk/manager tap |
 | Churn outreach send | **Confirm** | Cron enqueues `churn.risk_detected`; human sends |
 | Room PIN / off-peak yield | **Deferred** | After Phase A payment UAT |

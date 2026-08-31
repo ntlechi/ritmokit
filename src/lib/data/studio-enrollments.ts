@@ -180,7 +180,7 @@ export async function listStudioEnrollments(input: {
 
   if (q) {
     items = items.filter((i) =>
-      [i.studentName, i.studentEmail, i.studentPhone, i.courseTitle].some((v) =>
+      [i.studentName, i.studentEmail, i.studentPhone, i.courseTitle, i.ticketCode].some((v) =>
         String(v ?? "")
           .toLowerCase()
           .includes(q),

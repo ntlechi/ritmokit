@@ -184,7 +184,7 @@ export function IntegrationsPayPalForm({
               value={origins}
               onChange={(e) => setOrigins(e.target.value)}
               rows={3}
-              placeholder="https://salsaquebec.com"
+              placeholder="https://www.yourstudio.com"
               className="rounded-xl border border-border bg-surface-muted px-3 py-2.5 font-mono text-sm"
             />
             <span className="text-xs text-foreground-muted">{labels.originsHint}</span>

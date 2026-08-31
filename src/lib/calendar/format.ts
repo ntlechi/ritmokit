@@ -28,6 +28,16 @@ export function formatWeekRangeLabel(start: Date, end: Date, locale: Locale = "f
   return `${format(start, "d MMM", opts)} – ${format(lastDay, "d MMM yyyy", opts)}`;
 }
 
+export function formatQuarterLabel(anchor: Date, locale: Locale = "fr") {
+  const quarter = Math.floor(anchor.getMonth() / 3) + 1;
+  const prefix = locale === "en" ? "Q" : "T";
+  return `${prefix}${quarter} ${anchor.getFullYear()}`;
+}
+
+export function formatYearLabel(anchor: Date) {
+  return String(anchor.getFullYear());
+}
+
 export function shiftDurationHours(start: Date, end: Date) {
   return (end.getTime() - start.getTime()) / (1000 * 60 * 60);
 }

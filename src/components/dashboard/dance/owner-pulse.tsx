@@ -27,6 +27,14 @@ export function OwnerPulseStrip({
   const o = dict.studioCockpit.owner;
   const items = [
     {
+      href: `/${lang}/accueil`,
+      label: o.door,
+      value: `${pulse.tonightPresent}/${pulse.tonightSeated}`,
+      hint: o.doorHint
+        .replace("{present}", String(pulse.tonightPresent))
+        .replace("{seated}", String(pulse.tonightSeated)),
+    },
+    {
       href: `/${lang}/students`,
       label: o.collected,
       value: money(pulse.collectedCad + pulse.rentalCollectedCad, lang),
@@ -72,7 +80,7 @@ export function OwnerPulseStrip({
       <h2 id="owner-pulse-title" className="sr-only">
         {o.title}
       </h2>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-7">
         {items.map((item) => (
           <Link
             key={item.label}

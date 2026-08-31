@@ -78,6 +78,7 @@ export async function POST(request: NextRequest) {
         checkoutUrl: result.payment.checkoutUrl,
         payment: result.payment,
         packageEnrollmentIds: result.packageEnrollmentIds,
+        partnerEnrollmentId: result.partnerEnrollmentId,
         interacInstructions: result.interacInstructions,
         ...(checkoutBroken || result.checkoutError
           ? {

@@ -34,6 +34,7 @@ const courseSchema = z.object({
 function revalidateSessions(lang: string) {
   revalidatePath(`/${lang}/sessions`, "page");
   revalidatePath(`/${lang}/dashboard`, "page");
+  revalidatePath(`/${lang}/planning`, "page");
 }
 
 export async function createCourseAction(

@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { findTonightLesson, seasonWeekNumber } from "@/lib/data/course-lessons";
 import { buildAvailabilityPayload, loadSessionCapacity } from "@/lib/public-api/capacity";
 import { publicCorsPreflight, publicJson } from "@/lib/public-api/cors";
 import { checkRateLimit, clientKey, pruneRateLimitBuckets } from "@/lib/public-api/rate-limit";
@@ -42,8 +43,8 @@ export async function GET(
       id: true,
       maxLeads: true,
       maxFollows: true,
-      season: { select: { status: true, bookingOpen: true, name: true } },
-      course: { select: { title: true, level: true, style: true } },
+      season: { select: { status: true, bookingOpen: true, name: true, startsOn: true } },
+      course: { select: { id: true, title: true, level: true, style: true } },
     },
   });
 
@@ -59,6 +60,10 @@ export async function GET(
   const availability = buildAvailabilityPayload(capacity);
   const bookingOpen =
     !session.season || (session.season.status === "ACTIVE" && session.season.bookingOpen);
+  const seasonWeek = session.season
+    ? seasonWeekNumber(session.season.startsOn, new Date())
+    : 1;
+  const lesson = await findTonightLesson(session.course.id, seasonWeek);
 
   return publicJson(request, {
     ok: true,
@@ -68,6 +73,18 @@ export async function GET(
     style: session.course.style,
     seasonName: session.season?.name ?? null,
     bookingOpen,
+    syllabus: lesson
+      ? {
+          weekNumber: lesson.weekNumber,
+          seasonWeek,
+          title: lesson.title,
+          body: lesson.body,
+          musicNote: lesson.musicNote,
+          leadFocus: lesson.leadFocus,
+          followFocus: lesson.followFocus,
+          videoUrl: lesson.videoUrl,
+        }
+      : null,
     ...availability,
   });
 }

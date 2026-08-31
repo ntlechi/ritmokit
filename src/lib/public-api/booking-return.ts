@@ -1,6 +1,7 @@
 /**
- * Resolve public BookingModal return/cancel URLs for PayPal redirects.
- * Prefer tenant site (Salsa) over RitmoKit login.
+ * Resolve the studio's own public website base (PayPal return / calendar link).
+ * Tenant Integration Hub origins win. Platform env is a last-resort fallback
+ * so one pilot site never hijacks every other studio.
  */
 import "server-only";
 
@@ -11,14 +12,14 @@ function trimBase(url: string): string {
 }
 
 /**
- * Env `RITMOKIT_PUBLIC_BOOKING_RETURN_BASE` (e.g. https://salsa-attitude.vercel.app)
- * or first Integration Hub `allowedOrigins` entry for the location's org.
+ * 1. This organization's Integration Hub `allowedOrigins`
+ * 2. Platform `RITMOKIT_PUBLIC_BOOKING_RETURN_BASE` (single-tenant / local only)
  */
 export async function resolvePublicBookingBaseUrl(locationId?: string | null): Promise<string | null> {
-  const fromEnv = process.env.RITMOKIT_PUBLIC_BOOKING_RETURN_BASE?.trim();
-  if (fromEnv) return trimBase(fromEnv);
-
-  if (!locationId) return null;
+  if (!locationId) {
+    const fromEnv = process.env.RITMOKIT_PUBLIC_BOOKING_RETURN_BASE?.trim();
+    return fromEnv ? trimBase(fromEnv) : null;
+  }
 
   const loc = await prisma.location.findUnique({
     where: { id: locationId },
@@ -47,7 +48,8 @@ export async function resolvePublicBookingBaseUrl(locationId?: string | null): P
     if (origin) return trimBase(origin);
   }
 
-  return null;
+  const fromEnv = process.env.RITMOKIT_PUBLIC_BOOKING_RETURN_BASE?.trim();
+  return fromEnv ? trimBase(fromEnv) : null;
 }
 
 export async function resolvePublicBookingReturnUrls(input: {

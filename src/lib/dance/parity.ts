@@ -84,6 +84,18 @@ export function evaluateParityEnrollment(
   return { ok: true, waitlisted: false };
 }
 
+/**
+ * A couple (one Lead + one Follow) never worsens imbalance.
+ * Confirm when both roles still have a seat.
+ */
+export function evaluateCoupleEnrollment(cap: RoleCapacity): ParityDecision {
+  const avail = getClassAvailability(cap);
+  if (avail.leadsFree < 1 || avail.followsFree < 1) {
+    return { ok: false, reason: "role_full", waitlisted: false };
+  }
+  return { ok: true, waitlisted: false };
+}
+
 /** True when filled counts already exceed tolerance (for agent alerts). */
 export function isParityAlert(
   cap: RoleCapacity,

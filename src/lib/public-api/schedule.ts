@@ -1,8 +1,11 @@
 import "server-only";
 
 import { asPlainNumber } from "@/lib/data/serialize";
-import { getClassAvailability, getPackagePeers, type RoleCapacity } from "@/lib/dance/parity";
+import { pickLessonForWeek, seasonWeekNumber } from "@/lib/data/course-lessons";
+import { getPackagePeers, type RoleCapacity } from "@/lib/dance/parity";
+import { buildAvailabilityPayload } from "@/lib/public-api/capacity";
 import { prisma } from "@/lib/prisma";
+import { hhmmFromUtcDate } from "@/lib/rentals/wall-time";
 import { stationLabel } from "@/lib/stations/display";
 import type { CourseLevel } from "@/generated/prisma/enums";
 
@@ -24,6 +27,8 @@ export type PublicScheduleClass = {
   dayOfWeek: number | null;
   startTime: string;
   endTime: string;
+  startTimeLocal: string;
+  endTimeLocal: string;
   room: {
     id: string;
     name: string;
@@ -48,7 +53,25 @@ export type PublicScheduleClass = {
     followsFree: number;
     imbalance: number;
     full: boolean;
+    canRegisterLead: boolean;
+    canRegisterFollow: boolean;
+    canRegisterSolo: boolean;
+    canRegisterCouple: boolean;
+    canWaitlistLead: boolean;
+    canWaitlistFollow: boolean;
+    waitlistActive: boolean;
   };
+  /** Week-N teaching card for the current season week. */
+  syllabus: {
+    weekNumber: number;
+    seasonWeek: number;
+    title: string;
+    body: string;
+    musicNote: string | null;
+    leadFocus: string | null;
+    followFocus: string | null;
+    videoUrl: string | null;
+  } | null;
   /** Same course title across weekdays — one payment package. */
   packageClassIds: string[];
   isPackage: boolean;
@@ -119,6 +142,32 @@ export async function getPublicSchedule(
     },
   });
 
+  const courseIds = [...new Set(rows.map((row) => row.courseId))];
+  const lessonRows =
+    courseIds.length === 0
+      ? []
+      : await prisma.courseLesson.findMany({
+          where: { courseId: { in: courseIds } },
+          orderBy: { weekNumber: "asc" },
+          select: {
+            courseId: true,
+            weekNumber: true,
+            title: true,
+            body: true,
+            musicNote: true,
+            leadFocus: true,
+            followFocus: true,
+            videoUrl: true,
+          },
+        });
+  const lessonsByCourse = new Map<string, typeof lessonRows>();
+  for (const lesson of lessonRows) {
+    const list = lessonsByCourse.get(lesson.courseId) ?? [];
+    list.push(lesson);
+    lessonsByCourse.set(lesson.courseId, list);
+  }
+  const seasonWeek = activeSeason ? seasonWeekNumber(activeSeason.startsOn, new Date()) : 1;
+
   const peerInput = rows.map((row) => ({
     id: row.id,
     courseTitle: row.course.title,
@@ -131,11 +180,12 @@ export async function getPublicSchedule(
       maxFollows: row.maxFollows,
       ...filled,
     };
-    const availability = getClassAvailability(cap);
+    const flags = buildAvailabilityPayload(cap);
     const peers = getPackagePeers(peerInput, {
       id: row.id,
       courseTitle: row.course.title,
     });
+    const lesson = pickLessonForWeek(lessonsByCourse.get(row.courseId) ?? [], seasonWeek);
 
     return {
       id: row.id,
@@ -148,6 +198,8 @@ export async function getPublicSchedule(
       dayOfWeek: row.dayOfWeek,
       startTime: row.startTime.toISOString(),
       endTime: row.endTime.toISOString(),
+      startTimeLocal: hhmmFromUtcDate(row.startTime),
+      endTimeLocal: hhmmFromUtcDate(row.endTime),
       room: {
         id: row.room.id,
         name: stationLabel(row.room, "fr"),
@@ -164,15 +216,34 @@ export async function getPublicSchedule(
         student: row.priceStudent != null ? asPlainNumber(row.priceStudent) : null,
       },
       capacity: {
-        maxLeads: availability.maxLeads,
-        maxFollows: availability.maxFollows,
-        leadsFilled: availability.leadsFilled,
-        followsFilled: availability.followsFilled,
-        leadsFree: availability.leadsFree,
-        followsFree: availability.followsFree,
-        imbalance: availability.imbalance,
-        full: availability.full,
+        maxLeads: flags.maxLeads,
+        maxFollows: flags.maxFollows,
+        leadsFilled: flags.leadsFilled,
+        followsFilled: flags.followsFilled,
+        leadsFree: flags.leadsFree,
+        followsFree: flags.followsFree,
+        imbalance: flags.imbalance,
+        full: flags.full,
+        canRegisterLead: flags.canRegisterLead,
+        canRegisterFollow: flags.canRegisterFollow,
+        canRegisterSolo: flags.canRegisterSolo,
+        canRegisterCouple: flags.canRegisterCouple,
+        canWaitlistLead: flags.canWaitlistLead,
+        canWaitlistFollow: flags.canWaitlistFollow,
+        waitlistActive: flags.waitlistActive,
       },
+      syllabus: lesson
+        ? {
+            weekNumber: lesson.weekNumber,
+            seasonWeek,
+            title: lesson.title,
+            body: lesson.body,
+            musicNote: lesson.musicNote,
+            leadFocus: lesson.leadFocus,
+            followFocus: lesson.followFocus,
+            videoUrl: lesson.videoUrl,
+          }
+        : null,
       packageClassIds: peers.map((p) => p.id),
       isPackage: peers.length > 1,
       packageCount: peers.length,
