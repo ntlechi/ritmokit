@@ -22,8 +22,8 @@ function getPreferredLocale(request: NextRequest): string {
 
 /**
  * Routes accessibles sans session : l'écran de connexion et le callback
- * PKCE du lien magique (qui doit pouvoir échanger son `code` avant même
- * qu'une session existe — voir app/[lang]/auth/callback/route.ts).
+ * d'invitation / lien magique (hash, token_hash, ou PKCE `code` —
+ * voir app/[lang]/auth/callback/page.tsx).
  */
 const PUBLIC_PREFIXES = ["/login", "/auth/callback"];
 

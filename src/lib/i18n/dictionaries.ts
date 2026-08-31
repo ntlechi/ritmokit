@@ -25,6 +25,7 @@ export interface Dictionary {
     cockpit: string;
     students: string;
     plans: string;
+    planning: string;
     franchiseSection: string;
   };
   accueil: {
@@ -73,6 +74,23 @@ export interface Dictionary {
     weekLabel: string;
     readyForNext: string;
     needsReview: string;
+    searchPlaceholder: string;
+    searchHint: string;
+    alreadyCheckedIn: string;
+    ticketNotFound: string;
+    scanQr: string;
+    scanStop: string;
+    scanUnsupported: string;
+    walkInTitle: string;
+    walkInCash: string;
+    walkInInterac: string;
+    walkInName: string;
+    walkInEmail: string;
+    walkInSubmit: string;
+    walkInCancel: string;
+    walkInError: string;
+    walkInOk: string;
+    eventBadge: string;
   };
   crm: {
     badge: string;
@@ -212,6 +230,8 @@ export interface Dictionary {
       readyHint: string;
       churn: string;
       churnHint: string;
+      door: string;
+      doorHint: string;
     };
     pulse: {
       title: string;
@@ -387,6 +407,21 @@ export interface Dictionary {
     adminLicenseActive: string;
     adminLicenseInactive: string;
     adminEmpty: string;
+    inviteAdminTitle: string;
+    inviteAdminSubtitle: string;
+    inviteAdminName: string;
+    inviteAdminEmail: string;
+    inviteAdminSend: string;
+    inviteAdminSending: string;
+    inviteAdminSuccess: string;
+    inviteAdminAlreadyMember: string;
+    inviteAdminErrors: {
+      unauthorized: string;
+      missingFields: string;
+      cannotModifySelf: string;
+      inviteFailed: string;
+      authConflict: string;
+    };
     stations: string;
     agents: string;
     compliance: string;
@@ -452,6 +487,7 @@ export interface Dictionary {
     collapseSidebar: string;
     expandSidebar: string;
     resizeSidebar: string;
+    switchSchool: string;
   };
   auth: {
     signInTitle: string;
@@ -583,6 +619,55 @@ export interface Dictionary {
       notPending: string;
     };
   };
+  planning: {
+    title: string;
+    badge: string;
+    subtitle: string;
+    views: {
+      week: string;
+      month: string;
+      quarter: string;
+      year: string;
+    };
+    today: string;
+    filterAll: string;
+    filterClasses: string;
+    filterRentals: string;
+    allRooms: string;
+    empty: string;
+    emptySelect: string;
+    websiteLive: string;
+    websiteOff: string;
+    websiteHint: string;
+    websiteConnected: string;
+    websiteNotConnected: string;
+    publicApiLabel: string;
+    openWebsite: string;
+    connectWebsite: string;
+    websiteClasses: string;
+    draftClasses: string;
+    pendingRentals: string;
+    confirmedRentals: string;
+    editSessions: string;
+    manageRentals: string;
+    kindClass: string;
+    kindRental: string;
+    kindSocial: string;
+    onWebsite: string;
+    notOnWebsite: string;
+    booked: string;
+    present: string;
+    instructor: string;
+    room: string;
+    client: string;
+    status: string;
+    payment: string;
+    close: string;
+    more: string;
+    classesCount: string;
+    rentalsCount: string;
+    staffCalendarHint: string;
+  };
   team: {
     badge: string;
     intro: string;
@@ -592,6 +677,10 @@ export interface Dictionary {
     noStation: string;
     allStations: string;
     addMember: string;
+    inviteSubtitle: string;
+    inviteSuccess: string;
+    inviteSending: string;
+    alreadyOnTeam: string;
     editMember: string;
     removeMember: string;
     saveChanges: string;
@@ -633,6 +722,8 @@ export interface Dictionary {
       cannotModifySelf: string;
       invalidRole: string;
       missingFields: string;
+      inviteFailed: string;
+      authEmailConflict: string;
     };
     onboarding: {
       complete: string;

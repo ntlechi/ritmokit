@@ -26,6 +26,7 @@ import {
   ClipboardCheck,
   BookOpen,
   ContactRound,
+  CalendarRange,
 } from "lucide-react";
 import type { Locale } from "@/lib/i18n/config";
 import type { ShellCopy } from "@/lib/i18n/shell-copy";
@@ -37,6 +38,8 @@ import {
 } from "@/lib/auth/session-client";
 import { dna } from "@/lib/design/dna";
 import { cn } from "@/lib/utils";
+import type { LocationScope } from "@/components/layout/location-scope";
+import { LocationSwitcher } from "@/components/layout/location-switcher";
 
 const STORAGE_COLLAPSED = "ritmokit-sidebar-collapsed";
 const STORAGE_WIDTH = "ritmokit-sidebar-width";
@@ -53,6 +56,7 @@ const navItems = [
   { key: "students" as const, href: "/students", icon: ContactRound, accueilOnly: true },
   { key: "interac" as const, href: "/interac", icon: Banknote, managerOnly: true },
   { key: "sessions" as const, href: "/sessions", icon: Music2, managerOnly: true },
+  { key: "planning" as const, href: "/planning", icon: CalendarRange, managerOnly: true },
   { key: "plans" as const, href: "/plans", icon: BookOpen, managerOnly: true },
   { key: "rooms" as const, href: "/rooms", icon: DoorOpen, managerOnly: true },
   { key: "rentals" as const, href: "/rentals", icon: KeyRound, managerOnly: true },
@@ -130,10 +134,12 @@ export function Sidebar({
   lang,
   shell,
   role,
+  locationScope,
 }: {
   lang: Locale;
   shell: ShellCopy;
   role: Role;
+  locationScope?: LocationScope | null;
 }) {
   const pathname = usePathname();
   const isManagement = canAccessManagerSettings(role);
@@ -202,17 +208,26 @@ export function Sidebar({
     >
       <div
         className={cn(
-          "flex h-14 shrink-0 items-center border-b border-border",
-          collapsed ? "justify-center px-2" : "gap-2.5 px-4",
+          "flex shrink-0 items-center border-b border-border",
+          collapsed ? "h-14 justify-center px-2" : "min-h-14 gap-2.5 px-4 py-2",
         )}
       >
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground">
           <Sparkles className="h-3.5 w-3.5" aria-hidden />
         </div>
         {!collapsed && (
-          <p className="min-w-0 flex-1 truncate text-sm font-bold tracking-tight text-foreground">
-            {shell.brand.name}
-          </p>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-bold tracking-tight text-foreground">
+              {shell.brand.name}
+            </p>
+            {locationScope ? (
+              <LocationSwitcher
+                scope={locationScope}
+                label={shell.common.switchSchool}
+                dense
+              />
+            ) : null}
+          </div>
         )}
         {!collapsed && (
           <button
@@ -243,6 +258,15 @@ export function Sidebar({
           >
             <PanelLeftOpen className="h-4 w-4" aria-hidden />
           </button>
+        )}
+        {collapsed && locationScope && locationScope.locations.length > 1 && (
+          <div className="mb-1 flex justify-center">
+            <LocationSwitcher
+              scope={locationScope}
+              label={shell.common.switchSchool}
+              collapsed
+            />
+          </div>
         )}
 
         {navItems

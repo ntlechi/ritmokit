@@ -1,5 +1,6 @@
 import "server-only";
 
+import { getPrimaryMembership } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import type { StationKindValue } from "@/lib/stations/dance-defaults";
 import type { StationRecord } from "@/lib/stations/display";
@@ -55,11 +56,7 @@ export async function getStationById(stationId: string): Promise<StationRecord |
 }
 
 export async function getPrimaryLocationIdForUser(userId: string): Promise<string | null> {
-  const membership = await prisma.locationMember.findFirst({
-    where: { userId },
-    orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
-    select: { locationId: true },
-  });
+  const membership = await getPrimaryMembership(userId);
   return membership?.locationId ?? null;
 }
 

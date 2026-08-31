@@ -9,7 +9,13 @@ export type ShellCopy = {
   nav: Dictionary["nav"];
   common: Pick<
     Dictionary["common"],
-    "menu" | "logout" | "loading" | "collapseSidebar" | "expandSidebar" | "resizeSidebar"
+    | "menu"
+    | "logout"
+    | "loading"
+    | "collapseSidebar"
+    | "expandSidebar"
+    | "resizeSidebar"
+    | "switchSchool"
   >;
   roles: Dictionary["roles"];
   settings: Pick<Dictionary["settings"], "themeLight" | "themeDark" | "themeSystem" | "admin">;
@@ -27,6 +33,7 @@ export function toShellCopy(dict: Dictionary): ShellCopy {
       collapseSidebar: dict.common.collapseSidebar,
       expandSidebar: dict.common.expandSidebar,
       resizeSidebar: dict.common.resizeSidebar,
+      switchSchool: dict.common.switchSchool,
     },
     roles: dict.roles,
     settings: {

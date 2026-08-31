@@ -7,6 +7,7 @@ import {
   AGENT_PLAYBOOK_NAMES,
   DEFAULT_AGENT_PLAYBOOKS,
 } from "@/lib/rsi/playbooks";
+import { seatBrandLeadersOnLocation } from "@/lib/locations/seat-brand";
 import { DANCE_STATIONS } from "@/lib/stations/dance-defaults";
 
 const STATION_DEFS = DANCE_STATIONS;
@@ -81,7 +82,7 @@ export async function provisionNewStudioFranchise(
   const geofenceRadiusMeters = input.geofenceRadiusMeters ?? 150;
   const ownerStationSlug = input.ownerStationSlug ?? "direction";
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const organization = await tx.organization.upsert({
       where: { slug: orgSlug },
       update: { name: input.orgName },
@@ -302,4 +303,7 @@ export async function provisionNewStudioFranchise(
       cultureValuesUpserted,
     };
   });
+
+  await seatBrandLeadersOnLocation(result.locationId, result.organizationId);
+  return result;
 }

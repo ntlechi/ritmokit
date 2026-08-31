@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { ClipboardList, Music4, Plus, Users } from "lucide-react";
 import { Donut, ProgressRing } from "@/components/charts/primitives";
+import { InviteAdminForm } from "@/components/admin/invite-admin-form";
 import { addTeamMember } from "@/lib/actions/team";
 import { dna } from "@/lib/design/dna";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
@@ -54,6 +55,9 @@ function resolveTeamError(dict: Dictionary, code: string) {
     already_member: dict.team.errors.alreadyMember,
     missing_fields: dict.team.errors.missingFields,
     invalid_station: dict.team.errors.databaseError,
+    invite_failed: dict.team.errors.inviteFailed,
+    auth_email_conflict: dict.team.errors.authEmailConflict,
+    invalid_role: dict.team.errors.invalidRole,
   };
   return map[code] ?? dict.team.errors.databaseError;
 }
@@ -220,8 +224,11 @@ export function TeamRoster({
   const [selectedMember, setSelectedMember] = useState<TeamMemberEntry | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [addEmail, setAddEmail] = useState("");
+  const [addName, setAddName] = useState("");
+  const [addRole, setAddRole] = useState<Role>("INSTRUCTOR");
   const [addStationId, setAddStationId] = useState(roster.stations[0]?.id ?? "");
   const [addError, setAddError] = useState<string | null>(null);
+  const [addSuccess, setAddSuccess] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const filteredMembers = useMemo(() => {
@@ -272,19 +279,24 @@ export function TeamRoster({
     event.preventDefault();
     if (!canManage) return;
     setAddError(null);
+    setAddSuccess(null);
 
     startTransition(async () => {
       const result = await addTeamMember({
         lang,
         locationId: roster.locationId,
         email: addEmail,
+        fullName: addName,
         stationId: addStationId,
+        role: addRole,
       });
       if (!result.ok) {
         setAddError(resolveTeamError(dict, result.error));
         return;
       }
       setAddEmail("");
+      setAddName("");
+      setAddSuccess(result.invited ? dict.team.inviteSuccess : dict.team.alreadyOnTeam);
     });
   }
 
@@ -399,8 +411,17 @@ export function TeamRoster({
             onSubmit={handleAddMember}
             className="rounded-2xl border border-border bg-surface p-4 shadow-sm"
           >
-            <p className="mb-3 text-sm font-medium">{dict.team.addMember}</p>
-            <div className="flex flex-col gap-3 sm:flex-row">
+            <p className="mb-1 text-sm font-medium">{dict.team.addMember}</p>
+            <p className="mb-3 text-xs text-foreground-muted">{dict.team.inviteSubtitle}</p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <input
+                type="text"
+                value={addName}
+                onChange={(event) => setAddName(event.target.value)}
+                placeholder={dict.team.fullName}
+                disabled={isPending}
+                className={cn(dna.field, "h-10 flex-1")}
+              />
               <input
                 type="email"
                 value={addEmail}
@@ -410,6 +431,18 @@ export function TeamRoster({
                 required
                 className={cn(dna.field, "h-10 flex-1")}
               />
+              <select
+                value={addRole}
+                onChange={(event) => setAddRole(event.target.value as Role)}
+                disabled={isPending}
+                aria-label={dict.team.role}
+                className={cn(dna.field, "h-10 sm:w-auto")}
+              >
+                <option value="INSTRUCTOR">{dict.roles.INSTRUCTOR}</option>
+                <option value="FRONT_DESK">{dict.roles.FRONT_DESK}</option>
+                <option value="EMPLOYEE">{dict.roles.EMPLOYEE}</option>
+                {canOwner && <option value="MANAGER">{dict.roles.MANAGER}</option>}
+              </select>
               <select
                 value={addStationId}
                 onChange={(event) => setAddStationId(event.target.value)}
@@ -423,14 +456,22 @@ export function TeamRoster({
                   </option>
                 ))}
               </select>
-              <Button type="submit" variant="primary" disabled={isPending || !addEmail.trim()} className="rounded-xl">
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={isPending || !addEmail.trim()}
+                className="rounded-xl"
+              >
                 <Plus className="h-4 w-4" aria-hidden />
-                {dict.team.addMember}
+                {isPending ? dict.team.inviteSending : dict.team.addMember}
               </Button>
             </div>
             {addError && <p className="mt-2 text-sm text-danger">{addError}</p>}
+            {addSuccess && <p className="mt-2 text-sm text-success">{addSuccess}</p>}
           </form>
         )}
+
+        {canOwner && <InviteAdminForm lang={lang} dict={dict} />}
 
         {filteredMembers.length === 0 ? (
           <p className="rounded-2xl border border-dashed border-border bg-surface-muted/50 px-6 py-10 text-center text-sm text-foreground-muted">

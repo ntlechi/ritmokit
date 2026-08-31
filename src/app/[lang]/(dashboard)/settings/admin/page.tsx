@@ -4,6 +4,7 @@ import { Shield } from "lucide-react";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { isLocale } from "@/lib/i18n/config";
 import { canAccessAdminSettings, canAccessManagerSettings, getSessionUser } from "@/lib/auth/session";
+import { InviteAdminForm } from "@/components/admin/invite-admin-form";
 import { getAdminTenantMatrix } from "@/lib/data/admin";
 import { safeQuery } from "@/lib/data/safe";
 import { cn } from "@/lib/utils";
@@ -64,6 +65,8 @@ export default async function AdminSettingsPage({
         </nav>
 
         <div className="min-w-0 flex-1 space-y-4">
+          <InviteAdminForm lang={lang} dict={dict} />
+
           {dbError && (
             <p className="text-sm text-danger">{dict.culture.errors.databaseError}</p>
           )}

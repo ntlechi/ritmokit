@@ -9,6 +9,11 @@ import { safeQuery } from "@/lib/data/safe";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { toShellCopy } from "@/lib/i18n/shell-copy";
 import { isLocale } from "@/lib/i18n/config";
+import {
+  getAccessibleLocations,
+  resolveActiveLocation,
+} from "@/lib/locations/active-location";
+import { ensureBrandLeaderSeats } from "@/lib/locations/seat-brand";
 
 export default async function DashboardLayout({
   children,
@@ -25,12 +30,32 @@ export default async function DashboardLayout({
   const dictPromise = getDictionary(lang);
   const user = await userPromise;
   const isEmployee = user?.role === "EMPLOYEE";
-  const [dict, { data: onboardingState }] = await Promise.all([
+  if (user && (user.role === "OWNER" || user.role === "ADMIN")) {
+    await ensureBrandLeaderSeats(user.id);
+  }
+  const [dict, { data: onboardingState }, { data: locationScope }] = await Promise.all([
     dictPromise,
     safeQuery(
       () => (user && isEmployee ? getEmployeeOnboardingState(user.id) : Promise.resolve(null)),
       null,
     ),
+    safeQuery(async () => {
+      if (!user) return null;
+      const [accessible, active] = await Promise.all([
+        getAccessibleLocations(user.id, user.role),
+        resolveActiveLocation(user.id, user.role),
+      ]);
+      if (!active) return null;
+      return {
+        activeId: active.id,
+        activeName: active.name,
+        locations: accessible.map((row) => ({
+          id: row.id,
+          name: row.name,
+          city: row.city,
+        })),
+      };
+    }, null),
   ]);
   const shell = toShellCopy(dict);
   const onboardingComplete =
@@ -43,7 +68,7 @@ export default async function DashboardLayout({
 
   return (
     <ThemeProvider>
-      <AppShell lang={lang} shell={shell} user={user}>
+      <AppShell lang={lang} shell={shell} user={user} locationScope={locationScope}>
         <OnboardingGate lang={lang} complete={onboardingComplete} isEmployee={isEmployee}>
           {children}
         </OnboardingGate>

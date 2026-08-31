@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { InstructorPayType, OnboardingStatus, Role } from "@/generated/prisma/enums";
+import { getPrimaryMembership } from "@/lib/auth/session";
 import { canAccessManagerSettings } from "@/lib/auth/session-client";
 import { getTeamOnboardingSummaries } from "@/lib/data/hr-onboarding";
 import { prisma } from "@/lib/prisma";
@@ -113,17 +114,13 @@ export async function getTeamRosterForUser(
   userId: string,
   viewerRole?: Role,
 ): Promise<TeamRoster | null> {
-  const membership = await prisma.locationMember.findFirst({
-    where: { userId },
-    orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
-    include: {
-      location: true,
-      user: { select: { role: true } },
-    },
-  });
+  const membership = await getPrimaryMembership(userId);
   if (!membership) return null;
 
-  const role = viewerRole ?? membership.user.role;
+  const role =
+    viewerRole ??
+    (await prisma.user.findUnique({ where: { id: userId }, select: { role: true } }))?.role ??
+    "EMPLOYEE";
   const includeRates = canAccessManagerSettings(role);
 
   const [rows, stationRows] = await Promise.all([

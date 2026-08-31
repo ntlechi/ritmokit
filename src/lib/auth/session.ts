@@ -3,6 +3,7 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import type { Role } from "@/generated/prisma/enums";
+import { resolveActiveLocation } from "@/lib/locations/active-location";
 
 export type SessionUser = {
   id: string;
@@ -51,14 +52,53 @@ export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
   }
 });
 
-/** Primary location membership — cached once per request. */
-export const getPrimaryMembership = cache(async (userId: string) => {
+const membershipLocationSelect = {
+  id: true,
+  name: true,
+  organizationId: true,
+  timezone: true,
+} as const;
+
+export type ActiveMembership = {
+  locationId: string;
+  location: {
+    id: string;
+    name: string;
+    organizationId: string;
+    timezone: string;
+  };
+};
+
+/** Membership at the active school — follows the location switcher cookie. */
+export const getPrimaryMembership = cache(async (userId: string): Promise<ActiveMembership | null> => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true },
+  });
+  if (!user) return null;
+
+  const active = await resolveActiveLocation(userId, user.role);
+  if (active) {
+    const atActive = await prisma.locationMember.findFirst({
+      where: { userId, locationId: active.id },
+      include: { location: { select: membershipLocationSelect } },
+    });
+    if (atActive) return atActive;
+    return {
+      locationId: active.id,
+      location: {
+        id: active.id,
+        name: active.name,
+        organizationId: active.organizationId,
+        timezone: active.timezone,
+      },
+    };
+  }
+
   return prisma.locationMember.findFirst({
     where: { userId },
     orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
-    include: {
-      location: { select: { id: true, name: true, organizationId: true, timezone: true } },
-    },
+    include: { location: { select: membershipLocationSelect } },
   });
 });
 
