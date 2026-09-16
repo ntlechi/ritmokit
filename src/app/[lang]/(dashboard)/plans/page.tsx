@@ -3,7 +3,7 @@ import { BookOpen } from "lucide-react";
 import { CoursePlansAdmin } from "@/components/plans/course-plans-admin";
 import { DbErrorBanner } from "@/components/db-error-banner";
 import { dna } from "@/lib/design/dna";
-import { canAccessManagerSettings, getSessionUser } from "@/lib/auth/session";
+import { canAccessManagerSettings, canAccessTeaching, getSessionUser } from "@/lib/auth/session";
 import { listCoursePlansForUser } from "@/lib/data/course-lessons";
 import { safeQuery } from "@/lib/data/safe";
 import { getDictionary } from "@/lib/i18n/dictionaries";
@@ -21,7 +21,7 @@ export default async function CoursePlansPage({
 
   const [dict, user] = await Promise.all([getDictionary(lang), getSessionUser()]);
   if (!user) redirect(`/${lang}/login`);
-  if (!canAccessManagerSettings(user.role)) redirect(`/${lang}/dashboard`);
+  if (!canAccessTeaching(user.role)) redirect(`/${lang}/dashboard`);
 
   const { data, dbError } = await safeQuery(() => listCoursePlansForUser(user.id, user.role), null);
 
@@ -51,7 +51,14 @@ export default async function CoursePlansPage({
           <DbErrorBanner label={dict.common.dbDisconnected} />
         </div>
       )}
-      {data && <CoursePlansAdmin lang={lang} courses={data.courses} dict={dict} />}
+      {data && (
+        <CoursePlansAdmin
+          lang={lang}
+          courses={data.courses}
+          dict={dict}
+          readOnly={!canAccessManagerSettings(user.role)}
+        />
+      )}
     </div>
   );
 }

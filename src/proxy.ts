@@ -25,10 +25,17 @@ function getPreferredLocale(request: NextRequest): string {
  * d'invitation / lien magique (hash, token_hash, ou PKCE `code` —
  * voir app/[lang]/auth/callback/page.tsx).
  */
-const PUBLIC_PREFIXES = ["/login", "/auth/callback"];
+const LOGIN_PREFIXES = ["/login", "/auth/callback"];
+const PUBLIC_PREFIXES = [...LOGIN_PREFIXES, "/book"];
 
 function isPublicRoute(pathWithoutLocale: string) {
   return PUBLIC_PREFIXES.some(
+    (prefix) => pathWithoutLocale === prefix || pathWithoutLocale.startsWith(`${prefix}/`),
+  );
+}
+
+function isLoginRoute(pathWithoutLocale: string) {
+  return LOGIN_PREFIXES.some(
     (prefix) => pathWithoutLocale === prefix || pathWithoutLocale.startsWith(`${prefix}/`),
   );
 }
@@ -59,7 +66,8 @@ export async function proxy(request: NextRequest) {
   const segments = pathname.split("/").filter(Boolean);
   const lang = (segments[0] ?? defaultLocale) as Locale;
   const pathWithoutLocale = "/" + segments.slice(1).join("/");
-  const isAuthRoute = isPublicRoute(pathWithoutLocale);
+  const isAuthRoute = isLoginRoute(pathWithoutLocale);
+  const allowWithoutSession = isPublicRoute(pathWithoutLocale);
 
   let user: User | null = null;
   let getResponse = () => NextResponse.next({ request: { headers: request.headers } });
@@ -84,7 +92,7 @@ export async function proxy(request: NextRequest) {
   // sans attendre le déploiement.
   const authEnforced = process.env.NODE_ENV === "production" || process.env.AUTH_ENFORCE_DEV === "1";
 
-  if (!user && !isAuthRoute && authEnforced) {
+  if (!user && !allowWithoutSession && authEnforced) {
     const url = request.nextUrl.clone();
     url.pathname = `/${lang}/login`;
     url.searchParams.set("next", pathname);

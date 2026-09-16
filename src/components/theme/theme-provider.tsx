@@ -1,12 +1,16 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
+import { isPinnedDarkSurface } from "@/lib/theme/pinned-surfaces";
 
 export type Theme = "light" | "dark" | "system";
 
 type ThemeContextValue = {
   theme: Theme;
   resolved: "light" | "dark";
+  /** True on door surfaces (/accueil, /tablet) where the theme is forced dark. */
+  pinned: boolean;
   setTheme: (theme: Theme) => void;
 };
 
@@ -42,7 +46,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // le vrai thème est appliqué avant peinture par next/script (beforeInteractive),
   // puis synchronisé ici après montage.
   const [theme, setThemeState] = useState<Theme>("dark");
-  const resolved = useMemo(() => resolveTheme(theme), [theme]);
+  const pathname = usePathname();
+  const pinned = isPinnedDarkSurface(pathname);
+  const resolved = useMemo(() => (pinned ? "dark" : resolveTheme(theme)), [theme, pinned]);
 
   useEffect(() => {
     setThemeState(readStoredTheme());
@@ -53,21 +59,24 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [resolved]);
 
   useEffect(() => {
-    if (theme !== "system") return;
+    if (theme !== "system" || pinned) return;
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     const handler = () => applyTheme(mq.matches ? "dark" : "light");
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
-  }, [theme]);
+  }, [theme, pinned]);
 
-  const setTheme = useCallback((next: Theme) => {
-    setThemeState(next);
-    localStorage.setItem(THEME_STORAGE_KEY, next);
-    applyTheme(resolveTheme(next));
-  }, []);
+  const setTheme = useCallback(
+    (next: Theme) => {
+      setThemeState(next);
+      localStorage.setItem(THEME_STORAGE_KEY, next);
+      applyTheme(pinned ? "dark" : resolveTheme(next));
+    },
+    [pinned],
+  );
 
   return (
-    <ThemeContext.Provider value={{ theme, resolved, setTheme }}>
+    <ThemeContext.Provider value={{ theme, resolved, pinned, setTheme }}>
       {children}
     </ThemeContext.Provider>
   );

@@ -11,6 +11,8 @@ import {
   type IntegrationStatus,
   type PayPalIntegrationConfig,
   type ResolvedPayPalCredentials,
+  type ResolvedStripeCredentials,
+  type StripeIntegrationConfig,
 } from "@/lib/integrations/types";
 
 function parsePayPalConfig(raw: string | null): PayPalIntegrationConfig | null {
@@ -211,13 +213,142 @@ export async function getHubAllowedOrigins(): Promise<string[]> {
   );
 }
 
+function parseStripeConfig(raw: string | null): StripeIntegrationConfig | null {
+  if (!raw?.trim()) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<StripeIntegrationConfig>;
+    const secretKey = parsed.secretKey?.trim() ?? "";
+    const webhookSecret = parsed.webhookSecret?.trim() ?? "";
+    const mode = parsed.mode === "live" || secretKey.startsWith("sk_live_") ? "live" : "test";
+    if (!secretKey) return null;
+    return { secretKey, webhookSecret, mode };
+  } catch {
+    return null;
+  }
+}
+
+function envStripeCredentials(
+  organizationId: string | null,
+): ResolvedStripeCredentials | null {
+  const secretKey = process.env.STRIPE_SECRET_KEY?.trim();
+  if (!secretKey) return null;
+  const mode =
+    secretKey.startsWith("sk_live_") || process.env.STRIPE_MODE === "live" ? "live" : "test";
+  return {
+    secretKey,
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET?.trim() ?? "",
+    mode,
+    source: "env",
+    organizationId,
+    status: "env",
+  };
+}
+
+async function loadHubStripe(
+  organizationId: string,
+): Promise<ResolvedStripeCredentials | null> {
+  const row = await prisma.organizationIntegration.findUnique({
+    where: {
+      organizationId_provider: {
+        organizationId,
+        provider: "STRIPE",
+      },
+    },
+    select: {
+      status: true,
+      encryptedConfig: true,
+    },
+  });
+
+  if (!row) return null;
+  if (!ACTIVE_INTEGRATION_STATUSES.includes(row.status)) return null;
+
+  const decrypted = decryptField(row.encryptedConfig);
+  const config = parseStripeConfig(decrypted);
+  if (!config) return null;
+
+  return {
+    ...config,
+    source: "hub",
+    organizationId,
+    status: row.status,
+  };
+}
+
+export async function getStripeCredentialsForOrg(
+  organizationId: string | null | undefined,
+): Promise<ResolvedStripeCredentials | null> {
+  if (organizationId) {
+    const hub = await loadHubStripe(organizationId);
+    if (hub) return hub;
+  }
+  return envStripeCredentials(organizationId ?? null);
+}
+
+export async function getStripeCredentialsForEnrollment(
+  enrollmentId: string,
+): Promise<ResolvedStripeCredentials | null> {
+  const organizationId = await resolveOrganizationIdForEnrollment(enrollmentId);
+  return getStripeCredentialsForOrg(organizationId);
+}
+
+export async function getStripeCredentialsForSession(
+  sessionId: string,
+): Promise<ResolvedStripeCredentials | null> {
+  const organizationId = await resolveOrganizationIdForSession(sessionId);
+  return getStripeCredentialsForOrg(organizationId);
+}
+
+export type StripeWebhookCandidate = ResolvedStripeCredentials & {
+  integrationId?: string;
+};
+
+export async function listStripeWebhookCandidates(): Promise<StripeWebhookCandidate[]> {
+  const rows = await prisma.organizationIntegration.findMany({
+    where: {
+      provider: "STRIPE",
+      status: { in: ACTIVE_INTEGRATION_STATUSES },
+    },
+    select: {
+      id: true,
+      organizationId: true,
+      status: true,
+      encryptedConfig: true,
+    },
+  });
+
+  const fromHub: StripeWebhookCandidate[] = [];
+  for (const row of rows) {
+    const decrypted = decryptField(row.encryptedConfig);
+    const config = parseStripeConfig(decrypted);
+    if (!config?.webhookSecret) continue;
+    fromHub.push({
+      ...config,
+      source: "hub",
+      organizationId: row.organizationId,
+      status: row.status,
+      integrationId: row.id,
+    });
+  }
+
+  const fromEnv = envStripeCredentials(null);
+  if (fromEnv?.webhookSecret) {
+    return [...fromHub, fromEnv];
+  }
+  return fromHub;
+}
+
 export function preferredPublicPaymentProvider(
-  hubStatus: IntegrationStatus | "env" | null,
-): "paypal" | "none" {
-  if (hubStatus === "CONNECTED" || hubStatus === "TESTING" || hubStatus === "env") {
+  paypalStatus: IntegrationStatus | "env" | null,
+  stripeStatus?: IntegrationStatus | "env" | null,
+): "paypal" | "stripe" | "none" {
+  if (paypalStatus === "CONNECTED" || paypalStatus === "TESTING" || paypalStatus === "env") {
     return "paypal";
   }
+  if (stripeStatus === "CONNECTED" || stripeStatus === "TESTING" || stripeStatus === "env") {
+    return "stripe";
+  }
   const raw = (process.env.RITMOKIT_PUBLIC_PAYMENT_PROVIDER ?? "none").toLowerCase();
-  if (raw === "paypal") return "paypal";
+  if (raw === "paypal" || raw === "stripe") return raw;
   return "none";
 }

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { addMonths, addWeeks, addYears, format } from "date-fns";
 import { fr, enUS, es } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Globe, KeyRound, Music2, X } from "lucide-react";
+import { CopyBookingLink } from "@/components/booking/copy-booking-link";
 import { StudioCalendarViews } from "@/components/planning/studio-calendar-views";
 import { parseDateParam, type StudioPeriodView } from "@/lib/calendar/grid";
 import {
@@ -214,6 +215,9 @@ function WebsiteSyncBanner({
               </span>
             </p>
             <p className="mt-2 break-all font-mono text-[11px] text-foreground-muted">
+              {dict.booking.shareLink}: {sync.publicBookingUrl || `/${lang}/book`}
+            </p>
+            <p className="mt-1 break-all font-mono text-[11px] text-foreground-muted">
               {t.publicApiLabel}: {sync.publicScheduleUrl}
             </p>
           </div>
@@ -240,6 +244,12 @@ function WebsiteSyncBanner({
               {t.connectWebsite}
             </Link>
           )}
+          <CopyBookingLink
+            href={sync.publicBookingUrl || `/${lang}/book`}
+            copyLabel={dict.booking.copyLink}
+            copiedLabel={dict.booking.copied}
+            openLabel={dict.booking.openBooking}
+          />
           <Link href={`/${lang}/sessions`} data-interactive className={cn(dna.ctaGhost, "min-h-11 px-3 text-xs")}>
             <Music2 className="h-3.5 w-3.5" aria-hidden />
             {t.editSessions}

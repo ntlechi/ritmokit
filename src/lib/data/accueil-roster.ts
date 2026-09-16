@@ -1,7 +1,9 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
-import { findTonightLesson, seasonWeekNumber } from "@/lib/data/course-lessons";
+import { getPrimaryMembership } from "@/lib/auth/session";
+import { loadDrawerSnapshot, type DrawerSnapshot } from "@/lib/data/cash-drawer";
+import { seasonWeekNumber } from "@/lib/data/course-lessons";
 import { ensureStudioOsSchema } from "@/lib/db/ensure-studio-os-schema";
 import { isSocialEvent } from "@/lib/dance/door-search";
 import { stationLabel } from "@/lib/stations/display";
@@ -66,6 +68,8 @@ export type AccueilRoster = {
   date: string;
   generatedAt: string;
   classes: AccueilClassCard[];
+  /** Tonight's door money for the end-of-night drawer close. */
+  drawer: DrawerSnapshot;
 };
 
 function pad2(n: number) {
@@ -158,44 +162,46 @@ export async function getAccueilRosterForUser(
   const locale = options?.locale ?? "fr";
   const now = options?.date ?? new Date();
 
-  const membership = await prisma.locationMember.findFirst({
-    where: { userId },
-    select: {
-      locationId: true,
-      location: { select: { id: true, name: true, timezone: true } },
-    },
-    orderBy: { createdAt: "asc" },
-  });
+  // Follows the location switcher cookie (multi-site owners) — same resolver as
+  // every other staff surface, so the door and the Interac queue agree.
+  const membership = await getPrimaryMembership(userId);
   if (!membership) return null;
 
   const timeZone = membership.location.timezone || "America/Toronto";
   const civil = civilInTimeZone(now, timeZone);
   const nowMin = civil.hour * 60 + civil.minute;
+  const dayStartIso = civilDateTimeToIso(timeZone, civil.year, civil.month, civil.day, 0, 0);
+  const dayStart = new Date(dayStartIso);
+  const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60_000);
 
   await ensureStudioOsSchema();
-  const progressions = await prisma.studentProgression.findMany({
-    where: { locationId: membership.locationId },
-    select: {
-      studentId: true,
-      courseId: true,
-      seasonId: true,
-      status: true,
-      attendedCount: true,
-      expectedWeeks: true,
-    },
-  });
-  const progressionByKey = new Map(
-    progressions.map((p) => [`${p.studentId}:${p.courseId}:${p.seasonId}`, p]),
-  );
 
+  // Tonight only, decided in SQL: recurring classes on this weekday, plus dated
+  // one-offs inside today's civil window. Narrow selects — the tablet gets the
+  // fields it renders, nothing else.
   const sessions = await prisma.classSession.findMany({
     where: {
       OR: [
         { season: { locationId: membership.locationId, status: "ACTIVE" } },
         { room: { locationId: membership.locationId }, seasonId: null },
       ],
+      AND: [
+        {
+          OR: [
+            { dayOfWeek: civil.dow },
+            { dayOfWeek: null, startTime: { gte: dayStart, lt: dayEnd } },
+          ],
+        },
+      ],
     },
-    include: {
+    select: {
+      id: true,
+      seasonId: true,
+      dayOfWeek: true,
+      startTime: true,
+      endTime: true,
+      maxLeads: true,
+      maxFollows: true,
       course: { select: { id: true, title: true, style: true, level: true } },
       season: { select: { id: true, startsOn: true } },
       room: {
@@ -209,31 +215,85 @@ export async function getAccueilRosterForUser(
       },
       instructor: { select: { fullName: true } },
       enrollments: {
-        include: {
+        where: { paymentStatus: { not: "CANCELLED_INTERAC" } },
+        select: {
+          id: true,
+          danceRole: true,
+          paid: true,
+          waitlisted: true,
+          attended: true,
+          promotedAt: true,
+          pricingTier: true,
+          ticketCode: true,
           student: { select: { id: true, fullName: true, email: true } },
         },
         orderBy: [{ waitlisted: "asc" }, { createdAt: "asc" }],
-        // promotedAt used for Accueil unpaid priority (agent chase).
       },
     },
+    orderBy: { startTime: "asc" },
   });
+
+  const tonight = sessions.filter((s) => s.room.locationId === membership.locationId);
+
+  // Batched side data: one query for evolution rows, one for lesson plans.
+  const courseIds = [...new Set(tonight.map((s) => s.course.id))];
+  const seasonIds = [...new Set(tonight.map((s) => s.seasonId).filter((id): id is string => !!id))];
+  const planWeekBySession = new Map(
+    tonight.map((s) => [
+      s.id,
+      s.season?.startsOn
+        ? seasonWeekNumber(s.season.startsOn, new Date(`${civil.date}T12:00:00`))
+        : 1,
+    ]),
+  );
+  const maxPlanWeek = Math.max(1, ...planWeekBySession.values());
+
+  const [progressions, lessons] = await Promise.all([
+    seasonIds.length && courseIds.length
+      ? prisma.studentProgression.findMany({
+          where: {
+            locationId: membership.locationId,
+            seasonId: { in: seasonIds },
+            courseId: { in: courseIds },
+          },
+          select: {
+            studentId: true,
+            courseId: true,
+            seasonId: true,
+            status: true,
+            attendedCount: true,
+            expectedWeeks: true,
+          },
+        })
+      : Promise.resolve([]),
+    courseIds.length
+      ? prisma.courseLesson.findMany({
+          where: { courseId: { in: courseIds }, weekNumber: { lte: maxPlanWeek } },
+          select: {
+            courseId: true,
+            weekNumber: true,
+            title: true,
+            body: true,
+            musicNote: true,
+            leadFocus: true,
+            followFocus: true,
+          },
+          orderBy: { weekNumber: "desc" },
+        })
+      : Promise.resolve([]),
+  ]);
+  const progressionByKey = new Map(
+    progressions.map((p) => [`${p.studentId}:${p.courseId}:${p.seasonId}`, p]),
+  );
+  // Sorted desc → first hit with weekNumber ≤ planWeek is "tonight or latest before".
+  const lessonFor = (courseId: string, planWeek: number) =>
+    lessons.find((l) => l.courseId === courseId && l.weekNumber <= planWeek) ?? null;
 
   const cards: AccueilClassCard[] = [];
 
-  for (const session of sessions) {
-    if (session.room.locationId !== membership.locationId) continue;
-
+  for (const session of tonight) {
     const startHm = hmUtc(session.startTime);
     const endHm = hmUtc(session.endTime);
-
-    let include = false;
-    if (session.dayOfWeek != null) {
-      include = session.dayOfWeek === civil.dow;
-    } else {
-      const startCivil = civilInTimeZone(session.startTime, timeZone);
-      include = startCivil.date === civil.date;
-    }
-    if (!include) continue;
 
     const startIso = civilDateTimeToIso(
       timeZone,
@@ -310,10 +370,8 @@ export async function getAccueilRosterForUser(
     const startMin = startHm.h * 60 + startHm.m;
     const endMin = endHm.h * 60 + endHm.m;
 
-    const planWeek = session.season?.startsOn
-      ? seasonWeekNumber(session.season.startsOn, new Date(`${civil.date}T12:00:00`))
-      : 1;
-    const lesson = await findTonightLesson(session.course.id, planWeek);
+    const planWeek = planWeekBySession.get(session.id) ?? 1;
+    const lesson = lessonFor(session.course.id, planWeek);
 
     cards.push({
       sessionId: session.id,
@@ -360,6 +418,8 @@ export async function getAccueilRosterForUser(
 
   cards.sort((a, b) => a.startTime.localeCompare(b.startTime));
 
+  const drawer = await loadDrawerSnapshot(membership.locationId, timeZone, now);
+
   return {
     locationId: membership.location.id,
     locationName: membership.location.name,
@@ -367,5 +427,6 @@ export async function getAccueilRosterForUser(
     date: civil.date,
     generatedAt: now.toISOString(),
     classes: cards,
+    drawer,
   };
 }

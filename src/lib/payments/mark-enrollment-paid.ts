@@ -55,23 +55,52 @@ export async function markEnrollmentPaid(input: MarkPaidInput): Promise<MarkPaid
         ? asPlainNumber(row.amountCad)
         : null;
 
-  async function healPaidIfNeeded(): Promise<number> {
-    if (row.paid && row.paymentStatus === "PAID") return 0;
-    // Event already recorded but enrollment never flipped — heal so webhooks
-    // cannot leave a permanently unpaid seat after PayPal success.
-    await prisma.enrollment.update({
-      where: { id: row.id },
+  const now = new Date();
+
+  /**
+   * One short transaction, three conditional statements, zero pre-reads:
+   *  1. ledger event — `skipDuplicates` on the unique key means a replayed
+   *     webhook or a second tablet tap inserts 0 rows;
+   *  2. seat flip — `WHERE paid = false OR payment_status <> 'PAID'` so only
+   *     the first writer flips; the loser sees count 0 and stays silent;
+   *  3. package/couple siblings ride the same charge.
+   * Whoever flipped owns the side effects (email, agent event). Nobody else.
+   */
+  const { newEvent, flipped } = await prisma.$transaction(async (tx) => {
+    const ev = await tx.paymentEvent.createMany({
+      data: [
+        {
+          enrollmentId: row.id,
+          provider: input.provider,
+          externalTransactionId: input.externalTransactionId,
+          eventType: input.eventType,
+          payload: input.payload as object,
+        },
+      ],
+      skipDuplicates: true,
+    });
+
+    const flip = await tx.enrollment.updateMany({
+      where: {
+        id: row.id,
+        OR: [{ paid: false }, { paymentStatus: { not: "PAID" } }],
+      },
       data: {
         paid: true,
         paymentStatus: "PAID",
         paymentProvider: input.provider,
-        paidAt: row.paidAt ?? new Date(),
+        paidAt: row.paidAt ?? now,
         paymentRef: input.externalTransactionId,
+        paymentCancelledAt: null,
+        paymentCancelledById: null,
+        cancellationReason: null,
         ...(input.confirmedById ? { paymentConfirmedById: input.confirmedById } : {}),
         ...(amountCad != null ? { amountCad } : {}),
+        // Paying a waitlisted seat does not auto-seat them — promotion owns that.
       },
     });
-    await prisma.enrollment.updateMany({
+
+    await tx.enrollment.updateMany({
       where: {
         paymentRef: { in: [`pkg:${row.id}`, `couple:${row.id}`] },
         paid: false,
@@ -81,64 +110,14 @@ export async function markEnrollmentPaid(input: MarkPaidInput): Promise<MarkPaid
         paid: true,
         paymentStatus: "PAID",
         paymentProvider: input.provider,
-        paidAt: new Date(),
+        paidAt: now,
       },
     });
-    const promoted = await tryPromoteWaitlist(row.sessionId);
-    return promoted.length;
-  }
 
-  // Fast path: already recorded this exact event.
-  const existingEvent = await prisma.paymentEvent.findUnique({
-    where: {
-      provider_externalTransactionId_eventType: {
-        provider: input.provider,
-        externalTransactionId: input.externalTransactionId,
-        eventType: input.eventType,
-      },
-    },
-    select: { id: true },
+    return { newEvent: ev.count === 1, flipped: flip.count === 1 };
   });
-  if (existingEvent) {
-    const promoted = await healPaidIfNeeded();
-    return { ok: true, alreadyProcessed: true, promoted };
-  }
 
-  try {
-    await prisma.paymentEvent.create({
-      data: {
-        enrollmentId: row.id,
-        provider: input.provider,
-        externalTransactionId: input.externalTransactionId,
-        eventType: input.eventType,
-        payload: input.payload as object,
-      },
-    });
-  } catch (error) {
-    // Unique race — another worker won; still heal unpaid if needed.
-    const code = (error as { code?: string }).code;
-    if (code === "P2002") {
-      const promoted = await healPaidIfNeeded();
-      return { ok: true, alreadyProcessed: true, promoted };
-    }
-    throw error;
-  }
-
-  const wasPaid = row.paid && row.paymentStatus === "PAID";
-
-  await prisma.enrollment.update({
-    where: { id: row.id },
-    data: {
-      paid: true,
-      paymentStatus: "PAID",
-      paymentProvider: input.provider,
-      paidAt: row.paidAt ?? new Date(),
-      paymentRef: input.externalTransactionId,
-      ...(input.confirmedById ? { paymentConfirmedById: input.confirmedById } : {}),
-      ...(amountCad != null ? { amountCad } : {}),
-      // Paying a waitlisted seat does not auto-seat them — promotion owns that.
-    },
-  });
+  const wasPaid = !flipped;
 
   if (!wasPaid) {
     if (!input.skipStudentEmail) {
@@ -183,24 +162,8 @@ export async function markEnrollmentPaid(input: MarkPaidInput): Promise<MarkPaid
     });
   }
 
-  // Package siblings and couple partner share one charge.
-  await prisma.enrollment.updateMany({
-    where: {
-      paymentRef: { in: [`pkg:${row.id}`, `couple:${row.id}`] },
-      paid: false,
-      paymentStatus: { not: "CANCELLED_INTERAC" },
-    },
-    data: {
-      paid: true,
-      paymentStatus: "PAID",
-      paymentProvider: input.provider,
-      paidAt: new Date(),
-      ...(amountCad != null ? { amountCad: 0 } : {}),
-    },
-  });
+  // A paid seat can unlock the opposite waitlist (no-op when nothing changed).
+  const promoted = flipped ? await tryPromoteWaitlist(row.sessionId) : [];
 
-  // A paid seat can unlock the opposite waitlist.
-  const promoted = await tryPromoteWaitlist(row.sessionId);
-
-  return { ok: true, alreadyProcessed: false, promoted: promoted.length };
+  return { ok: true, alreadyProcessed: !newEvent, promoted: promoted.length };
 }

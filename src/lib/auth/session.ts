@@ -136,6 +136,7 @@ async function getDevFallbackUser(): Promise<SessionUser | null> {
 export {
   canAccessAdminSettings,
   canAccessAccueil,
+  canAccessTeaching,
   canAccessManagerSettings,
   canManageTrainingCatalog,
 } from "@/lib/auth/session-client";

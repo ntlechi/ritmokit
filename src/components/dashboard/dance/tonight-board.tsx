@@ -140,7 +140,7 @@ export function TonightBoard({
       ) : (
         <ul className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {tonight.map(({ row, live, parity: snap }) => {
-            const status = snap?.status ?? (row.imbalance > 2 ? "blocked" : row.imbalance >= 1 ? "warning" : "balanced");
+            const status = snap?.status ?? (row.imbalance >= 1 ? "warning" : "balanced");
             return (
               <li
                 key={row.sessionId}

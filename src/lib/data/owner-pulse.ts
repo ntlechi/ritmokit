@@ -3,6 +3,7 @@
  */
 import "server-only";
 
+import { loadDrawerWeek } from "@/lib/data/cash-drawer";
 import { asPlainNumber } from "@/lib/data/serialize";
 import { civilDateInTimeZone } from "@/lib/dance/progression";
 import { ensureStudioOsSchema } from "@/lib/db/ensure-studio-os-schema";
@@ -20,6 +21,10 @@ export type OwnerPulse = {
   churnCount: number;
   tonightPresent: number;
   tonightSeated: number;
+  /** Door cash actually counted at drawer close this week (not the same as `collectedCad`, which is booked). */
+  doorCashCad: number;
+  drawerVarianceCad: number;
+  drawerCloses: number;
 };
 
 function weekStartUtc(now: Date, timeZone: string): Date {
@@ -72,8 +77,17 @@ export async function loadOwnerPulse(
   tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
   const dow = today.getUTCDay();
 
-  const [paidWeek, pendingInterac, unpaidSeated, rentals, students, progressions, tonightPresent, tonightSeated] =
-    await Promise.all([
+  const [
+    paidWeek,
+    pendingInterac,
+    unpaidSeated,
+    rentals,
+    students,
+    progressions,
+    tonightPresent,
+    tonightSeated,
+    drawerWeek,
+  ] = await Promise.all([
     prisma.enrollment.findMany({
       where: {
         ...enrollmentWhere,
@@ -144,6 +158,7 @@ export async function loadOwnerPulse(
         },
       },
     }),
+    loadDrawerWeek(locationId, weekStart),
   ]);
 
   let rentalCollectedCad = 0;
@@ -185,5 +200,8 @@ export async function loadOwnerPulse(
     ).length,
     tonightPresent,
     tonightSeated,
+    doorCashCad: drawerWeek.doorCashCad,
+    drawerVarianceCad: drawerWeek.varianceCad,
+    drawerCloses: drawerWeek.closes,
   };
 }

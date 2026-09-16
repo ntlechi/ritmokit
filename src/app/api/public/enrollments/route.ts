@@ -80,6 +80,7 @@ export async function POST(request: NextRequest) {
         packageEnrollmentIds: result.packageEnrollmentIds,
         partnerEnrollmentId: result.partnerEnrollmentId,
         interacInstructions: result.interacInstructions,
+        ...(result.replayed ? { replayed: true } : {}),
         ...(checkoutBroken || result.checkoutError
           ? {
               checkoutError: result.checkoutError ?? result.payment.error ?? "checkout_failed",
@@ -87,7 +88,8 @@ export async function POST(request: NextRequest) {
             }
           : {}),
       },
-      { status: 201 },
+      // A replayed retry returns the original seat, not a second creation.
+      { status: result.replayed ? 200 : 201 },
     );
   } catch (error) {
     console.error("[public:enrollments]", error);

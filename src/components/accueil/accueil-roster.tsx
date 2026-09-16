@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ClipboardCheck, RefreshCw } from "lucide-react";
+import { ClipboardCheck, PartyPopper, RefreshCw } from "lucide-react";
+import { CashDrawerPanel } from "@/components/accueil/cash-drawer-close";
 import { CheckInRow } from "@/components/accueil/check-in-row";
 import { ClassTimeline } from "@/components/accueil/class-timeline";
 import {
@@ -25,6 +26,41 @@ import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { cn } from "@/lib/utils";
 
 type FilterKey = "all" | "unpaid" | "waitlist" | "pending";
+
+/**
+ * Door-level Soirée override: per device, per night (key carries the date), read
+ * through `useSyncExternalStore` so SSR renders OFF and the client resolves
+ * without a setState-in-effect.
+ */
+const SOIREE_STORAGE_PREFIX = "ritmokit-door-soiree:";
+const SOIREE_EVENT = "ritmokit:door-soiree";
+
+function readSoiree(date: string): boolean {
+  try {
+    return localStorage.getItem(SOIREE_STORAGE_PREFIX + date) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeSoiree(date: string, on: boolean) {
+  try {
+    if (on) localStorage.setItem(SOIREE_STORAGE_PREFIX + date, "1");
+    else localStorage.removeItem(SOIREE_STORAGE_PREFIX + date);
+  } catch {
+    // Private mode: nothing persisted; the event below still updates this tab.
+  }
+  window.dispatchEvent(new Event(SOIREE_EVENT));
+}
+
+function subscribeSoiree(onChange: () => void) {
+  window.addEventListener("storage", onChange);
+  window.addEventListener(SOIREE_EVENT, onChange);
+  return () => {
+    window.removeEventListener("storage", onChange);
+    window.removeEventListener(SOIREE_EVENT, onChange);
+  };
+}
 
 function pickDefaultSession(classes: AccueilClassCard[]): string | null {
   if (classes.length === 0) return null;
@@ -106,12 +142,18 @@ export function AccueilRosterView({
   );
   const [filter, setFilter] = useState<FilterKey>(prioritizeUnpaid ? "unpaid" : "all");
   const [busyId, setBusyId] = useState<string | null>(null);
+  const inflight = useRef<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [scanning, setScanning] = useState(false);
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [isRefreshing, startRefresh] = useTransition();
+  const soiree = useSyncExternalStore(
+    subscribeSoiree,
+    () => readSoiree(initial.date),
+    () => false,
+  );
 
   useEffect(() => {
     setClasses(initial.classes);
@@ -123,10 +165,13 @@ export function AccueilRosterView({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional resync on server snapshot
   }, [initial.generatedAt]);
 
-  const selected = useMemo(
-    () => classes.find((c) => c.sessionId === selectedId) ?? classes[0] ?? null,
-    [classes, selectedId],
-  );
+  // Soirée mode makes every session behave like a social at the door: parity
+  // meters hidden, walk-ins default to SOLO, no couple checkbox.
+  const selected = useMemo(() => {
+    const base = classes.find((c) => c.sessionId === selectedId) ?? classes[0] ?? null;
+    if (!base || !soiree || base.isSocial) return base;
+    return { ...base, isSocial: true };
+  }, [classes, selectedId, soiree]);
 
   const doorHits = useMemo(
     () => collectDoorHits(classes, query, rowMatchesDoorQuery),
@@ -198,11 +243,20 @@ export function AccueilRosterView({
     { key: "waitlist", label: a.filterWaitlist },
   ];
 
+  /**
+   * Optimistic PRÉSENT toggle. The row flips immediately; on rejection we
+   * apply the *inverse* to the current state (not a stale snapshot) so a
+   * rollback never undoes another row whose request landed in the meantime.
+   * The server action is idempotent, so a duplicate tap is harmless — we
+   * still drop it client-side to avoid a flicker.
+   */
   async function onToggle(enrollmentId: string, nextAttended: boolean) {
+    if (inflight.current.has(enrollmentId)) return;
+    inflight.current.add(enrollmentId);
     setError(null);
-    const snapshot = classes;
     setClasses((prev) => applyOptimistic(prev, enrollmentId, nextAttended));
     setBusyId(enrollmentId);
+    const rollback = () => setClasses((prev) => applyOptimistic(prev, enrollmentId, !nextAttended));
     try {
       const result = await markAttendanceAction({
         enrollmentId,
@@ -210,7 +264,7 @@ export function AccueilRosterView({
         lang,
       });
       if (!result.ok) {
-        setClasses(snapshot);
+        rollback();
         setError(result.error === "waitlisted" ? a.waitlisted : dict.dance.errors.generic);
         return;
       }
@@ -222,10 +276,11 @@ export function AccueilRosterView({
       }
       router.refresh();
     } catch {
-      setClasses(snapshot);
+      rollback();
       setError(dict.dance.errors.generic);
     } finally {
-      setBusyId(null);
+      inflight.current.delete(enrollmentId);
+      setBusyId((current) => (current === enrollmentId ? null : current));
     }
   }
 
@@ -239,7 +294,9 @@ export function AccueilRosterView({
         reason: "no_show",
       });
       if (!result.ok) {
-        setError(dict.dance.errors.generic);
+        setError(
+          result.error === "already_paid" ? dict.interac.errors.alreadyPaid : dict.dance.errors.generic,
+        );
         return;
       }
       router.refresh();
@@ -308,21 +365,57 @@ export function AccueilRosterView({
             )}
           </p>
         </div>
-        <button
-          type="button"
-          data-interactive
-          disabled={isRefreshing}
-          onClick={() =>
-            startRefresh(() => {
-              router.refresh();
-            })
-          }
-          className={cn(dna.ctaGhost, "min-h-11")}
-        >
-          <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} aria-hidden />
-          {a.refresh}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            data-interactive
+            role="switch"
+            aria-checked={soiree}
+            aria-label={a.soireeMode}
+            title={soiree ? a.soireeOn : a.soireeOff}
+            onClick={() => writeSoiree(initial.date, !soiree)}
+            className={cn(
+              "inline-flex min-h-12 items-center gap-2 rounded-full border px-4 text-sm font-semibold transition",
+              soiree
+                ? "border-accent bg-accent text-accent-foreground shadow-xs"
+                : "border-border bg-surface text-foreground-muted hover:text-foreground",
+            )}
+          >
+            <PartyPopper className="h-4 w-4" aria-hidden />
+            {a.soireeMode}
+            <span
+              className={cn(
+                "font-mono text-[11px] font-bold uppercase tracking-wide",
+                soiree ? "text-accent-foreground/80" : "text-foreground-muted",
+              )}
+            >
+              {soiree ? "ON" : "OFF"}
+            </span>
+          </button>
+          <button
+            type="button"
+            data-interactive
+            disabled={isRefreshing}
+            onClick={() =>
+              startRefresh(() => {
+                router.refresh();
+              })
+            }
+            className={cn(dna.ctaGhost, "min-h-12")}
+          >
+            <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} aria-hidden />
+            {a.refresh}
+          </button>
+        </div>
       </div>
+
+      <CashDrawerPanel
+        drawer={initial.drawer}
+        locationId={initial.locationId}
+        lang={lang}
+        dict={a}
+        onClosed={() => router.refresh()}
+      />
 
       <ClassTimeline
         classes={classes}
@@ -348,7 +441,7 @@ export function AccueilRosterView({
                   <StatusPill status={selected.status} dict={a} />
                   {selected.isSocial && (
                     <span className="rounded-full bg-accent/15 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent">
-                      {a.eventBadge}
+                      {soiree ? a.soireeMode : a.eventBadge}
                     </span>
                   )}
                 </div>

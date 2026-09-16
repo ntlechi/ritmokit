@@ -48,8 +48,10 @@ export async function resolvePublicLocation(input: {
   const locationSlug = input.locationSlug?.trim().toLowerCase();
   if (!locationSlug) return null;
 
+  // `Location.slug` is unique per organisation only. Without `organizationSlug`
+  // an ambiguous slug must fail closed rather than pick a tenant by row order.
   const orgSlug = input.organizationSlug?.trim().toLowerCase();
-  const row = await prisma.location.findFirst({
+  const rows = await prisma.location.findMany({
     where: {
       slug: locationSlug,
       isActive: true,
@@ -63,8 +65,10 @@ export async function resolvePublicLocation(input: {
       organizationId: true,
       organization: { select: { slug: true, name: true } },
     },
+    take: 2,
   });
-  if (!row) return null;
+  if (rows.length !== 1) return null;
+  const row = rows[0]!;
   return {
     id: row.id,
     name: row.name,

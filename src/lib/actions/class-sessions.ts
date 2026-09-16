@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { actionDatabaseError } from "@/lib/actions/result";
 import { canAccessManagerSettings, getSessionUser } from "@/lib/auth/session";
+import { findClassSlotConflict, slotConflictError } from "@/lib/dance/session-slot";
 import { prisma } from "@/lib/prisma";
 
 const createSchema = z.object({
@@ -81,6 +82,16 @@ export async function createClassSessionAction(
     return { ok: false, error: "invalid_times" };
   }
 
+  const conflict = await findClassSlotConflict({
+    roomId: parsed.data.roomId,
+    instructorId: parsed.data.instructorId,
+    assistantId: parsed.data.assistantId,
+    dayOfWeek: parsed.data.dayOfWeek ?? null,
+    startTime: start,
+    endTime: end,
+  });
+  if (conflict) return { ok: false, error: slotConflictError(conflict) };
+
   try {
     const session = await prisma.classSession.create({
       data: {
@@ -142,6 +153,31 @@ export async function updateClassSessionAction(
   if (patch.priceStudent !== undefined) data.priceStudent = patch.priceStudent;
 
   if (Object.keys(data).length === 0) return { ok: false, error: "invalid_input" };
+
+  if (patch.roomId != null || patch.instructorId != null || patch.assistantId !== undefined) {
+    const current = await prisma.classSession.findUnique({
+      where: { id: sessionId },
+      select: {
+        roomId: true,
+        instructorId: true,
+        assistantId: true,
+        dayOfWeek: true,
+        startTime: true,
+        endTime: true,
+      },
+    });
+    if (!current) return { ok: false, error: "session_not_found" };
+    const conflict = await findClassSlotConflict({
+      roomId: patch.roomId ?? current.roomId,
+      instructorId: patch.instructorId ?? current.instructorId,
+      assistantId: patch.assistantId !== undefined ? patch.assistantId : current.assistantId,
+      dayOfWeek: current.dayOfWeek,
+      startTime: current.startTime,
+      endTime: current.endTime,
+      excludeSessionId: sessionId,
+    });
+    if (conflict) return { ok: false, error: slotConflictError(conflict) };
+  }
 
   try {
     await prisma.classSession.update({ where: { id: sessionId }, data });

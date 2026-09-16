@@ -12,8 +12,8 @@ export const runtime = "nodejs";
  * GET /api/studio/enrollments
  * Query: locationId | locationSlug + organizationSlug, seasonId, sessionId, paid, waitlisted, q, limit
  *
- * Auth: Supabase session (Accueil+) OR Authorization: Bearer RITMOKIT_STUDIO_ROSTER_SECRET
- * (Bearer requires explicit locationId or locationSlug).
+ * Auth: Supabase session (Accueil+, brand-scoped) OR Authorization: Bearer <rk1 tenant token>
+ * (see `deriveRosterToken`; Bearer requires explicit locationId or locationSlug inside its org).
  */
 export async function GET(request: NextRequest) {
   const auth = await authorizeStudioRoster(request);
@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
     locationSlug: sp.get("locationSlug"),
     organizationSlug: sp.get("organizationSlug"),
     requireExplicitLocation: auth.mode === "roster_secret",
+    tokenOrganizationSlug: auth.mode === "roster_secret" ? auth.organizationSlug : null,
   });
   if (!location.ok) {
     return NextResponse.json({ error: location.error }, { status: location.status });
@@ -97,6 +98,7 @@ export async function PATCH(request: NextRequest) {
     organizationSlug:
       body.organizationSlug ?? request.nextUrl.searchParams.get("organizationSlug"),
     requireExplicitLocation: auth.mode === "roster_secret",
+    tokenOrganizationSlug: auth.mode === "roster_secret" ? auth.organizationSlug : null,
   });
   if (!location.ok) {
     return NextResponse.json({ error: location.error }, { status: location.status });

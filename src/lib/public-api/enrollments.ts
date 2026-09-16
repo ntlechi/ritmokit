@@ -2,54 +2,60 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
+import type { PaymentStatus } from "@/generated/prisma/enums";
 import { enqueueAndRunDanceAgent } from "@/lib/agents/dance-enqueue";
-import { asPlainNumber } from "@/lib/data/serialize";
+import { getPackagePeers, isParityAlert, type RoleCapacity } from "@/lib/dance/parity";
 import {
-  evaluateCoupleEnrollment,
-  evaluateParityEnrollment,
-  getPackagePeers,
-  isParityAlert,
-} from "@/lib/dance/parity";
+  allocateCouple,
+  allocateSeat,
+  loadLockedCapacity,
+  lockSessions,
+  SEAT_TX_OPTIONS,
+  type LockedSession,
+  type SeatOutcome,
+} from "@/lib/dance/seat-allocator";
 import { tryPromoteWaitlist } from "@/lib/dance/waitlist-promote";
-import {
-  resolveEnrollmentAmountCad,
-  type PricingTier,
-} from "@/lib/dance/pricing";
+import { resolveEnrollmentAmountCad, type PricingTier } from "@/lib/dance/pricing";
 import { createEnrollmentCheckout, type PaymentProvider } from "@/lib/public-api/payments";
-import { loadSessionCapacity } from "@/lib/public-api/capacity";
 import {
   notifyStaffPendingInterac,
   publicPaymentStatus,
-  ticketCodeForEnrollment,
 } from "@/lib/payments/interac";
 import { prisma } from "@/lib/prisma";
 
 export { resolveEnrollmentAmountCad } from "@/lib/dance/pricing";
 
-export const publicEnrollSchema = z.object({
-  sessionId: z.string().uuid(),
-  danceRole: z.enum(["LEAD", "FOLLOW", "SOLO"]),
-  fullName: z.string().min(1).max(120),
-  email: z.string().email().max(200),
-  phone: z.string().max(40).optional().nullable(),
-  locale: z.enum(["fr", "en", "es"]).optional().default("fr"),
-  allowWaitlist: z.boolean().optional().default(true),
-  pricingTier: z.enum(["REGULAR", "STUDENT", "COUPLE", "UNLIMITED_PASS"]).optional().default("REGULAR"),
-  paymentProvider: z.enum(["paypal", "stripe", "interac", "cash", "none"]).optional(),
-  returnUrl: z.string().url().optional().nullable(),
-  cancelUrl: z.string().url().optional().nullable(),
-  /** When true, mark paid immediately (offline / test). Default false. */
-  markPaid: z.boolean().optional().default(false),
-  paymentRef: z.string().max(120).optional().nullable(),
-  /**
-   * Multi-day same-course package: sibling ClassSession ids.
-   * Primary (`sessionId`) gets checkout; siblings are unpaid holds linked via paymentRef.
-   */
-  packageSessionIds: z.array(z.string().uuid()).max(14).optional(),
-  partnerFullName: z.string().min(1).max(120).optional(),
-  partnerEmail: z.string().email().max(200).optional(),
-  partnerPhone: z.string().max(40).optional().nullable(),
-});
+/**
+ * Anonymous headless input. Anything that can flip money state (`markPaid`,
+ * `paymentRef`) is deliberately absent — payment truth only enters through
+ * provider webhooks, the Interac queue, or the front desk.
+ */
+export const publicEnrollSchema = z
+  .object({
+    sessionId: z.string().uuid(),
+    danceRole: z.enum(["LEAD", "FOLLOW", "SOLO"]),
+    fullName: z.string().trim().min(1).max(120),
+    email: z.string().trim().email().max(200),
+    phone: z.string().trim().max(40).optional().nullable(),
+    locale: z.enum(["fr", "en", "es"]).optional().default("fr"),
+    allowWaitlist: z.boolean().optional().default(true),
+    pricingTier: z
+      .enum(["REGULAR", "STUDENT", "COUPLE", "UNLIMITED_PASS"])
+      .optional()
+      .default("REGULAR"),
+    paymentProvider: z.enum(["paypal", "stripe", "interac", "cash", "none"]).optional(),
+    returnUrl: z.string().url().max(2000).optional().nullable(),
+    cancelUrl: z.string().url().max(2000).optional().nullable(),
+    /**
+     * Multi-day same-course package: sibling ClassSession ids.
+     * Primary (`sessionId`) gets checkout; siblings are unpaid holds linked via paymentRef.
+     */
+    packageSessionIds: z.array(z.string().uuid()).max(14).optional(),
+    partnerFullName: z.string().trim().min(1).max(120).optional(),
+    partnerEmail: z.string().trim().email().max(200).optional(),
+    partnerPhone: z.string().trim().max(40).optional().nullable(),
+  })
+  .strip();
 
 export type PublicEnrollInput = z.infer<typeof publicEnrollSchema>;
 
@@ -63,6 +69,8 @@ export type PublicEnrollResult =
       ticketCode: string;
       paymentStatus: string;
       payment: Awaited<ReturnType<typeof createEnrollmentCheckout>>;
+      /** True when a retried request matched an enrollment created moments ago. */
+      replayed?: boolean;
       packageEnrollmentIds?: string[];
       partnerEnrollmentId?: string;
       checkoutError?: string;
@@ -73,183 +81,306 @@ export type PublicEnrollResult =
     }
   | { ok: false; error: string; status: number };
 
+/**
+ * A second POST for the same (class, email) inside this window is treated as
+ * a network retry of the first (double-tap, LTE resend) and replays its
+ * result. Past it, it is a genuine duplicate → 409 `already_enrolled`.
+ */
+export const ENROLL_REPLAY_WINDOW_MS = 10 * 60_000;
+
 function localeToPrisma(locale: string): "FR" | "EN" | "ES" {
   if (locale === "en") return "EN";
   if (locale === "es") return "ES";
   return "FR";
 }
 
-async function findOrCreateStudent(input: {
+/** Race-free by construction: one `INSERT … ON CONFLICT (email)` round trip. */
+async function upsertStudent(input: {
   email: string;
   fullName: string;
   phone?: string | null;
   locale: string;
-}): Promise<{ id: string; created: boolean }> {
+}): Promise<{ id: string }> {
   const email = input.email.trim().toLowerCase();
-  const existing = await prisma.user.findUnique({
+  const phone = input.phone?.trim() || undefined;
+  return prisma.user.upsert({
     where: { email },
-    select: { id: true },
-  });
-  if (existing) {
-    await prisma.user.update({
-      where: { id: existing.id },
-      data: {
-        fullName: input.fullName.trim(),
-        phone: input.phone?.trim() || undefined,
-      },
-    });
-    return { id: existing.id, created: false };
-  }
-
-  const id = randomUUID();
-  await prisma.user.create({
-    data: {
-      id,
+    create: {
+      id: randomUUID(),
       email,
       fullName: input.fullName.trim(),
-      phone: input.phone?.trim() || null,
+      phone: phone ?? null,
       role: "STUDENT",
       locale: localeToPrisma(input.locale),
     },
+    update: { fullName: input.fullName.trim(), ...(phone ? { phone } : {}) },
+    select: { id: true },
   });
-  return { id, created: true };
 }
 
-export async function createPublicEnrollment(
-  input: PublicEnrollInput,
-): Promise<PublicEnrollResult> {
+type TxOutcome =
+  | { kind: "not_found" }
+  | { kind: "booking_closed" }
+  | { kind: "refused"; reason: string }
+  | {
+      kind: "existing";
+      enrollmentId: string;
+      ticketCode: string | null;
+      waitlisted: boolean;
+      paid: boolean;
+      paymentStatus: PaymentStatus;
+      createdAt: Date;
+    }
+  | {
+      kind: "created";
+      session: LockedSession;
+      primary: Extract<SeatOutcome, { kind: "seated" | "waitlisted" }>;
+      partnerEnrollmentId?: string;
+      packageEnrollmentIds: string[];
+      amountCad: number;
+      pricingTier: PricingTier;
+      capacityAfter: RoleCapacity;
+    };
+
+export async function createPublicEnrollment(input: PublicEnrollInput): Promise<PublicEnrollResult> {
+  // ---- Pre-flight (no lock): fast 404/409 before touching the hot row. ----
   const session = await prisma.classSession.findUnique({
     where: { id: input.sessionId },
-    include: {
-      season: { select: { id: true, status: true, bookingOpen: true, locationId: true } },
-      room: { select: { locationId: true } },
+    select: {
+      id: true,
+      seasonId: true,
+      season: { select: { status: true, bookingOpen: true } },
       course: { select: { title: true } },
     },
   });
-
   if (!session) return { ok: false, error: "session_not_found", status: 404 };
-
-  // Booking must be open on an ACTIVE season when linked; orphan classes allow booking.
-  if (session.season) {
-    if (session.season.status !== "ACTIVE" || !session.season.bookingOpen) {
-      return { ok: false, error: "booking_closed", status: 409 };
-    }
+  if (session.season && (session.season.status !== "ACTIVE" || !session.season.bookingOpen)) {
+    return { ok: false, error: "booking_closed", status: 409 };
   }
 
-  const capacity = await loadSessionCapacity(session.id);
-  if (!capacity) return { ok: false, error: "session_not_found", status: 404 };
-
+  const email = input.email.trim().toLowerCase();
+  const partnerEmail = input.partnerEmail?.trim().toLowerCase() || null;
   const wantsCouple =
-    input.pricingTier === "COUPLE" ||
-    Boolean(input.partnerFullName?.trim() && input.partnerEmail?.trim());
+    input.pricingTier === "COUPLE" || Boolean(input.partnerFullName?.trim() && partnerEmail);
   if (wantsCouple && input.danceRole === "SOLO") {
     return { ok: false, error: "invalid_couple_role", status: 400 };
   }
-  if (wantsCouple && (!input.partnerFullName?.trim() || !input.partnerEmail?.trim())) {
+  if (wantsCouple && (!input.partnerFullName?.trim() || !partnerEmail)) {
     return { ok: false, error: "partner_required", status: 400 };
   }
-  if (
-    wantsCouple &&
-    input.partnerEmail &&
-    input.partnerEmail.trim().toLowerCase() === input.email.trim().toLowerCase()
-  ) {
+  if (wantsCouple && partnerEmail === email) {
     return { ok: false, error: "partner_same_email", status: 400 };
   }
 
-  const coupleDecision = wantsCouple ? evaluateCoupleEnrollment(capacity) : null;
-  if (wantsCouple && (!coupleDecision?.ok || coupleDecision.waitlisted)) {
-    return { ok: false, error: "parity_couple_full", status: 409 };
-  }
-
-  const decision = wantsCouple
-    ? { ok: true as const, waitlisted: false }
-    : evaluateParityEnrollment(capacity, input.danceRole, {
-        allowWaitlist: input.allowWaitlist,
-      });
-  if (!decision.ok) {
-    return { ok: false, error: `parity_${decision.reason}`, status: 409 };
-  }
-
-  const student = await findOrCreateStudent({
-    email: input.email,
-    fullName: input.fullName,
-    phone: input.phone,
-    locale: input.locale,
-  });
-
-  const existingEnrollment = await prisma.enrollment.findUnique({
-    where: {
-      sessionId_studentId: { sessionId: session.id, studentId: student.id },
-    },
-    select: { id: true },
-  });
-  if (existingEnrollment) {
-    return { ok: false, error: "already_enrolled", status: 409 };
-  }
-
-  const paid = Boolean(input.markPaid);
   const pricingTier: PricingTier = wantsCouple
     ? "COUPLE"
     : input.pricingTier === "STUDENT" || input.pricingTier === "UNLIMITED_PASS"
       ? input.pricingTier
       : "REGULAR";
-  const amountCad = resolveEnrollmentAmountCad(
-    {
-      priceRegular: asPlainNumber(session.priceRegular),
-      priceCouple: session.priceCouple != null ? asPlainNumber(session.priceCouple) : null,
-      priceStudent: session.priceStudent != null ? asPlainNumber(session.priceStudent) : null,
-    },
-    pricingTier,
-  );
 
-  const locationId = session.season?.locationId ?? session.room.locationId;
+  // Package siblings: same course title across weekdays = one payment.
+  let siblingIds: string[] = [];
+  if (session.seasonId) {
+    const seasonClasses = await prisma.classSession.findMany({
+      where: { seasonId: session.seasonId },
+      select: { id: true, course: { select: { title: true } } },
+    });
+    const peerIds = getPackagePeers(
+      seasonClasses.map((c) => ({ id: c.id, courseTitle: c.course.title })),
+      { id: session.id, courseTitle: session.course.title },
+    )
+      .map((p) => p.id)
+      .filter((id) => id !== session.id);
+    const requested = (input.packageSessionIds ?? []).filter((id) => id !== session.id);
+    siblingIds = requested.length > 0 ? requested.filter((id) => peerIds.includes(id)) : peerIds;
+  }
+
+  // Students live outside the seat lock — the users table is not contended.
+  const [student, partner] = await Promise.all([
+    upsertStudent({ email, fullName: input.fullName, phone: input.phone, locale: input.locale }),
+    wantsCouple && partnerEmail && input.partnerFullName
+      ? upsertStudent({
+          email: partnerEmail,
+          fullName: input.partnerFullName,
+          phone: input.partnerPhone,
+          locale: input.locale,
+        })
+      : Promise.resolve(null),
+  ]);
+
   const courseTitle = session.course.title;
-
-  // Pre-generate id so ticket code is stable at insert time.
-  const enrollmentId = randomUUID();
-  const ticketCode = ticketCodeForEnrollment(enrollmentId);
   const interacHint = `${input.fullName.trim()}, ${courseTitle}`;
 
-  const enrollment = await prisma.enrollment.create({
-    data: {
-      id: enrollmentId,
-      sessionId: session.id,
-      studentId: student.id,
-      danceRole: input.danceRole,
-      waitlisted: decision.waitlisted,
-      waitlistedAt: decision.waitlisted ? new Date() : null,
-      paid,
-      paymentStatus: paid ? "PAID" : "NONE",
-      paymentProvider: paid ? "CASH" : null,
-      paidAt: paid ? new Date() : null,
-      pricingTier,
-      amountCad,
-      currency: "CAD",
-      paymentRef: input.paymentRef ?? null,
-      ticketCode,
-      interacReferenceHint: interacHint,
-    },
-  });
+  // ---- Atomic seat allocation under the per-class row lock. ----
+  const outcome = await prisma.$transaction<TxOutcome>(async (tx) => {
+    const locked = await lockSessions(tx, [session.id, ...siblingIds]);
+    const primary = locked.get(session.id);
+    if (!primary) return { kind: "not_found" };
+    // Re-check under lock: an owner may have closed booking a moment ago.
+    if (
+      primary.seasonId &&
+      (primary.seasonStatus !== "ACTIVE" || primary.bookingOpen !== true)
+    ) {
+      return { kind: "booking_closed" };
+    }
 
-  // Waitlisted seats hold a place in queue — checkout only after promotion.
+    const amountCad = resolveEnrollmentAmountCad(
+      {
+        priceRegular: primary.priceRegular,
+        priceCouple: primary.priceCouple,
+        priceStudent: primary.priceStudent,
+      },
+      pricingTier,
+    );
+
+    let primarySeat: SeatOutcome;
+    let partnerEnrollmentId: string | undefined;
+
+    if (wantsCouple && partner && input.partnerFullName) {
+      const couple = await allocateCouple(
+        tx,
+        primary,
+        {
+          studentId: student.id,
+          danceRole: input.danceRole,
+          allowWaitlist: false,
+          pricingTier: "COUPLE",
+          amountCad,
+          interacReferenceHint: interacHint,
+        },
+        {
+          studentId: partner.id,
+          allowWaitlist: false,
+          pricingTier: "COUPLE",
+          amountCad: 0,
+          interacReferenceHint: `${input.partnerFullName.trim()}, ${courseTitle}`,
+        },
+      );
+      if (couple.kind === "refused") {
+        return {
+          kind: "refused",
+          reason: couple.reason === "role_full" ? "couple_full" : couple.reason,
+        };
+      }
+      primarySeat = couple.primary;
+      if (couple.kind === "seated") {
+        partnerEnrollmentId = couple.partner.enrollmentId;
+      }
+    } else {
+      primarySeat = await allocateSeat(tx, primary, {
+        studentId: student.id,
+        danceRole: input.danceRole,
+        allowWaitlist: input.allowWaitlist,
+        pricingTier,
+        amountCad,
+        interacReferenceHint: interacHint,
+      });
+    }
+
+    if (primarySeat.kind === "refused") return { kind: "refused", reason: primarySeat.reason };
+    if (primarySeat.kind === "existing") {
+      const e = primarySeat.existing;
+      return {
+        kind: "existing",
+        enrollmentId: e.id,
+        ticketCode: e.ticketCode,
+        waitlisted: e.waitlisted,
+        paid: e.paid,
+        paymentStatus: e.paymentStatus,
+        createdAt: e.createdAt,
+      };
+    }
+
+    // Siblings are unpaid holds tied to the primary charge; never waitlisted.
+    const packageEnrollmentIds = [primarySeat.enrollmentId];
+    if (primarySeat.kind === "seated") {
+      for (const siblingId of siblingIds) {
+        const sibling = locked.get(siblingId);
+        if (!sibling) continue;
+        const seat = await allocateSeat(tx, sibling, {
+          studentId: student.id,
+          danceRole: input.danceRole,
+          allowWaitlist: false,
+          pricingTier,
+          amountCad: 0,
+          paymentRef: `pkg:${primarySeat.enrollmentId}`,
+          interacReferenceHint: interacHint,
+        });
+        if (seat.kind === "seated" || seat.kind === "existing") {
+          packageEnrollmentIds.push(seat.enrollmentId);
+        }
+      }
+    }
+
+    return {
+      kind: "created",
+      session: primary,
+      primary: primarySeat,
+      partnerEnrollmentId,
+      packageEnrollmentIds,
+      amountCad,
+      pricingTier,
+      capacityAfter: await loadLockedCapacity(tx, primary),
+    };
+  }, SEAT_TX_OPTIONS);
+
+  if (outcome.kind === "not_found") return { ok: false, error: "session_not_found", status: 404 };
+  if (outcome.kind === "booking_closed") return { ok: false, error: "booking_closed", status: 409 };
+  if (outcome.kind === "refused") {
+    return { ok: false, error: `parity_${outcome.reason}`, status: 409 };
+  }
+
+  if (outcome.kind === "existing") {
+    const recent = Date.now() - outcome.createdAt.getTime() <= ENROLL_REPLAY_WINDOW_MS;
+    if (!recent || outcome.paid) {
+      return { ok: false, error: "already_enrolled", status: 409 };
+    }
+    // Idempotent replay: same answer the first request would have produced.
+    return {
+      ok: true,
+      replayed: true,
+      enrollmentId: outcome.enrollmentId,
+      studentId: student.id,
+      waitlisted: outcome.waitlisted,
+      paid: false,
+      ticketCode: outcome.ticketCode ?? "",
+      paymentStatus: publicPaymentStatus(outcome.paymentStatus, null),
+      payment: {
+        status: "deferred",
+        provider: (input.paymentProvider as PaymentProvider | undefined) ?? "none",
+        checkoutUrl: null,
+        paymentRef: null,
+        retryCheckout: !outcome.waitlisted,
+        message: outcome.waitlisted
+          ? "Waitlisted — payment opens when a seat is promoted."
+          : "Already enrolled moments ago — resume checkout via /checkout.",
+      },
+    };
+  }
+
+  // ---- Side effects (outside the lock): checkout, notifications, agents. ----
+  const { primary, session: locked, amountCad } = outcome;
+  const waitlisted = primary.kind === "waitlisted";
+  const locationId = locked.locationId;
+
   let payment: Awaited<ReturnType<typeof createEnrollmentCheckout>> = {
     status: "deferred",
     provider: (input.paymentProvider as PaymentProvider | undefined) ?? "none",
     checkoutUrl: null,
     paymentRef: null,
-    message: decision.waitlisted
+    message: waitlisted
       ? "Waitlisted — payment opens when a seat is promoted."
       : "No checkout required.",
   };
 
-  if (!decision.waitlisted && !paid) {
+  if (!waitlisted) {
     try {
       payment = await createEnrollmentCheckout({
         provider: (input.paymentProvider as PaymentProvider | undefined) ?? undefined,
         amountCad,
-        enrollmentId: enrollment.id,
-        sessionId: session.id,
-        studentEmail: input.email.trim().toLowerCase(),
+        enrollmentId: primary.enrollmentId,
+        sessionId: locked.id,
+        studentEmail: email,
         studentName: input.fullName.trim(),
         courseName: courseTitle,
         locationId,
@@ -259,28 +390,27 @@ export async function createPublicEnrollment(
 
       if (payment.status === "pending_interac") {
         const now = new Date();
-        await prisma.enrollment.update({
-          where: { id: enrollment.id },
+        // Conditional: never downgrade a seat a webhook already marked PAID.
+        await prisma.enrollment.updateMany({
+          where: { id: primary.enrollmentId, paid: false },
           data: {
             paymentRef: payment.paymentRef,
             paymentStatus: "PENDING_INTERAC",
             paymentProvider: "INTERAC",
             paymentPendingAt: now,
-            interacReferenceHint:
-              payment.interacInstructions?.referenceHint ?? interacHint,
+            interacReferenceHint: payment.interacInstructions?.referenceHint ?? interacHint,
           },
         });
-
         void notifyStaffPendingInterac({
           locationId,
-          enrollmentId: enrollment.id,
+          enrollmentId: primary.enrollmentId,
           studentName: input.fullName.trim(),
           courseName: courseTitle,
           amountCad,
         });
       } else if (payment.paymentRef || payment.status === "pending") {
-        await prisma.enrollment.update({
-          where: { id: enrollment.id },
+        await prisma.enrollment.updateMany({
+          where: { id: primary.enrollmentId, paid: false },
           data: {
             paymentRef: payment.paymentRef,
             paymentStatus: payment.status === "pending" ? "PENDING" : "NONE",
@@ -310,138 +440,14 @@ export async function createPublicEnrollment(
     }
   }
 
-  // Package siblings: same course title across weekdays = one payment (Salsa parity).
-  // Auto-resolve peers in the season; if client sends packageSessionIds, intersect for safety.
-  const packageEnrollmentIds: string[] = [enrollment.id];
-  let siblingIds: string[] = [];
-  if (!decision.waitlisted && session.seasonId) {
-    const seasonClasses = await prisma.classSession.findMany({
-      where: { seasonId: session.seasonId },
-      select: { id: true, course: { select: { title: true } } },
-    });
-    const peerIds = getPackagePeers(
-      seasonClasses.map((c) => ({ id: c.id, courseTitle: c.course.title })),
-      { id: session.id, courseTitle: courseTitle },
-    )
-      .map((p) => p.id)
-      .filter((id) => id !== session.id);
-    const requested = (input.packageSessionIds ?? []).filter((id) => id !== session.id);
-    siblingIds =
-      requested.length > 0
-        ? requested.filter((id) => peerIds.includes(id))
-        : peerIds;
-  }
-  const partnerRole =
-    wantsCouple && input.danceRole === "LEAD"
-      ? ("FOLLOW" as const)
-      : wantsCouple && input.danceRole === "FOLLOW"
-        ? ("LEAD" as const)
-        : null;
-  let partnerEnrollmentId: string | undefined;
-  if (partnerRole && input.partnerFullName && input.partnerEmail && !decision.waitlisted) {
-    const partner = await findOrCreateStudent({
-      email: input.partnerEmail,
-      fullName: input.partnerFullName,
-      phone: input.partnerPhone,
-      locale: input.locale,
-    });
-    const existingPartner = await prisma.enrollment.findUnique({
-      where: {
-        sessionId_studentId: { sessionId: session.id, studentId: partner.id },
-      },
-      select: { id: true },
-    });
-    if (existingPartner) {
-      partnerEnrollmentId = existingPartner.id;
-    } else {
-      const partnerId = randomUUID();
-      await prisma.enrollment.create({
-        data: {
-          id: partnerId,
-          sessionId: session.id,
-          studentId: partner.id,
-          danceRole: partnerRole,
-          waitlisted: false,
-          paid,
-          paymentStatus: paid ? "PAID" : "NONE",
-          paymentProvider: paid ? "CASH" : null,
-          paidAt: paid ? new Date() : null,
-          pricingTier: "COUPLE",
-          amountCad: 0,
-          currency: "CAD",
-          paymentRef: `couple:${enrollment.id}`,
-          ticketCode: ticketCodeForEnrollment(partnerId),
-          interacReferenceHint: `${input.partnerFullName.trim()}, ${courseTitle}`,
-        },
-      });
-      partnerEnrollmentId = partnerId;
-    }
-  }
-
-  if (siblingIds.length && !decision.waitlisted) {
-    for (const siblingSessionId of siblingIds) {
-      const siblingCap = await loadSessionCapacity(siblingSessionId);
-      if (!siblingCap) continue;
-      const siblingDecision = evaluateParityEnrollment(siblingCap, input.danceRole, {
-        allowWaitlist: false,
-      });
-      if (!siblingDecision.ok || siblingDecision.waitlisted) continue;
-
-      const existingSibling = await prisma.enrollment.findUnique({
-        where: {
-          sessionId_studentId: { sessionId: siblingSessionId, studentId: student.id },
-        },
-        select: { id: true },
-      });
-      if (existingSibling) {
-        packageEnrollmentIds.push(existingSibling.id);
-        continue;
-      }
-
-      const siblingEnrollmentId = randomUUID();
-      await prisma.enrollment.create({
-        data: {
-          id: siblingEnrollmentId,
-          sessionId: siblingSessionId,
-          studentId: student.id,
-          danceRole: input.danceRole,
-          waitlisted: false,
-          paid: false,
-          paymentStatus: "NONE",
-          paymentProvider: null,
-          pricingTier,
-          amountCad: 0,
-          currency: "CAD",
-          paymentRef: `pkg:${enrollment.id}`,
-          ticketCode: ticketCodeForEnrollment(siblingEnrollmentId),
-          interacReferenceHint: interacHint,
-        },
-      });
-      packageEnrollmentIds.push(siblingEnrollmentId);
-    }
-  }
-
   const refreshed = await prisma.enrollment.findUnique({
-    where: { id: enrollment.id },
+    where: { id: primary.enrollmentId },
     select: { paymentStatus: true, paymentProvider: true },
   });
 
-  const seatedCouple = Boolean(partnerEnrollmentId && !decision.waitlisted);
-  const nextCap = {
-    ...capacity,
-    filledLeads:
-      capacity.filledLeads +
-      (input.danceRole === "LEAD" && !decision.waitlisted ? 1 : 0) +
-      (seatedCouple && partnerRole === "LEAD" ? 1 : 0),
-    filledFollows:
-      capacity.filledFollows +
-      (input.danceRole === "FOLLOW" && !decision.waitlisted ? 1 : 0) +
-      (seatedCouple && partnerRole === "FOLLOW" ? 1 : 0),
-  };
-
-  if (!decision.waitlisted) {
+  if (!waitlisted) {
     const { refreshProgressionForEnrollment } = await import("@/lib/dance/progression");
-    void refreshProgressionForEnrollment(enrollment.id).catch((error) => {
+    void refreshProgressionForEnrollment(primary.enrollmentId).catch((error) => {
       console.error("[public:enrollments] progression", error);
     });
   }
@@ -449,62 +455,54 @@ export async function createPublicEnrollment(
   await enqueueAndRunDanceAgent({
     eventType: "enrollment.created",
     payload: {
-      sessionId: session.id,
-      enrollmentId: enrollment.id,
+      sessionId: locked.id,
+      enrollmentId: primary.enrollmentId,
       studentId: student.id,
       danceRole: input.danceRole,
-      waitlisted: decision.waitlisted,
-      paid,
+      waitlisted,
+      paid: false,
       source: "public_api",
-      locationId: session.season?.locationId ?? session.room.locationId,
+      locationId,
     },
   });
 
-  if (isParityAlert(nextCap) || decision.waitlisted) {
+  if (isParityAlert(outcome.capacityAfter) || waitlisted) {
     await enqueueAndRunDanceAgent({
       eventType: "enrollment.parity_alert",
       payload: {
-        sessionId: session.id,
-        enrollmentId: enrollment.id,
+        sessionId: locked.id,
+        enrollmentId: primary.enrollmentId,
         studentId: student.id,
         danceRole: input.danceRole,
-        waitlisted: decision.waitlisted,
-        capacity: nextCap,
+        waitlisted,
+        capacity: outcome.capacityAfter,
         source: "public_api",
       },
     });
   }
 
   // A newly seated Lead/Follow may unlock the opposite waitlist immediately.
-  if (!decision.waitlisted) {
-    await tryPromoteWaitlist(session.id).catch((error) => {
+  if (!waitlisted) {
+    await tryPromoteWaitlist(locked.id).catch((error) => {
       console.error("[public:enrollments] waitlist promote failed", error);
     });
   }
 
   return {
     ok: true,
-    enrollmentId: enrollment.id,
+    enrollmentId: primary.enrollmentId,
     studentId: student.id,
-    waitlisted: decision.waitlisted,
-    paid,
-    ticketCode,
-    paymentStatus: publicPaymentStatus(
-      refreshed?.paymentStatus ?? (paid ? "PAID" : "NONE"),
-      refreshed?.paymentProvider,
-    ),
+    waitlisted,
+    paid: false,
+    ticketCode: primary.ticketCode,
+    paymentStatus: publicPaymentStatus(refreshed?.paymentStatus ?? "NONE", refreshed?.paymentProvider),
     payment,
     packageEnrollmentIds:
-      packageEnrollmentIds.length > 1 ? packageEnrollmentIds : undefined,
-    ...(partnerEnrollmentId ? { partnerEnrollmentId } : {}),
+      outcome.packageEnrollmentIds.length > 1 ? outcome.packageEnrollmentIds : undefined,
+    ...(outcome.partnerEnrollmentId ? { partnerEnrollmentId: outcome.partnerEnrollmentId } : {}),
     ...(payment.status === "error"
-      ? {
-          checkoutError: payment.error ?? "checkout_failed",
-          retryCheckout: true,
-        }
+      ? { checkoutError: payment.error ?? "checkout_failed", retryCheckout: true }
       : {}),
-    ...(payment.interacInstructions
-      ? { interacInstructions: payment.interacInstructions }
-      : {}),
+    ...(payment.interacInstructions ? { interacInstructions: payment.interacInstructions } : {}),
   };
 }

@@ -41,6 +41,21 @@ export function OwnerPulseStrip({
       hint: o.collectedHint,
     },
     {
+      href: `/${lang}/accueil`,
+      label: o.doorCash,
+      value: money(pulse.doorCashCad, lang),
+      hint:
+        pulse.drawerCloses > 0
+          ? o.doorCashHint
+              .replace("{closes}", String(pulse.drawerCloses))
+              .replace(
+                "{variance}",
+                `${pulse.drawerVarianceCad > 0 ? "+" : ""}${money(pulse.drawerVarianceCad, lang)}`,
+              )
+          : o.doorCashOpen,
+      warn: Math.abs(pulse.drawerVarianceCad) > 5,
+    },
+    {
       href: `/${lang}/interac`,
       label: o.pending,
       value: money(pulse.pendingInteracCad + pulse.rentalPendingCad, lang),
@@ -80,7 +95,7 @@ export function OwnerPulseStrip({
       <h2 id="owner-pulse-title" className="sr-only">
         {o.title}
       </h2>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-7">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-8">
         {items.map((item) => (
           <Link
             key={item.label}

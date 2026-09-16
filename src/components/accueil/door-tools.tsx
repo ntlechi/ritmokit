@@ -181,6 +181,8 @@ export function WalkInBar({
   const [role, setRole] = useState<"LEAD" | "FOLLOW" | "SOLO">(
     selected.isSocial ? "SOLO" : "LEAD",
   );
+  const [withPartner, setWithPartner] = useState(false);
+  const [partnerName, setPartnerName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const nameRef = useRef<HTMLInputElement>(null);
@@ -191,10 +193,13 @@ export function WalkInBar({
 
   useEffect(() => {
     setRole(selected.isSocial ? "SOLO" : "LEAD");
+    setWithPartner(false);
+    setPartnerName("");
   }, [selected.sessionId, selected.isSocial]);
 
   async function submit() {
     if (!mode || !name.trim()) return;
+    if (withPartner && !partnerName.trim()) return;
     setBusy(true);
     setError(null);
     const result = await walkInAtDoorAction({
@@ -204,15 +209,18 @@ export function WalkInBar({
       danceRole: role,
       payment: mode,
       lang,
+      partnerFullName: withPartner ? partnerName.trim() : "",
     });
     setBusy(false);
     if (!result.ok) {
       setError(
-        result.error === "parity_imbalance"
-          ? dict.walkInParity
-          : result.error === "parity_role_full"
-            ? dict.walkInFull
-            : dict.walkInError,
+        result.error === "parity_couple_full"
+          ? dict.walkInCoupleFull
+          : result.error === "parity_imbalance"
+            ? dict.walkInParity
+            : result.error === "parity_role_full"
+              ? dict.walkInFull
+              : dict.walkInError,
       );
       return;
     }
@@ -223,6 +231,8 @@ export function WalkInBar({
     setMode(null);
     setName("");
     setEmail("");
+    setPartnerName("");
+    setWithPartner(false);
     onDone(result.enrollmentId);
   }
 
@@ -286,7 +296,13 @@ export function WalkInBar({
                 key={r}
                 type="button"
                 data-interactive
-                onClick={() => setRole(r)}
+                onClick={() => {
+                  setRole(r);
+                  if (r === "SOLO") {
+                    setWithPartner(false);
+                    setPartnerName("");
+                  }
+                }}
                 className={cn(
                   "min-h-11 rounded-xl px-3 text-xs font-bold",
                   role === r ? "bg-accent text-accent-foreground" : "bg-surface text-foreground-muted",
@@ -296,11 +312,31 @@ export function WalkInBar({
               </button>
             ))}
           </div>
+          {!selected.isSocial && role !== "SOLO" && (
+            <label className="flex min-h-11 items-center gap-2 text-sm text-foreground">
+              <input
+                type="checkbox"
+                checked={withPartner}
+                onChange={(e) => setWithPartner(e.target.checked)}
+              />
+              {dict.walkInWithPartner}
+            </label>
+          )}
+          {withPartner && (
+            <input
+              id="walk-in-partner"
+              value={partnerName}
+              onChange={(e) => setPartnerName(e.target.value)}
+              placeholder={dict.walkInPartnerName}
+              className={cn(dna.field, "min-h-12")}
+              required
+            />
+          )}
           {error && <p className="text-sm text-danger">{error}</p>}
           <div className="flex flex-wrap gap-2">
             <button
               type="submit"
-              disabled={busy || !name.trim()}
+              disabled={busy || !name.trim() || (withPartner && !partnerName.trim())}
               className={cn(dna.cta, "min-h-12")}
             >
               {dict.walkInSubmit}

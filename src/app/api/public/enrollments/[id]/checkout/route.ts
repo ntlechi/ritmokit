@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { publicCorsPreflight, publicJson } from "@/lib/public-api/cors";
 import { asPlainNumber } from "@/lib/data/serialize";
 import { createEnrollmentCheckout } from "@/lib/public-api/payments";
+import { checkRateLimit, clientKey, pruneRateLimitBuckets } from "@/lib/public-api/rate-limit";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
@@ -18,6 +19,20 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
+  pruneRateLimitBuckets();
+  // Each call creates a provider order — keep it far below the enroll budget.
+  const limit = checkRateLimit(clientKey(request, "public:checkout"), {
+    limit: 10,
+    windowMs: 60_000,
+  });
+  if (!limit.ok) {
+    return publicJson(
+      request,
+      { error: "rate_limited", retryAfterSec: limit.retryAfterSec },
+      { status: 429 },
+    );
+  }
+
   const { id } = await context.params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) {
     return publicJson(request, { error: "invalid_id" }, { status: 400 });
@@ -34,7 +49,14 @@ export async function POST(
     where: { id },
     include: {
       student: { select: { email: true } },
-      session: { select: { id: true, course: { select: { title: true } } } },
+      session: {
+        select: {
+          id: true,
+          course: { select: { title: true } },
+          season: { select: { locationId: true } },
+          room: { select: { locationId: true } },
+        },
+      },
     },
   });
 
@@ -62,6 +84,8 @@ export async function POST(
       sessionId: enrollment.session.id,
       studentEmail: enrollment.student.email,
       description: enrollment.session.course.title,
+      // Tenant whitelist for client return URLs lives on the location's org.
+      locationId: enrollment.session.season?.locationId ?? enrollment.session.room.locationId,
       returnUrl: body.returnUrl,
       cancelUrl: body.cancelUrl,
     });

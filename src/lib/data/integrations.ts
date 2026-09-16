@@ -5,6 +5,7 @@ import { decryptField } from "@/lib/crypto/field-encryption";
 import type {
   IntegrationStatus,
   PayPalIntegrationConfig,
+  StripeIntegrationConfig,
 } from "@/lib/integrations/types";
 import { prisma } from "@/lib/prisma";
 
@@ -100,6 +101,90 @@ export async function getPayPalIntegrationSettings(
       allowedOrigins: row?.allowedOrigins ?? [],
       lastError: row?.lastError ?? null,
       webhookUrl: `${appBaseUrl()}/api/webhooks/paypal`,
+      updatedAt: row?.updatedAt?.toISOString() ?? null,
+      envFallbackAvailable,
+    },
+  };
+}
+
+export type StripeIntegrationView = {
+  organizationId: string;
+  organizationName: string;
+  locationId: string;
+  status: IntegrationStatus;
+  mode: "test" | "live";
+  secretKeyMasked: string;
+  hasSecretKey: boolean;
+  hasWebhookSecret: boolean;
+  allowedOrigins: string[];
+  lastError: string | null;
+  webhookUrl: string;
+  updatedAt: string | null;
+  envFallbackAvailable: boolean;
+};
+
+function parseStripeConfig(encrypted: string | null | undefined): Partial<StripeIntegrationConfig> {
+  if (!encrypted) return {};
+  try {
+    const raw = decryptField(encrypted);
+    if (!raw) return {};
+    return JSON.parse(raw) as Partial<StripeIntegrationConfig>;
+  } catch {
+    return {};
+  }
+}
+
+export async function getStripeIntegrationSettings(
+  userId: string,
+  role: string,
+): Promise<{ ok: true; data: StripeIntegrationView } | { ok: false; error: string }> {
+  if (!canAccessManagerSettings(role as Parameters<typeof canAccessManagerSettings>[0])) {
+    return { ok: false, error: "unauthorized" };
+  }
+
+  const membership = await prisma.locationMember.findFirst({
+    where: { userId },
+    orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+    include: {
+      location: {
+        select: {
+          id: true,
+          organizationId: true,
+          organization: { select: { id: true, name: true } },
+        },
+      },
+    },
+  });
+
+  if (!membership) return { ok: false, error: "not_found" };
+
+  const org = membership.location.organization;
+  const row = await prisma.organizationIntegration.findUnique({
+    where: {
+      organizationId_provider: {
+        organizationId: org.id,
+        provider: "STRIPE",
+      },
+    },
+  });
+
+  const config = parseStripeConfig(row?.encryptedConfig);
+  const envFallbackAvailable = Boolean(process.env.STRIPE_SECRET_KEY?.trim());
+
+  return {
+    ok: true,
+    data: {
+      organizationId: org.id,
+      organizationName: org.name,
+      locationId: membership.locationId,
+      status: row?.status ?? "DISCONNECTED",
+      mode: config.mode === "live" || config.secretKey?.startsWith("sk_live_") ? "live" : "test",
+      secretKeyMasked: maskSecret(config.secretKey),
+      hasSecretKey: Boolean(config.secretKey?.trim()),
+      hasWebhookSecret: Boolean(config.webhookSecret?.trim()),
+      allowedOrigins: row?.allowedOrigins ?? [],
+      lastError: row?.lastError ?? null,
+      webhookUrl: `${appBaseUrl()}/api/webhooks/stripe`,
       updatedAt: row?.updatedAt?.toISOString() ?? null,
       envFallbackAvailable,
     },

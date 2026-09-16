@@ -111,6 +111,8 @@ export type StudioCalendarSync = {
   websiteUrl: string | null;
   /** Tenant-scoped public schedule URL any studio site can fetch. */
   publicScheduleUrl: string;
+  /** First-party student registration (FLiiP-style) on RitmoKit. */
+  publicBookingUrl: string;
 };
 
 export type StudioCalendarPayload = {

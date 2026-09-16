@@ -20,6 +20,17 @@ export function shortDoorCode(enrollmentId: string): string {
   return enrollmentId.replace(/-/g, "").slice(-4).toLowerCase();
 }
 
+/**
+ * Display form of the door code (uppercase, 4 chars) derived from any accepted
+ * ticket string (`RK|uuid`, legacy `SA|…`, bare uuid). Printed on confirmations
+ * and on the door roster so a volunteer can type it instead of a name.
+ */
+export function doorCodeFromTicket(ticket: string | null | undefined): string | null {
+  if (!ticket) return null;
+  const id = parseTicketCode(ticket);
+  return id ? shortDoorCode(id).toUpperCase() : null;
+}
+
 export function rowMatchesDoorQuery(row: DoorSearchRow, query: string): boolean {
   const q = normalizeDoorQuery(query);
   if (q.length < 2) return false;

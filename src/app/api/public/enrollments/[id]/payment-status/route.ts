@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { publicCorsPreflight, publicJson } from "@/lib/public-api/cors";
 import { asPlainNumber } from "@/lib/data/serialize";
 import { publicPaymentStatus } from "@/lib/payments/interac";
+import { checkRateLimit, clientKey, pruneRateLimitBuckets } from "@/lib/public-api/rate-limit";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
@@ -18,6 +19,21 @@ export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
+  pruneRateLimitBuckets();
+  // Polled every few seconds by BookingModal; generous but bounded so the
+  // capability URL cannot be brute-forced or used as a DB load amplifier.
+  const limit = checkRateLimit(clientKey(request, "public:payment-status"), {
+    limit: 120,
+    windowMs: 60_000,
+  });
+  if (!limit.ok) {
+    return publicJson(
+      request,
+      { error: "rate_limited", retryAfterSec: limit.retryAfterSec },
+      { status: 429 },
+    );
+  }
+
   const { id } = await context.params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) {
     return publicJson(request, { error: "invalid_id" }, { status: 400 });

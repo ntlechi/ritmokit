@@ -1,15 +1,24 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { z } from "zod";
 import { enqueueAndRunDanceAgent } from "@/lib/agents/dance-enqueue";
-import { evaluateParityEnrollment, isParityAlert, type RoleCapacity } from "@/lib/dance/parity";
+import { isParityAlert, type RoleCapacity } from "@/lib/dance/parity";
+import {
+  allocateSeat,
+  loadLockedCapacity,
+  lockSession,
+  SEAT_TX_OPTIONS,
+  sessionInLocations,
+} from "@/lib/dance/seat-allocator";
+import { enrollmentScopeWhere, staffScope } from "@/lib/dance/tenant-scope";
 import { tryPromoteWaitlist } from "@/lib/dance/waitlist-promote";
-import { civilDateInTimeZone, recordClassAttendance } from "@/lib/dance/progression";
+import { civilDateInTimeZone, refreshProgressionForEnrollment } from "@/lib/dance/progression";
 import { actionDatabaseError, type SimpleActionResult } from "@/lib/actions/result";
 import { canAccessAccueil, canAccessManagerSettings, getSessionUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-import { resolveEnrollmentAmountCad } from "@/lib/public-api/enrollments";
+import { resolveEnrollmentAmountCad } from "@/lib/dance/pricing";
 
 const enrollSchema = z.object({
   sessionId: z.string().uuid(),
@@ -25,38 +34,13 @@ export type EnrollResult =
   | { ok: true; enrollmentId: string; waitlisted: boolean }
   | { ok: false; error: string };
 
-async function loadCapacity(sessionId: string): Promise<RoleCapacity | null> {
-  const session = await prisma.classSession.findUnique({
-    where: { id: sessionId },
-    select: {
-      maxLeads: true,
-      maxFollows: true,
-      enrollments: {
-        where: {
-          waitlisted: false,
-          paymentStatus: { not: "CANCELLED_INTERAC" },
-        },
-        select: { danceRole: true },
-      },
-    },
-  });
-  if (!session) return null;
+type EnrollTx =
+  | { kind: "not_found" }
+  | { kind: "refused"; reason: string }
+  | { kind: "existing"; enrollmentId: string; waitlisted: boolean }
+  | { kind: "created"; enrollmentId: string; waitlisted: boolean; capacityAfter: RoleCapacity };
 
-  let filledLeads = 0;
-  let filledFollows = 0;
-  for (const e of session.enrollments) {
-    if (e.danceRole === "LEAD") filledLeads += 1;
-    else if (e.danceRole === "FOLLOW") filledFollows += 1;
-  }
-
-  return {
-    maxLeads: session.maxLeads,
-    maxFollows: session.maxFollows,
-    filledLeads,
-    filledFollows,
-  };
-}
-
+/** Staff-side enrollment (Sessions page). Same lock as the public path. */
 export async function enrollStudentAction(input: z.infer<typeof enrollSchema>): Promise<EnrollResult> {
   const parsed = enrollSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "invalid_input" };
@@ -67,72 +51,71 @@ export async function enrollStudentAction(input: z.infer<typeof enrollSchema>): 
   const { sessionId, studentId, danceRole, lang, allowWaitlist, paid, paymentRef } = parsed.data;
 
   try {
-    const capacity = await loadCapacity(sessionId);
-    if (!capacity) return { ok: false, error: "session_not_found" };
-
-    const decision = evaluateParityEnrollment(capacity, danceRole, {
-      allowWaitlist: allowWaitlist ?? true,
-    });
-
-    if (!decision.ok) {
-      return { ok: false, error: `parity_${decision.reason}` };
-    }
-
-    const sessionPrices = await prisma.classSession.findUnique({
-      where: { id: sessionId },
-      select: { priceRegular: true, priceCouple: true, priceStudent: true },
-    });
-    if (!sessionPrices) return { ok: false, error: "session_not_found" };
-
+    const scope = await staffScope(user);
     const isPaid = paid ?? false;
-    const enrollment = await prisma.enrollment.create({
-      data: {
-        sessionId,
+    const now = new Date();
+
+    const outcome = await prisma.$transaction<EnrollTx>(async (tx) => {
+      const session = await lockSession(tx, sessionId);
+      if (!session || !sessionInLocations(session, scope.locationIds)) return { kind: "not_found" };
+
+      const seat = await allocateSeat(tx, session, {
         studentId,
         danceRole,
-        waitlisted: decision.waitlisted,
-        waitlistedAt: decision.waitlisted ? new Date() : null,
-        paid: isPaid,
-        paymentStatus: isPaid ? "PAID" : "NONE",
-        paidAt: isPaid ? new Date() : null,
+        allowWaitlist: allowWaitlist ?? true,
         pricingTier: "REGULAR",
         amountCad: resolveEnrollmentAmountCad(
           {
-            priceRegular: Number(sessionPrices.priceRegular),
-            priceCouple:
-              sessionPrices.priceCouple != null ? Number(sessionPrices.priceCouple) : null,
-            priceStudent:
-              sessionPrices.priceStudent != null ? Number(sessionPrices.priceStudent) : null,
+            priceRegular: session.priceRegular,
+            priceCouple: session.priceCouple,
+            priceStudent: session.priceStudent,
           },
           "REGULAR",
         ),
+        interacReferenceHint: session.courseTitle,
         paymentRef: paymentRef ?? null,
-      },
-    });
+        payment: isPaid
+          ? {
+              paid: true,
+              paymentStatus: "PAID",
+              paymentProvider: "CASH",
+              paidAt: now,
+              paymentPendingAt: null,
+            }
+          : undefined,
+      });
+      if (seat.kind === "refused") return { kind: "refused", reason: seat.reason };
+      if (seat.kind === "existing") {
+        return { kind: "existing", enrollmentId: seat.enrollmentId, waitlisted: seat.existing.waitlisted };
+      }
+      return {
+        kind: "created",
+        enrollmentId: seat.enrollmentId,
+        waitlisted: seat.kind === "waitlisted",
+        capacityAfter: await loadLockedCapacity(tx, session),
+      };
+    }, SEAT_TX_OPTIONS);
 
-    const nextCap: RoleCapacity = {
-      ...capacity,
-      filledLeads: capacity.filledLeads + (danceRole === "LEAD" && !decision.waitlisted ? 1 : 0),
-      filledFollows:
-        capacity.filledFollows + (danceRole === "FOLLOW" && !decision.waitlisted ? 1 : 0),
-    };
+    if (outcome.kind === "not_found") return { ok: false, error: "session_not_found" };
+    if (outcome.kind === "refused") return { ok: false, error: `parity_${outcome.reason}` };
+    if (outcome.kind === "existing") return { ok: false, error: "already_enrolled" };
 
-    if (isParityAlert(nextCap) || decision.waitlisted) {
+    if (isParityAlert(outcome.capacityAfter) || outcome.waitlisted) {
       await enqueueAndRunDanceAgent({
         eventType: "enrollment.parity_alert",
         payload: {
           sessionId,
-          enrollmentId: enrollment.id,
+          enrollmentId: outcome.enrollmentId,
           studentId,
           danceRole,
-          waitlisted: decision.waitlisted,
-          capacity: nextCap,
+          waitlisted: outcome.waitlisted,
+          capacity: outcome.capacityAfter,
         },
       });
     }
 
     // Seating someone may unlock the opposite waitlist.
-    if (!decision.waitlisted) {
+    if (!outcome.waitlisted) {
       await tryPromoteWaitlist(sessionId).catch((error) => {
         console.error("[enrollStudent] promote failed", error);
       });
@@ -141,12 +124,23 @@ export async function enrollStudentAction(input: z.infer<typeof enrollSchema>): 
     revalidatePath(`/${lang}/sessions`, "page");
     revalidatePath(`/${lang}/accueil`, "page");
     revalidatePath(`/${lang}/planning`, "page");
-    return { ok: true, enrollmentId: enrollment.id, waitlisted: decision.waitlisted };
+    return { ok: true, enrollmentId: outcome.enrollmentId, waitlisted: outcome.waitlisted };
   } catch (error) {
     return actionDatabaseError("enrollStudent", error) as EnrollResult;
   }
 }
 
+/**
+ * PRÉSENT toggle — the 18:58 hot path.
+ *
+ * Three indexed round trips, all by primary key, no class-level lock:
+ *   1. scoped read (tenant check + timezone),
+ *   2. conditional `UPDATE … WHERE attended <> $1` (idempotent: a double tap
+ *      or LTE retry updates 0 rows and reports `alreadyAttended`),
+ *   3. `class_attendance` upsert keyed on (enrollment_id, occurred_on) — the
+ *      "Déjà pointé" guard lives in the unique index, not in JS.
+ * Evolution stats are recomputed after the response is sent.
+ */
 export async function markAttendanceAction(input: {
   enrollmentId: string;
   attended: boolean;
@@ -155,10 +149,12 @@ export async function markAttendanceAction(input: {
   const user = await getSessionUser();
   if (!user) return { ok: false, error: "unauthorized" };
   if (!canAccessAccueil(user.role)) return { ok: false, error: "forbidden" };
+  if (!/^[0-9a-f-]{36}$/i.test(input.enrollmentId)) return { ok: false, error: "not_found" };
 
   try {
-    const enrollment = await prisma.enrollment.findUnique({
-      where: { id: input.enrollmentId },
+    const scope = await staffScope(user);
+    const enrollment = await prisma.enrollment.findFirst({
+      where: { id: input.enrollmentId, ...enrollmentScopeWhere(scope.locationIds) },
       select: {
         id: true,
         waitlisted: true,
@@ -173,29 +169,35 @@ export async function markAttendanceAction(input: {
     });
     if (!enrollment) return { ok: false, error: "not_found" };
     if (enrollment.waitlisted) return { ok: false, error: "waitlisted" };
-    if (input.attended && enrollment.attended) {
-      return { ok: true, alreadyAttended: true };
-    }
-
-    await prisma.enrollment.update({
-      where: { id: input.enrollmentId },
-      data: { attended: input.attended },
-    });
 
     const timezone =
       enrollment.session.season?.location.timezone ||
       enrollment.session.room.location.timezone ||
       "America/Toronto";
-    await recordClassAttendance({
-      enrollmentId: enrollment.id,
-      attended: input.attended,
-      occurredOn: civilDateInTimeZone(new Date(), timezone),
-    }).catch((error) => {
-      console.error("[markAttendance] progression", error);
+    const occurredOn = civilDateInTimeZone(new Date(), timezone);
+
+    const [flip] = await prisma.$transaction([
+      prisma.enrollment.updateMany({
+        where: { id: enrollment.id, waitlisted: false, attended: { not: input.attended } },
+        data: { attended: input.attended },
+      }),
+      prisma.classAttendance.upsert({
+        where: { enrollmentId_occurredOn: { enrollmentId: enrollment.id, occurredOn } },
+        create: { enrollmentId: enrollment.id, occurredOn, attended: input.attended },
+        update: { attended: input.attended },
+      }),
+    ]);
+
+    after(async () => {
+      await refreshProgressionForEnrollment(enrollment.id).catch((error) => {
+        console.error("[markAttendance] progression", error);
+      });
     });
 
-    revalidatePath(`/${input.lang}/sessions`, "page");
     revalidatePath(`/${input.lang}/accueil`, "page");
+    if (flip.count === 0) return { ok: true, alreadyAttended: input.attended };
+
+    revalidatePath(`/${input.lang}/sessions`, "page");
     revalidatePath(`/${input.lang}/students`, "page");
     revalidatePath(`/${input.lang}/planning`, "page");
     return { ok: true };
@@ -220,16 +222,22 @@ export async function releaseEnrollmentSeatAction(input: {
   }
 
   try {
-    const enrollment = await prisma.enrollment.findUnique({
-      where: { id: input.enrollmentId },
-      select: { id: true, sessionId: true, waitlisted: true },
+    const scope = await staffScope(user);
+    const enrollment = await prisma.enrollment.findFirst({
+      where: { id: input.enrollmentId, ...enrollmentScopeWhere(scope.locationIds) },
+      select: { id: true, sessionId: true, waitlisted: true, paid: true },
     });
     if (!enrollment) return { ok: false, error: "not_found" };
+    // Money on file must be refunded/cancelled explicitly, never dropped with the row.
+    if (enrollment.paid) return { ok: false, error: "already_paid" };
 
-    const sessionId = enrollment.sessionId;
-    await prisma.enrollment.delete({ where: { id: enrollment.id } });
+    // Conditional delete: a concurrent payment webhook wins over a release.
+    const deleted = await prisma.enrollment.deleteMany({
+      where: { id: enrollment.id, paid: false },
+    });
+    if (deleted.count === 0) return { ok: false, error: "already_paid" };
 
-    await tryPromoteWaitlist(sessionId).catch((error) => {
+    await tryPromoteWaitlist(enrollment.sessionId).catch((error) => {
       console.error("[releaseSeat] promote failed", error);
     });
 
@@ -237,7 +245,7 @@ export async function releaseEnrollmentSeatAction(input: {
       await enqueueAndRunDanceAgent({
         eventType: "enrollment.parity_alert",
         payload: {
-          sessionId,
+          sessionId: enrollment.sessionId,
           enrollmentId: enrollment.id,
           reason: input.reason ?? "cancel",
           released: true,

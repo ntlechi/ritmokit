@@ -3,7 +3,7 @@
  */
 import "server-only";
 
-import { canAccessManagerSettings, getPrimaryMembership } from "@/lib/auth/session";
+import { canAccessTeaching, getPrimaryMembership } from "@/lib/auth/session";
 import { ensureStudioOsSchema } from "@/lib/db/ensure-studio-os-schema";
 import { prisma } from "@/lib/prisma";
 import type { Role } from "@/generated/prisma/enums";
@@ -52,7 +52,7 @@ export async function listCoursePlansForUser(
   userId: string,
   role: Role,
 ): Promise<{ locationName: string; organizationId: string; courses: CoursePlanView[] } | null> {
-  if (!canAccessManagerSettings(role)) return null;
+  if (!canAccessTeaching(role)) return null;
   const membership = await getPrimaryMembership(userId);
   if (!membership) return null;
 

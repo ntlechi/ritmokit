@@ -7,8 +7,10 @@ import { decryptField, encryptField } from "@/lib/crypto/field-encryption";
 import type {
   IntegrationStatus,
   PayPalIntegrationConfig,
+  StripeIntegrationConfig,
 } from "@/lib/integrations/types";
 import { testPayPalConnection } from "@/lib/payments/paypal";
+import { testStripeConnection } from "@/lib/payments/stripe";
 import { prisma } from "@/lib/prisma";
 
 export type IntegrationActionResult =
@@ -218,5 +220,191 @@ export async function disconnectPayPalIntegrationAction(): Promise<IntegrationAc
     return { ok: true, status: "DISCONNECTED" };
   } catch (error) {
     return actionDatabaseError("integrations:disconnect", error);
+  }
+}
+
+function loadExistingStripeConfig(
+  encrypted: string | null | undefined,
+): Partial<StripeIntegrationConfig> {
+  if (!encrypted) return {};
+  try {
+    const raw = decryptField(encrypted);
+    if (!raw) return {};
+    return JSON.parse(raw) as Partial<StripeIntegrationConfig>;
+  } catch {
+    return {};
+  }
+}
+
+export async function saveStripeIntegrationAction(input: {
+  secretKey: string;
+  webhookSecret: string;
+  mode: "test" | "live";
+  allowedOrigins: string;
+  keepExistingSecret?: boolean;
+}): Promise<IntegrationActionResult> {
+  try {
+    const user = await getSessionUser();
+    if (!user || !canAccessManagerSettings(user.role)) {
+      return { ok: false, error: "unauthorized" };
+    }
+
+    const membership = await resolveManagerOrg(user.id);
+    if (!membership) return { ok: false, error: "not_found" };
+
+    const organizationId = membership.location.organizationId;
+    const existing = await prisma.organizationIntegration.findUnique({
+      where: {
+        organizationId_provider: { organizationId, provider: "STRIPE" },
+      },
+    });
+
+    const prev = loadExistingStripeConfig(existing?.encryptedConfig);
+    let secretKey = input.secretKey.trim();
+    if (!secretKey && input.keepExistingSecret) {
+      secretKey = prev.secretKey?.trim() ?? "";
+    }
+    const webhookSecret =
+      input.webhookSecret.trim() || prev.webhookSecret?.trim() || "";
+    const mode =
+      input.mode === "live" || secretKey.startsWith("sk_live_") ? "live" : "test";
+    const allowedOrigins = parseOrigins(input.allowedOrigins);
+
+    if (!secretKey) {
+      return { ok: false, error: "missing_credentials" };
+    }
+
+    const config: StripeIntegrationConfig = {
+      secretKey,
+      webhookSecret,
+      mode,
+    };
+
+    const encryptedConfig = encryptField(JSON.stringify(config));
+    if (!encryptedConfig) {
+      return { ok: false, error: "encrypt_failed" };
+    }
+
+    const status: IntegrationStatus =
+      existing?.status === "CONNECTED" || existing?.status === "TESTING"
+        ? existing.status
+        : "DISCONNECTED";
+
+    await prisma.organizationIntegration.upsert({
+      where: {
+        organizationId_provider: { organizationId, provider: "STRIPE" },
+      },
+      create: {
+        organizationId,
+        provider: "STRIPE",
+        status,
+        encryptedConfig,
+        allowedOrigins,
+        lastError: null,
+      },
+      update: {
+        encryptedConfig,
+        allowedOrigins,
+        lastError: null,
+        ...(status === "DISCONNECTED" ? {} : { status }),
+      },
+    });
+
+    revalidatePath("/[lang]/settings/manager/integrations", "page");
+    return { ok: true, status };
+  } catch (error) {
+    return actionDatabaseError("integrations:saveStripe", error);
+  }
+}
+
+export async function testStripeIntegrationAction(): Promise<IntegrationActionResult> {
+  try {
+    const user = await getSessionUser();
+    if (!user || !canAccessManagerSettings(user.role)) {
+      return { ok: false, error: "unauthorized" };
+    }
+
+    const membership = await resolveManagerOrg(user.id);
+    if (!membership) return { ok: false, error: "not_found" };
+
+    const organizationId = membership.location.organizationId;
+    const row = await prisma.organizationIntegration.findUnique({
+      where: {
+        organizationId_provider: { organizationId, provider: "STRIPE" },
+      },
+    });
+
+    if (!row) return { ok: false, error: "not_configured" };
+
+    const config = loadExistingStripeConfig(row.encryptedConfig);
+    if (!config.secretKey) {
+      return { ok: false, error: "missing_credentials" };
+    }
+
+    const result = await testStripeConnection({
+      secretKey: config.secretKey,
+      webhookSecret: config.webhookSecret ?? "",
+      mode: config.mode === "live" ? "live" : "test",
+    });
+
+    if (!result.ok) {
+      await prisma.organizationIntegration.update({
+        where: { id: row.id },
+        data: { status: "ERROR", lastError: result.error },
+      });
+      revalidatePath("/[lang]/settings/manager/integrations", "page");
+      return { ok: false, error: result.error };
+    }
+
+    const status: IntegrationStatus = config.mode === "live" ? "CONNECTED" : "TESTING";
+    await prisma.organizationIntegration.update({
+      where: { id: row.id },
+      data: { status, lastError: null },
+    });
+
+    revalidatePath("/[lang]/settings/manager/integrations", "page");
+    return { ok: true, status };
+  } catch (error) {
+    return actionDatabaseError("integrations:testStripe", error);
+  }
+}
+
+export async function disconnectStripeIntegrationAction(): Promise<IntegrationActionResult> {
+  try {
+    const user = await getSessionUser();
+    if (!user || !canAccessManagerSettings(user.role)) {
+      return { ok: false, error: "unauthorized" };
+    }
+
+    const membership = await resolveManagerOrg(user.id);
+    if (!membership) return { ok: false, error: "not_found" };
+
+    const organizationId = membership.location.organizationId;
+    const empty = encryptField(JSON.stringify({ cleared: true, mode: "test" }));
+    if (!empty) return { ok: false, error: "encrypt_failed" };
+
+    await prisma.organizationIntegration.upsert({
+      where: {
+        organizationId_provider: { organizationId, provider: "STRIPE" },
+      },
+      create: {
+        organizationId,
+        provider: "STRIPE",
+        status: "DISCONNECTED",
+        encryptedConfig: empty,
+        allowedOrigins: [],
+        lastError: null,
+      },
+      update: {
+        status: "DISCONNECTED",
+        encryptedConfig: empty,
+        lastError: null,
+      },
+    });
+
+    revalidatePath("/[lang]/settings/manager/integrations", "page");
+    return { ok: true, status: "DISCONNECTED" };
+  } catch (error) {
+    return actionDatabaseError("integrations:disconnectStripe", error);
   }
 }

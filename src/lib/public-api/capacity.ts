@@ -4,6 +4,8 @@ import {
   evaluateCoupleEnrollment,
   evaluateParityEnrollment,
   getClassAvailability,
+  getParityLock,
+  maxImbalanceForCourse,
   type RoleCapacity,
 } from "@/lib/dance/parity";
 import { prisma } from "@/lib/prisma";
@@ -15,6 +17,7 @@ export async function loadSessionCapacity(sessionId: string): Promise<RoleCapaci
     select: {
       maxLeads: true,
       maxFollows: true,
+      course: { select: { style: true, title: true } },
       enrollments: {
         where: {
           waitlisted: false,
@@ -38,6 +41,7 @@ export async function loadSessionCapacity(sessionId: string): Promise<RoleCapaci
     maxFollows: session.maxFollows,
     filledLeads,
     filledFollows,
+    maxImbalance: maxImbalanceForCourse(session.course),
   };
 }
 
@@ -65,6 +69,7 @@ export function buildAvailabilityPayload(cap: RoleCapacity) {
     leadsFree: availability.leadsFree,
     followsFree: availability.followsFree,
     imbalance: availability.imbalance,
+    lockedRole: getParityLock(cap),
     full: availability.full,
     canRegisterLead: lead.canRegister,
     canRegisterFollow: follow.canRegister,

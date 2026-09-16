@@ -19,6 +19,15 @@ async function tableExists(name: string): Promise<boolean> {
   return Boolean(rows[0]?.exists);
 }
 
+async function indexExists(name: string): Promise<boolean> {
+  const rows = await prisma.$queryRaw<TableRow[]>`
+    SELECT EXISTS (
+      SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND indexname = ${name}
+    ) AS exists
+  `;
+  return Boolean(rows[0]?.exists);
+}
+
 async function exec(sql: string): Promise<void> {
   try {
     await prisma.$executeRawUnsafe(sql);
@@ -200,6 +209,56 @@ export async function ensureStudioOsSchema(): Promise<{ applied: string[] }> {
 
     if (applied.includes("student_progressions") || applied.includes("class_attendance")) {
       await recordMigration("20260828150000_student_progression");
+    }
+
+    if (!(await tableExists("cash_drawer_closes"))) {
+      await exec(`
+        CREATE TABLE IF NOT EXISTS "cash_drawer_closes" (
+          "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+          "location_id" UUID NOT NULL,
+          "closed_by_id" UUID NOT NULL,
+          "business_date" DATE NOT NULL,
+          "start_float_cad" DECIMAL(10,2) NOT NULL,
+          "cash_door_cad" DECIMAL(10,2) NOT NULL,
+          "cash_door_count" INTEGER NOT NULL,
+          "interac_door_cad" DECIMAL(10,2) NOT NULL,
+          "interac_door_count" INTEGER NOT NULL,
+          "expected_cad" DECIMAL(10,2) NOT NULL,
+          "counted_cad" DECIMAL(10,2) NOT NULL,
+          "variance_cad" DECIMAL(10,2) NOT NULL,
+          "deposit_cad" DECIMAL(10,2) NOT NULL,
+          "note" TEXT,
+          "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "cash_drawer_closes_pkey" PRIMARY KEY ("id")
+        )`);
+      await exec(
+        `CREATE UNIQUE INDEX IF NOT EXISTS "cash_drawer_closes_location_id_business_date_key" ON "cash_drawer_closes"("location_id", "business_date")`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS "cash_drawer_closes_location_id_business_date_idx" ON "cash_drawer_closes"("location_id", "business_date")`,
+      );
+      await exec(
+        `ALTER TABLE "cash_drawer_closes" ADD CONSTRAINT "cash_drawer_closes_location_id_fkey" FOREIGN KEY ("location_id") REFERENCES "locations"("id") ON DELETE CASCADE ON UPDATE CASCADE`,
+      );
+      await exec(
+        `ALTER TABLE "cash_drawer_closes" ADD CONSTRAINT "cash_drawer_closes_closed_by_id_fkey" FOREIGN KEY ("closed_by_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE`,
+      );
+      applied.push("cash_drawer_closes");
+      await recordMigration("20260902200000_cash_drawer_close");
+    }
+
+    if (!(await indexExists("enrollments_payment_provider_paid_at_idx"))) {
+      await exec(
+        `CREATE INDEX IF NOT EXISTS "enrollments_student_id_idx" ON "enrollments"("student_id")`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS "enrollments_payment_provider_paid_at_idx" ON "enrollments"("payment_provider", "paid_at")`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS "enrollments_payment_provider_payment_pending_at_idx" ON "enrollments"("payment_provider", "payment_pending_at")`,
+      );
+      applied.push("hardening_indexes");
+      await recordMigration("20260902230000_hardening_indexes");
     }
 
     ready = true;

@@ -16,10 +16,12 @@ export function CoursePlansAdmin({
   lang,
   courses,
   dict,
+  readOnly = false,
 }: {
   lang: Locale;
   courses: CoursePlanView[];
   dict: Dictionary;
+  readOnly?: boolean;
 }) {
   const p = dict.plans;
   const [courseId, setCourseId] = useState(courses[0]?.courseId ?? "");
@@ -58,7 +60,9 @@ export function CoursePlansAdmin({
 
       {selected && (
         <>
-          <LessonEditor key={`${selected.courseId}-new`} lang={lang} courseId={selected.courseId} dict={dict} />
+          {!readOnly && (
+            <LessonEditor key={`${selected.courseId}-new`} lang={lang} courseId={selected.courseId} dict={dict} />
+          )}
           {selected.lessons.length === 0 ? (
             <p className="text-sm text-foreground-muted">{p.emptyLessons}</p>
           ) : (
@@ -89,12 +93,14 @@ export function CoursePlansAdmin({
                       </span>
                     )}
                   </div>
-                  <LessonEditor
-                    lang={lang}
-                    courseId={selected.courseId}
-                    dict={dict}
-                    existing={lesson}
-                  />
+                  {!readOnly && (
+                    <LessonEditor
+                      lang={lang}
+                      courseId={selected.courseId}
+                      dict={dict}
+                      existing={lesson}
+                    />
+                  )}
                 </li>
               ))}
             </ul>

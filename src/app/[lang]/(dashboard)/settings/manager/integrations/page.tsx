@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { IntegrationsPayPalForm } from "@/components/manager/integrations-paypal-form";
+import { IntegrationsStripeForm } from "@/components/manager/integrations-stripe-form";
 import { dna } from "@/lib/design/dna";
-import { getPayPalIntegrationSettings } from "@/lib/data/integrations";
+import { getPayPalIntegrationSettings, getStripeIntegrationSettings } from "@/lib/data/integrations";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { isLocale } from "@/lib/i18n/config";
 import { canAccessManagerSettings, getSessionUser } from "@/lib/auth/session";
@@ -20,7 +21,10 @@ export default async function ManagerIntegrationsPage({
   if (!user) redirect(`/${lang}/login`);
   if (!canAccessManagerSettings(user.role)) redirect(`/${lang}/settings`);
 
-  const result = await getPayPalIntegrationSettings(user.id, user.role);
+  const [result, stripeResult] = await Promise.all([
+    getPayPalIntegrationSettings(user.id, user.role),
+    getStripeIntegrationSettings(user.id, user.role),
+  ]);
   if (!result.ok) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-8">
@@ -77,6 +81,36 @@ export default async function ManagerIntegrationsPage({
           copied: t.integrationsCopied,
         }}
       />
+
+      {stripeResult.ok ? (
+        <IntegrationsStripeForm
+          settings={stripeResult.data}
+          labels={{
+            title: t.integrationsStripeTitle,
+            subtitle: t.integrationsStripeSubtitle,
+            status: t.integrationsStatus,
+            mode: t.integrationsMode,
+            modeSandbox: t.integrationsModeSandbox,
+            modeLive: t.integrationsModeLive,
+            secretKey: t.integrationsStripeSecret,
+            secretKeyKeep: t.integrationsClientSecretKeep,
+            webhookSecret: t.integrationsStripeWebhookSecret,
+            webhookUrl: t.integrationsStripeWebhookUrl,
+            origins: t.integrationsOrigins,
+            originsHint: t.integrationsOriginsHint,
+            save: t.integrationsSave,
+            test: t.integrationsTest,
+            disconnect: t.integrationsDisconnect,
+            envFallback: t.integrationsStripeEnvFallback,
+            saved: t.integrationsStripeSaved,
+            tested: t.integrationsTested,
+            disconnected: t.integrationsStripeDisconnected,
+            errorGeneric: t.integrationsError,
+            copy: t.integrationsCopy,
+            copied: t.integrationsCopied,
+          }}
+        />
+      ) : null}
     </div>
   );
 }

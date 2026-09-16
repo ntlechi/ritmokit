@@ -7,6 +7,7 @@ import type { AccueilRosterRow } from "@/lib/data/accueil-roster";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
 import { evaluateProgressionAction } from "@/lib/actions/progression";
+import { doorCodeFromTicket } from "@/lib/dance/door-search";
 import { cn } from "@/lib/utils";
 
 export function CheckInRow({
@@ -49,6 +50,16 @@ export function CheckInRow({
         highlighted && "ring-2 ring-accent ring-offset-2 ring-offset-background",
       )}
     >
+      <span
+        className={cn(
+          "hidden w-14 shrink-0 font-mono text-lg font-bold tracking-[0.12em] tabular-nums sm:block",
+          highlighted ? "text-accent" : "text-foreground-muted",
+        )}
+        aria-label={dict.doorCode}
+        title={dict.doorCode}
+      >
+        {doorCodeFromTicket(row.ticketCode) ?? doorCodeFromTicket(row.enrollmentId) ?? "····"}
+      </span>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-1.5">
           <Link

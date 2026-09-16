@@ -14,6 +14,7 @@ import { prisma } from "@/lib/prisma";
 import { getPrimaryMembership } from "@/lib/auth/session";
 import { stationLabel } from "@/lib/stations/display";
 import { civilDateFromDbDate } from "@/lib/rentals/wall-time";
+import { publicBookingUrl } from "@/lib/public-api/directory";
 import { resolvePublicBookingBaseUrl } from "@/lib/public-api/booking-return";
 import { civilDateToUtcDate } from "@/lib/time/location-timezone";
 import type { Locale } from "@/lib/i18n/config";
@@ -230,6 +231,11 @@ export async function getStudioCalendarForUser(
       rentalModuleEnabled,
       websiteUrl,
       publicScheduleUrl: buildPublicScheduleUrl(
+        location?.organization.slug ?? "",
+        location?.slug ?? "",
+      ),
+      publicBookingUrl: publicBookingUrl(
+        locale,
         location?.organization.slug ?? "",
         location?.slug ?? "",
       ),

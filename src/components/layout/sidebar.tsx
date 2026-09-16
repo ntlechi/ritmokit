@@ -35,6 +35,7 @@ import {
   canAccessAccueil,
   canAccessAdminSettings,
   canAccessManagerSettings,
+  canAccessTeaching,
 } from "@/lib/auth/session-client";
 import { dna } from "@/lib/design/dna";
 import { cn } from "@/lib/utils";
@@ -57,7 +58,7 @@ const navItems = [
   { key: "interac" as const, href: "/interac", icon: Banknote, managerOnly: true },
   { key: "sessions" as const, href: "/sessions", icon: Music2, managerOnly: true },
   { key: "planning" as const, href: "/planning", icon: CalendarRange, managerOnly: true },
-  { key: "plans" as const, href: "/plans", icon: BookOpen, managerOnly: true },
+  { key: "plans" as const, href: "/plans", icon: BookOpen, teachingOnly: true },
   { key: "rooms" as const, href: "/rooms", icon: DoorOpen, managerOnly: true },
   { key: "rentals" as const, href: "/rentals", icon: KeyRound, managerOnly: true },
   { key: "calendar" as const, href: "/calendar/week", icon: Calendar },
@@ -145,6 +146,7 @@ export function Sidebar({
   const isManagement = canAccessManagerSettings(role);
   const isAdmin = canAccessAdminSettings(role);
   const showAccueil = canAccessAccueil(role);
+  const showTeaching = canAccessTeaching(role);
 
   const prefs = useSidebarPrefs();
   const { collapsed, width } = prefs;
@@ -272,6 +274,7 @@ export function Sidebar({
         {navItems
           .filter((item) => {
             if ("accueilOnly" in item && item.accueilOnly) return showAccueil;
+            if ("teachingOnly" in item && item.teachingOnly) return showTeaching;
             if ("managerOnly" in item && item.managerOnly) return isManagement;
             return true;
           })

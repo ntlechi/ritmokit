@@ -150,14 +150,10 @@ export function buildClassEconomicsRows(raw: RawClassForAnalytics[]): ClassEcono
 
 export function buildParitySnapshots(rows: ClassEconomicsRow[]): ParitySnapshot[] {
   return rows.map((row) => {
-    const blockedFollows = Math.max(0, row.followsFilled - row.leadsFilled - 2);
-    const blockedLeads = Math.max(0, row.leadsFilled - row.followsFilled - 2);
-    const imbalanceBlockedSeats = blockedFollows + blockedLeads;
-    // Real waitlist CAD + theoretical parity pressure at regular price.
-    const blockedRevenue =
-      row.waitlistBlockedRevenue + imbalanceBlockedSeats * row.priceRegular;
+    // Uneven rooms are normal — do not invent "lost" seats from the mix.
+    const blockedRevenue = row.waitlistBlockedRevenue;
     let status: ParitySnapshot["status"] = "balanced";
-    if (row.waitlistedCount > 0 || row.imbalance > 2) status = "blocked";
+    if (row.waitlistedCount > 0) status = "blocked";
     else if (row.imbalance >= 1) status = "warning";
 
     return {

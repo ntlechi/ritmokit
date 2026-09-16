@@ -8,6 +8,8 @@ import { prisma } from "@/lib/prisma";
 import {
   getPayPalCredentialsForEnrollment,
   getPayPalCredentialsForSession,
+  getStripeCredentialsForEnrollment,
+  getStripeCredentialsForSession,
   preferredPublicPaymentProvider,
 } from "@/lib/integrations/resolver";
 import {
@@ -15,6 +17,11 @@ import {
   createPayPalOrder,
   isPayPalConfigured,
 } from "@/lib/payments/paypal";
+import {
+  allowStripeStub,
+  createStripeCheckoutSession,
+  isStripeConfigured,
+} from "@/lib/payments/stripe";
 import { resolvePublicBookingReturnUrls } from "@/lib/public-api/booking-return";
 
 export type PaymentProvider = "paypal" | "stripe" | "interac" | "cash" | "none";
@@ -61,10 +68,6 @@ function envDefaultProvider(): PaymentProvider {
   return "none";
 }
 
-function appBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "";
-}
-
 /** Ensure BookingModal can resume after PayPal using enrollmentId. */
 function withEnrollmentId(url: string, enrollmentId: string): string {
   try {
@@ -87,14 +90,18 @@ function withEnrollmentId(url: string, enrollmentId: string): string {
 export async function createEnrollmentCheckout(
   input: PaymentCheckoutRequest,
 ): Promise<PaymentCheckoutResult> {
-  const creds =
+  const paypalCreds =
     (await getPayPalCredentialsForEnrollment(input.enrollmentId)) ??
     (await getPayPalCredentialsForSession(input.sessionId));
+  const stripeCreds =
+    (await getStripeCredentialsForEnrollment(input.enrollmentId)) ??
+    (await getStripeCredentialsForSession(input.sessionId));
 
-  const hubPreferred = preferredPublicPaymentProvider(creds?.status ?? null);
-  const provider =
-    input.provider ??
-    (hubPreferred === "paypal" ? "paypal" : envDefaultProvider());
+  const hubPreferred = preferredPublicPaymentProvider(
+    paypalCreds?.status ?? null,
+    stripeCreds?.status ?? null,
+  );
+  const provider = input.provider ?? (hubPreferred === "none" ? envDefaultProvider() : hubPreferred);
 
   if (provider === "none") {
     return {
@@ -141,7 +148,6 @@ export async function createEnrollmentCheckout(
     };
   }
 
-  const base = appBaseUrl();
   const resolved = await resolvePublicBookingReturnUrls({
     enrollmentId: input.enrollmentId,
     locationId: input.locationId,
@@ -152,7 +158,7 @@ export async function createEnrollmentCheckout(
   const cancelUrl = withEnrollmentId(resolved.cancelUrl, input.enrollmentId);
 
   if (provider === "paypal") {
-    if (!isPayPalConfigured(creds)) {
+    if (!isPayPalConfigured(paypalCreds)) {
       if (!allowPayPalStub()) {
         return {
           status: "error",
@@ -185,7 +191,7 @@ export async function createEnrollmentCheckout(
         description: input.description,
         returnUrl,
         cancelUrl,
-        credentials: creds,
+        credentials: paypalCreds,
       });
 
       await prisma.paymentEvent
@@ -199,8 +205,8 @@ export async function createEnrollmentCheckout(
               amountCad: input.amountCad,
               approveUrl: order.approveUrl,
               sessionId: input.sessionId,
-              credentialSource: creds?.source ?? "unknown",
-              organizationId: creds?.organizationId ?? null,
+              credentialSource: paypalCreds?.source ?? "unknown",
+              organizationId: paypalCreds?.organizationId ?? null,
             },
           },
         })
@@ -231,12 +237,81 @@ export async function createEnrollmentCheckout(
     }
   }
 
-  const paymentRef = `stripe_${input.enrollmentId.slice(0, 8)}_${Date.now()}`;
-  return {
-    status: "pending",
-    provider: "stripe",
-    checkoutUrl: `${base}/api/webhooks/stripe?stub=1&ref=${paymentRef}`,
-    paymentRef,
-    message: "Stripe checkout stub — wire live credentials for production.",
-  };
+  if (!isStripeConfigured(stripeCreds)) {
+    if (!allowStripeStub()) {
+      return {
+        status: "error",
+        provider: "stripe",
+        checkoutUrl: null,
+        paymentRef: null,
+        error: "stripe_not_connected",
+        retryCheckout: true,
+        message:
+          "Stripe not connected — open Settings → Integrations (or set STRIPE_SECRET_KEY / STRIPE_ALLOW_STUB=1 for local).",
+      };
+    }
+
+    const paymentRef = `stripe_stub_${input.enrollmentId.slice(0, 8)}_${Date.now()}`;
+    return {
+      status: "pending",
+      provider: "stripe",
+      checkoutUrl: `${returnUrl}${returnUrl.includes("?") ? "&" : "?"}paymentRef=${paymentRef}&stub=1`,
+      paymentRef,
+      message: "Stripe stub checkout (STRIPE_ALLOW_STUB=1) — not a live charge.",
+    };
+  }
+
+  try {
+    const session = await createStripeCheckoutSession({
+      amountCad: input.amountCad,
+      enrollmentId: input.enrollmentId,
+      sessionId: input.sessionId,
+      studentEmail: input.studentEmail,
+      description: input.description,
+      returnUrl,
+      cancelUrl,
+      credentials: stripeCreds,
+    });
+
+    await prisma.paymentEvent
+      .create({
+        data: {
+          enrollmentId: input.enrollmentId,
+          provider: "STRIPE",
+          externalTransactionId: session.sessionId,
+          eventType: "checkout.created",
+          payload: {
+            amountCad: input.amountCad,
+            checkoutUrl: session.checkoutUrl,
+            sessionId: input.sessionId,
+            credentialSource: stripeCreds?.source ?? "unknown",
+            organizationId: stripeCreds?.organizationId ?? null,
+          },
+        },
+      })
+      .catch((error) => {
+        const code = (error as { code?: string }).code;
+        if (code !== "P2002") throw error;
+      });
+
+    return {
+      status: "pending",
+      provider: "stripe",
+      checkoutUrl: session.checkoutUrl,
+      paymentRef: session.sessionId,
+      message: "Stripe checkout created — redirect the student to checkoutUrl.",
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "stripe_checkout_failed";
+    console.error("[payments] stripe checkout error", message);
+    return {
+      status: "error",
+      provider: "stripe",
+      checkoutUrl: null,
+      paymentRef: null,
+      error: message.startsWith("stripe_") ? message : "stripe_checkout_failed",
+      retryCheckout: true,
+      message: "Stripe checkout failed — retry via POST /api/public/enrollments/:id/checkout.",
+    };
+  }
 }

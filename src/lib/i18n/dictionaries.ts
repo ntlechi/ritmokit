@@ -92,6 +92,9 @@ export interface Dictionary {
     walkInParity: string;
     walkInFull: string;
     walkInOk: string;
+    walkInWithPartner: string;
+    walkInPartnerName: string;
+    walkInCoupleFull: string;
     eventBadge: string;
     conciergeTitle: string;
     conciergeSubtitle: string;
@@ -111,6 +114,34 @@ export interface Dictionary {
       waitlist: string;
       no_match: string;
     };
+    /** 4-char code column on the door roster. */
+    doorCode: string;
+    /** Door-level Soirée / Practica override (hides parity, defaults walk-ins to SOLO). */
+    soireeMode: string;
+    soireeOn: string;
+    soireeOff: string;
+    /** End-of-night cash drawer close. */
+    drawerTitle: string;
+    drawerCash: string;
+    drawerInterac: string;
+    drawerInteracNote: string;
+    drawerClose: string;
+    drawerStartFloat: string;
+    drawerExpected: string;
+    drawerCounted: string;
+    drawerVariance: string;
+    drawerVarianceOk: string;
+    drawerVarianceTolerated: string;
+    drawerVarianceOver: string;
+    drawerNote: string;
+    /** Placeholder: {amount}. */
+    drawerDeposit: string;
+    drawerSubmit: string;
+    drawerDone: string;
+    drawerError: string;
+    /** Placeholder: {time}. */
+    drawerAlreadyClosed: string;
+    drawerEntries: string;
   };
   crm: {
     badge: string;
@@ -252,6 +283,10 @@ export interface Dictionary {
       churnHint: string;
       door: string;
       doorHint: string;
+      /** Door cash counted at drawer close this week. Placeholders: {closes}, {variance}. */
+      doorCash: string;
+      doorCashHint: string;
+      doorCashOpen: string;
     };
     pulse: {
       title: string;
@@ -417,6 +452,14 @@ export interface Dictionary {
     integrationsError: string;
     integrationsCopy: string;
     integrationsCopied: string;
+    integrationsStripeTitle: string;
+    integrationsStripeSubtitle: string;
+    integrationsStripeSecret: string;
+    integrationsStripeWebhookSecret: string;
+    integrationsStripeWebhookUrl: string;
+    integrationsStripeEnvFallback: string;
+    integrationsStripeSaved: string;
+    integrationsStripeDisconnected: string;
     adminDesc: string;
     adminConsoleTitle: string;
     adminConsoleSubtitle: string;
@@ -2429,7 +2472,64 @@ export interface Dictionary {
       parity_role_full: string;
       parity_imbalance: string;
       parity_solo_not_supported: string;
+      room_conflict: string;
+      instructor_conflict: string;
+      assistant_conflict: string;
     };
+  };
+  booking: {
+    kicker: string;
+    title: string;
+    subtitle: string;
+    closed: string;
+    emptyDirectory: string;
+    pickStudio: string;
+    season: string;
+    enroll: string;
+    full: string;
+    waitlist: string;
+    leadsFree: string;
+    followsFree: string;
+    regular: string;
+    couple: string;
+    yourName: string;
+    email: string;
+    phone: string;
+    role: string;
+    withPartner: string;
+    partnerName: string;
+    partnerEmail: string;
+    payHow: string;
+    payInterac: string;
+    payStripe: string;
+    payPaypal: string;
+    submit: string;
+    submitting: string;
+    cancel: string;
+    successTitle: string;
+    successWaitlist: string;
+    successPaid: string;
+    successInterac: string;
+    ticket: string;
+    /** 4-char door code label + hint shown on confirmations. */
+    doorCode: string;
+    doorCodeHint: string;
+    back: string;
+    interacHint: string;
+    errorGeneric: string;
+    noStudios: string;
+    shareLink: string;
+    alreadyEnrolled: string;
+    roleFull: string;
+    coupleFull: string;
+    /** Server refused/waitlisted because the role would breach the lead/follow gap. */
+    parityLocked: string;
+    /** Inline hint under role chips. Placeholders: {role}, {other}. */
+    parityLockedHint: string;
+    submitWaitlist: string;
+    copyLink: string;
+    copied: string;
+    openBooking: string;
   };
 }
 

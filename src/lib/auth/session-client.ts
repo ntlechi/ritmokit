@@ -9,14 +9,20 @@ export function canAccessAdminSettings(role: Role) {
   return role === "ADMIN";
 }
 
-/** Front-desk tablet + Accueil check-in (Phase A). */
+/** Front-desk tablet + Accueil check-in. Instructors see tonight + week-N plan. */
 export function canAccessAccueil(role: Role) {
   return (
     role === "OWNER" ||
     role === "MANAGER" ||
     role === "ADMIN" ||
-    role === "FRONT_DESK"
+    role === "FRONT_DESK" ||
+    role === "INSTRUCTOR"
   );
+}
+
+/** Syllabus / Cahier du prof — managers edit, instructors read. */
+export function canAccessTeaching(role: Role) {
+  return canAccessManagerSettings(role) || role === "INSTRUCTOR";
 }
 
 /**

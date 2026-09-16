@@ -21,15 +21,23 @@ const leadOk = evaluateParityEnrollment(cap, "LEAD", { allowWaitlist: false });
 assert.equal(leadOk.ok, true);
 assert.equal(leadOk.waitlisted, false);
 
-// Adding a Lead when Follows lag behind → imbalance waitlist (Δ would be 3).
-const leadWait = evaluateParityEnrollment(
+// Uneven room at the threshold (Δ2): one more Lead would make Δ3, so the Lead
+// is diverted to the Lead waitlist. A Follow still sits.
+const leadUneven = evaluateParityEnrollment(
   { maxLeads: 12, maxFollows: 12, filledLeads: 10, filledFollows: 8 },
   "LEAD",
   { allowWaitlist: true },
 );
-assert.equal(leadWait.ok, true);
-assert.equal(leadWait.waitlisted, true);
-assert.equal(leadWait.reason, "imbalance");
+assert.equal(leadUneven.ok, true);
+assert.equal(leadUneven.waitlisted, true);
+assert.equal(leadUneven.reason, "imbalance");
+const followUneven = evaluateParityEnrollment(
+  { maxLeads: 12, maxFollows: 12, filledLeads: 10, filledFollows: 8 },
+  "FOLLOW",
+  { allowWaitlist: false },
+);
+assert.equal(followUneven.ok, true);
+assert.equal(followUneven.waitlisted, false);
 
 const leadFull = evaluateParityEnrollment(
   { maxLeads: 12, maxFollows: 12, filledLeads: 12, filledFollows: 10 },
@@ -58,12 +66,20 @@ assert.notEqual(inv1, inv2);
 assert.match(inv1, /^rk_[0-9a-f]{12}_nonce1$/);
 assert.notEqual(inv1, `rk_${enrollmentId.replace(/-/g, "").slice(0, 12)}`);
 
+// 3L/8F is the "unteachable class" case: a lone Follow waits, a couple (1L+1F) still sits.
 const followHeavy = { maxLeads: 12, maxFollows: 12, filledLeads: 3, filledFollows: 8 };
 const followSolo = evaluateParityEnrollment(followHeavy, "FOLLOW", { allowWaitlist: true });
+assert.equal(followSolo.ok, true);
 assert.equal(followSolo.waitlisted, true);
+assert.equal(followSolo.reason, "imbalance");
+const leadRelief = evaluateParityEnrollment(followHeavy, "LEAD", { allowWaitlist: false });
+assert.equal(leadRelief.ok, true);
+assert.equal(leadRelief.waitlisted, false);
 const coupleOk = evaluateCoupleEnrollment(followHeavy);
 assert.equal(coupleOk.ok, true);
 assert.equal(coupleOk.waitlisted, false);
+
+const followFull = { maxLeads: 12, maxFollows: 8, filledLeads: 3, filledFollows: 8 };
 
 const advised = adviseInscription(
   [
@@ -88,8 +104,10 @@ const advised = adviseInscription(
   ],
   { role: "FOLLOW", style: "bachata", dayOfWeek: 2, withPartner: true },
 );
+// Follow-heavy room: the lone Follow would wait, but the partner (a Lead) balances it.
 assert.equal(advised.verdict, "partner_unlocks");
 assert.equal(advised.offers[0]?.status, "partner_confirmed");
+assert.equal(advised.offers[0]?.reason, "partner_balances");
 
 const alt = adviseInscription(
   [
@@ -100,7 +118,7 @@ const alt = adviseInscription(
       level: "BEGINNER",
       dayOfWeek: 2,
       startTime: "19:00",
-      capacity: followHeavy,
+      capacity: followFull,
     },
     {
       id: "thu-bach",

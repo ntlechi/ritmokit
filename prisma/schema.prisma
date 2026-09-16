@@ -435,6 +435,7 @@ model Location {
   rentalBookings         RentalBooking[]
   studentNotes           StudentNote[]
   studentProgressions    StudentProgression[]
+  cashDrawerCloses       CashDrawerClose[]
   interacSettings        LocationInteracSettings?
   publicAnnouncements    StudioAnnouncement[]
   publicEvents           StudioPublicEvent[]
@@ -761,6 +762,7 @@ model User {
   studentProgressionsEvaluated  StudentProgression[]           @relation("StudentProgressionEvaluator")
   studentNotesAbout             StudentNote[]                  @relation("StudentNoteSubject")
   studentNotesWritten           StudentNote[]                  @relation("StudentNoteAuthor")
+  cashDrawerCloses              CashDrawerClose[]              @relation("CashDrawerClosedBy")
   instructorPayrollLogs         InstructorPayrollLog[]
   rentalBookingsConfirmed       RentalBooking[]                @relation("RentalBookingConfirmedBy")
   rentalBookingsCancelled       RentalBooking[]                @relation("RentalBookingCancelledBy")
@@ -2294,6 +2296,35 @@ model StudentNote {
   @@map("student_notes")
 }
 
+/// End-of-night door drawer close — cash only (Interac never sits in the drawer).
+/// One row per location per business night; feeds the Monday Financial Pulse.
+model CashDrawerClose {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  locationId String   @map("location_id") @db.Uuid
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  closedById String   @map("closed_by_id") @db.Uuid
+  closedBy   User     @relation("CashDrawerClosedBy", fields: [closedById], references: [id], onDelete: Restrict)
+
+  /// Civil business date (night of). Nights past midnight roll into the previous date.
+  businessDate     DateTime @map("business_date") @db.Date
+  startFloatCad    Decimal  @map("start_float_cad") @db.Decimal(10, 2)
+  cashDoorCad      Decimal  @map("cash_door_cad") @db.Decimal(10, 2)
+  cashDoorCount    Int      @map("cash_door_count")
+  interacDoorCad   Decimal  @map("interac_door_cad") @db.Decimal(10, 2)
+  interacDoorCount Int      @map("interac_door_count")
+  expectedCad      Decimal  @map("expected_cad") @db.Decimal(10, 2)
+  countedCad       Decimal  @map("counted_cad") @db.Decimal(10, 2)
+  varianceCad      Decimal  @map("variance_cad") @db.Decimal(10, 2)
+  depositCad       Decimal  @map("deposit_cad") @db.Decimal(10, 2)
+  note             String?  @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([locationId, businessDate])
+  @@index([locationId, businessDate])
+  @@map("cash_drawer_closes")
+}
+
 /// One path through a course this season — attendance + ready-for-next-level.
 model StudentProgression {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -2422,11 +2453,20 @@ model Enrollment {
   paymentEvents     PaymentEvent[]
   attendanceMarks   ClassAttendance[]
 
+  /// Idempotency key for every seat write (public retry, door, staff, promotion).
   @@unique([sessionId, studentId])
+  /// Seated head-count by role under the class lock (`loadLockedCapacity`).
   @@index([sessionId, danceRole, waitlisted])
   @@index([sessionId, paymentStatus, paid])
+  /// FIFO waitlist candidate (`FOR UPDATE SKIP LOCKED`).
   @@index([sessionId, waitlisted, waitlistedAt])
+  /// Interac queue.
   @@index([paymentStatus, paymentPendingAt])
+  /// Student profile / evolution recompute (FK side, not auto-indexed by Postgres).
+  @@index([studentId])
+  /// Clôture de caisse: cash taken tonight, Interac announced tonight.
+  @@index([paymentProvider, paidAt])
+  @@index([paymentProvider, paymentPendingAt])
   @@map("enrollments")
 }
 

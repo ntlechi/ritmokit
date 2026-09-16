@@ -13,7 +13,6 @@ import {
   doorStatusFromPayment,
   parseTicketCode,
   publicPaymentStatus,
-  ticketCodeForEnrollment,
 } from "@/lib/payments/interac-status";
 import { prisma } from "@/lib/prisma";
 import { getPrimaryMembership } from "@/lib/auth/session";
@@ -261,30 +260,55 @@ export async function cancelInteracEnrollment(input: {
     return { ok: false, error: "not_pending_interac", status: 409 };
   }
 
-  await prisma.$transaction([
-    prisma.enrollment.update({
-      where: { id: row.id },
+  const reason = input.reason?.trim() || "transfer_not_received";
+
+  // Conditional transition: only a still-pending, unpaid row can be cancelled.
+  // If a confirm landed on another tablet between our read and this write, the
+  // UPDATE matches 0 rows and the money stays credited.
+  const cancelled = await prisma.$transaction(async (tx) => {
+    const res = await tx.enrollment.updateMany({
+      where: {
+        id: row.id,
+        paid: false,
+        paymentStatus: { in: ["PENDING_INTERAC", "PENDING"] },
+      },
       data: {
         paymentStatus: "CANCELLED_INTERAC",
         paid: false,
         paymentCancelledAt: new Date(),
         paymentCancelledById: input.userId,
-        cancellationReason: input.reason?.trim() || "transfer_not_received",
+        cancellationReason: reason,
       },
-    }),
-    prisma.paymentEvent.create({
-      data: {
-        enrollmentId: row.id,
-        provider: "INTERAC",
-        externalTransactionId: `interac_cancel_${row.id}_${Date.now()}`,
-        eventType: "payment.cancelled",
-        payload: {
-          cancelledBy: input.userId,
-          reason: input.reason?.trim() || "transfer_not_received",
+    });
+    if (res.count !== 1) return false;
+    await tx.paymentEvent.createMany({
+      data: [
+        {
+          enrollmentId: row.id,
+          provider: "INTERAC",
+          externalTransactionId: `interac_cancel_${row.id}`,
+          eventType: "payment.cancelled",
+          payload: { cancelledBy: input.userId, reason },
         },
-      },
-    }),
-  ]);
+      ],
+      skipDuplicates: true,
+    });
+    return true;
+  });
+
+  if (!cancelled) {
+    const fresh = await prisma.enrollment.findUnique({
+      where: { id: row.id },
+      select: { paid: true, paymentStatus: true },
+    });
+    if (fresh?.paymentStatus === "CANCELLED_INTERAC") {
+      return { ok: true, enrollmentId: row.id, paymentStatus: "cancelled_interac", promoted: 0 };
+    }
+    if (fresh?.paid || fresh?.paymentStatus === "PAID") {
+      return { ok: false, error: "already_paid", status: 409 };
+    }
+    return { ok: false, error: "not_pending_interac", status: 409 };
+  }
 
   const promoted = await tryPromoteWaitlist(row.sessionId);
 

@@ -2,80 +2,23 @@ import "server-only";
 
 import { asPlainNumber } from "@/lib/data/serialize";
 import { pickLessonForWeek, seasonWeekNumber } from "@/lib/data/course-lessons";
-import { getPackagePeers, type RoleCapacity } from "@/lib/dance/parity";
+import { getPackagePeers, maxImbalanceForCourse, type RoleCapacity } from "@/lib/dance/parity";
 import { buildAvailabilityPayload } from "@/lib/public-api/capacity";
 import { prisma } from "@/lib/prisma";
 import { hhmmFromUtcDate } from "@/lib/rentals/wall-time";
 import { stationLabel } from "@/lib/stations/display";
 import type { CourseLevel } from "@/generated/prisma/enums";
+import type { Locale } from "@/lib/i18n/config";
+import type { PublicScheduleClass } from "@/lib/public-api/schedule-types";
+
+export type { PublicScheduleClass } from "@/lib/public-api/schedule-types";
 
 export type PublicScheduleQuery = {
   locationId: string;
   level?: CourseLevel | null;
   style?: string | null;
   dayOfWeek?: number | null;
-};
-
-export type PublicScheduleClass = {
-  id: string;
-  seasonId: string | null;
-  seasonName: string | null;
-  courseId: string;
-  title: string;
-  level: string;
-  style: string;
-  dayOfWeek: number | null;
-  startTime: string;
-  endTime: string;
-  startTimeLocal: string;
-  endTimeLocal: string;
-  room: {
-    id: string;
-    name: string;
-    capacity: number | null;
-    surfaceSqm: number | null;
-  };
-  instructor: {
-    id: string;
-    fullName: string;
-  };
-  pricing: {
-    regular: number;
-    couple: number | null;
-    student: number | null;
-  };
-  capacity: {
-    maxLeads: number;
-    maxFollows: number;
-    leadsFilled: number;
-    followsFilled: number;
-    leadsFree: number;
-    followsFree: number;
-    imbalance: number;
-    full: boolean;
-    canRegisterLead: boolean;
-    canRegisterFollow: boolean;
-    canRegisterSolo: boolean;
-    canRegisterCouple: boolean;
-    canWaitlistLead: boolean;
-    canWaitlistFollow: boolean;
-    waitlistActive: boolean;
-  };
-  /** Week-N teaching card for the current season week. */
-  syllabus: {
-    weekNumber: number;
-    seasonWeek: number;
-    title: string;
-    body: string;
-    musicNote: string | null;
-    leadFocus: string | null;
-    followFocus: string | null;
-    videoUrl: string | null;
-  } | null;
-  /** Same course title across weekdays — one payment package. */
-  packageClassIds: string[];
-  isPackage: boolean;
-  packageCount: number;
+  locale?: Locale;
 };
 
 function countRoles(
@@ -179,6 +122,7 @@ export async function getPublicSchedule(
       maxLeads: row.maxLeads,
       maxFollows: row.maxFollows,
       ...filled,
+      maxImbalance: maxImbalanceForCourse(row.course),
     };
     const flags = buildAvailabilityPayload(cap);
     const peers = getPackagePeers(peerInput, {
@@ -202,7 +146,7 @@ export async function getPublicSchedule(
       endTimeLocal: hhmmFromUtcDate(row.endTime),
       room: {
         id: row.room.id,
-        name: stationLabel(row.room, "fr"),
+        name: stationLabel(row.room, query.locale ?? "fr"),
         capacity: row.room.capacity,
         surfaceSqm: row.room.surfaceSqm,
       },
@@ -223,6 +167,7 @@ export async function getPublicSchedule(
         leadsFree: flags.leadsFree,
         followsFree: flags.followsFree,
         imbalance: flags.imbalance,
+        lockedRole: flags.lockedRole,
         full: flags.full,
         canRegisterLead: flags.canRegisterLead,
         canRegisterFollow: flags.canRegisterFollow,

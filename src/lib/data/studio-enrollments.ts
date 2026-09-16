@@ -8,7 +8,8 @@ import { publicPaymentStatus } from "@/lib/payments/interac-status";
 import { prisma } from "@/lib/prisma";
 import { resolvePublicLocation } from "@/lib/public-api/tenant";
 import { getPrimaryMembership } from "@/lib/auth/session";
-import { canAccessManagerSettings } from "@/lib/auth/session-client";
+import { canAccessLocation } from "@/lib/locations/active-location";
+import type { Prisma } from "@/generated/prisma/client";
 import type { Role } from "@/generated/prisma/enums";
 
 const DAY_NAMES_FR = [
@@ -61,21 +62,28 @@ export async function resolveStudioLocationId(input: {
   organizationSlug?: string | null;
   /** When true, slug/id from query is required (Bearer / machine auth). */
   requireExplicitLocation?: boolean;
+  /**
+   * Organisation the machine token is bound to. The resolved location must
+   * belong to it; `null` (dev-only unscoped secret) skips the check.
+   */
+  tokenOrganizationSlug?: string | null;
 }): Promise<{ ok: true; locationId: string } | { ok: false; error: string; status: number }> {
   if (input.locationId || input.locationSlug) {
     const loc = await resolvePublicLocation({
       locationId: input.locationId,
       locationSlug: input.locationSlug,
-      organizationSlug: input.organizationSlug,
+      organizationSlug: input.organizationSlug ?? input.tokenOrganizationSlug,
     });
     if (!loc) return { ok: false, error: "location_not_found", status: 404 };
 
+    if (input.tokenOrganizationSlug && loc.organizationSlug !== input.tokenOrganizationSlug) {
+      // Same status as "not found": a token must not learn which ids exist elsewhere.
+      return { ok: false, error: "location_not_found", status: 404 };
+    }
+
+    // Session callers: brand-scoped (owners see their org's sites, never another tenant).
     if (input.userId && input.role) {
-      const member = await prisma.locationMember.findFirst({
-        where: { userId: input.userId, locationId: loc.id },
-        select: { id: true },
-      });
-      if (!member && !canAccessManagerSettings(input.role)) {
+      if (!(await canAccessLocation(input.userId, input.role, loc.id))) {
         return { ok: false, error: "forbidden", status: 403 };
       }
     }
@@ -107,7 +115,29 @@ export async function listStudioEnrollments(input: {
   count: number;
 }> {
   const limit = Math.min(Math.max(input.limit ?? 500, 1), 1000);
-  const q = input.q?.trim().toLowerCase() || null;
+  const q = input.q?.trim() || null;
+
+  // Location scope is unconditional — `seasonId` / `sessionId` only narrow it.
+  // A guessed seasonId from another tenant therefore matches nothing.
+  const sessionScope: Prisma.ClassSessionWhereInput = {
+    OR: [
+      { season: { locationId: input.locationId } },
+      { seasonId: null, room: { locationId: input.locationId } },
+    ],
+    ...(input.seasonId ? { seasonId: input.seasonId } : {}),
+  };
+
+  const search: Prisma.EnrollmentWhereInput = q
+    ? {
+        OR: [
+          { student: { fullName: { contains: q, mode: "insensitive" } } },
+          { student: { email: { contains: q, mode: "insensitive" } } },
+          { student: { phone: { contains: q, mode: "insensitive" } } },
+          { ticketCode: { contains: q, mode: "insensitive" } },
+          { session: { course: { title: { contains: q, mode: "insensitive" } } } },
+        ],
+      }
+    : {};
 
   const rows = await prisma.enrollment.findMany({
     where: {
@@ -116,21 +146,24 @@ export async function listStudioEnrollments(input: {
       ...(input.paid === false ? { paid: false } : {}),
       ...(input.waitlisted === true ? { waitlisted: true } : {}),
       ...(input.waitlisted === false ? { waitlisted: false } : {}),
-      ...(input.seasonId
-        ? { session: { seasonId: input.seasonId } }
-        : {
-            session: {
-              OR: [
-                { season: { locationId: input.locationId } },
-                { seasonId: null, room: { locationId: input.locationId } },
-              ],
-            },
-          }),
+      session: sessionScope,
       paymentStatus: { not: "CANCELLED_INTERAC" },
+      ...search,
     },
     orderBy: [{ createdAt: "desc" }],
     take: limit,
-    include: {
+    select: {
+      id: true,
+      danceRole: true,
+      paid: true,
+      paymentStatus: true,
+      paymentProvider: true,
+      pricingTier: true,
+      amountCad: true,
+      waitlisted: true,
+      attended: true,
+      ticketCode: true,
+      createdAt: true,
       student: { select: { id: true, fullName: true, email: true, phone: true } },
       session: {
         select: {
@@ -147,7 +180,7 @@ export async function listStudioEnrollments(input: {
     },
   });
 
-  let items: StudioEnrollmentListItem[] = rows.map((row) => {
+  const items: StudioEnrollmentListItem[] = rows.map((row) => {
     const dayOfWeek = row.session.dayOfWeek;
     return {
       enrollmentId: row.id,
@@ -178,16 +211,6 @@ export async function listStudioEnrollments(input: {
     };
   });
 
-  if (q) {
-    items = items.filter((i) =>
-      [i.studentName, i.studentEmail, i.studentPhone, i.courseTitle, i.ticketCode].some((v) =>
-        String(v ?? "")
-          .toLowerCase()
-          .includes(q),
-      ),
-    );
-  }
-
   return { locationId: input.locationId, items, count: items.length };
 }
 
@@ -211,8 +234,9 @@ export async function updateStudioEnrollmentAttendance(input: {
   if (!row) return { ok: false, error: "not_found", status: 404 };
   if (row.waitlisted) return { ok: false, error: "waitlisted", status: 409 };
 
-  await prisma.enrollment.update({
-    where: { id: row.id },
+  // Conditional write: a second identical PATCH (proxy retry) touches 0 rows.
+  await prisma.enrollment.updateMany({
+    where: { id: row.id, waitlisted: false },
     data: { attended: input.attended === true },
   });
   return { ok: true };

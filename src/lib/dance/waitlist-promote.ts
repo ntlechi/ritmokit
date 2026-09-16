@@ -1,13 +1,17 @@
 /**
  * Auto-promote waitlisted opposite-role dancers when capacity opens (Phase A).
- * Uses FOR UPDATE SKIP LOCKED so concurrent Lead enrollments cannot promote
- * the same Follow twice.
+ *
+ * Each promotion runs under the class row lock (`lockSession`) so it is
+ * serialized with every public / door / staff seat allocation for that class,
+ * and takes the candidate with FOR UPDATE SKIP LOCKED so two triggers cannot
+ * promote the same Follow twice.
  */
 import "server-only";
 
 import { Prisma } from "@/generated/prisma/client";
 import { enqueueAndRunDanceAgent } from "@/lib/agents/dance-enqueue";
-import { evaluateParityEnrollment, type RoleCapacity } from "@/lib/dance/parity";
+import { evaluateParityEnrollment } from "@/lib/dance/parity";
+import { loadLockedCapacity, lockSession, SEAT_TX_OPTIONS } from "@/lib/dance/seat-allocator";
 import { sendEnrollmentEmail } from "@/lib/notifications/email";
 import { createEnrollmentCheckout } from "@/lib/public-api/payments";
 import { asPlainNumber } from "@/lib/data/serialize";
@@ -21,41 +25,6 @@ export type PromoteResult = {
 };
 
 const MAX_PROMOTIONS_PER_TRIGGER = 3;
-
-async function loadActiveCapacity(
-  tx: Prisma.TransactionClient,
-  sessionId: string,
-): Promise<(RoleCapacity & { maxLeads: number; maxFollows: number }) | null> {
-  const session = await tx.classSession.findUnique({
-    where: { id: sessionId },
-    select: {
-      maxLeads: true,
-      maxFollows: true,
-      enrollments: {
-        where: {
-          waitlisted: false,
-          paymentStatus: { not: "CANCELLED_INTERAC" },
-        },
-        select: { danceRole: true },
-      },
-    },
-  });
-  if (!session) return null;
-
-  let filledLeads = 0;
-  let filledFollows = 0;
-  for (const e of session.enrollments) {
-    if (e.danceRole === "LEAD") filledLeads += 1;
-    else if (e.danceRole === "FOLLOW") filledFollows += 1;
-  }
-
-  return {
-    maxLeads: session.maxLeads,
-    maxFollows: session.maxFollows,
-    filledLeads,
-    filledFollows,
-  };
-}
 
 type CandidateRow = { id: string };
 
@@ -95,8 +64,9 @@ export async function tryPromoteWaitlist(sessionId: string): Promise<PromoteResu
 
 async function promoteOne(sessionId: string): Promise<PromoteResult | null> {
   const locked = await prisma.$transaction(async (tx) => {
-    const capacity = await loadActiveCapacity(tx, sessionId);
-    if (!capacity) return null;
+    const session = await lockSession(tx, sessionId);
+    if (!session) return null;
+    const capacity = await loadLockedCapacity(tx, session);
 
     // Prefer promoting the role that has people waiting and that parity allows.
     const waitCounts = await tx.enrollment.groupBy({
@@ -121,20 +91,16 @@ async function promoteOne(sessionId: string): Promise<PromoteResult | null> {
       const candidateId = await lockNextWaitlisted(tx, sessionId, role);
       if (!candidateId) continue;
 
-      // Re-check after lock (capacity may have changed within the same TX via prior loops).
-      const freshCap = await loadActiveCapacity(tx, sessionId);
-      if (!freshCap) return null;
-      const again = evaluateParityEnrollment(freshCap, role, { allowWaitlist: false });
-      if (!again.ok || again.waitlisted) continue;
-
-      await tx.enrollment.update({
-        where: { id: candidateId },
+      // Conditional flip: a concurrent release/cancel of this row loses the race cleanly.
+      const flipped = await tx.enrollment.updateMany({
+        where: { id: candidateId, waitlisted: true },
         data: {
           waitlisted: false,
           waitlistedAt: null,
           promotedAt: new Date(),
         },
       });
+      if (flipped.count !== 1) continue;
 
       const row = await tx.enrollment.findUnique({
         where: { id: candidateId },
@@ -172,7 +138,7 @@ async function promoteOne(sessionId: string): Promise<PromoteResult | null> {
     }
 
     return null;
-  });
+  }, SEAT_TX_OPTIONS);
 
   if (!locked) return null;
 
