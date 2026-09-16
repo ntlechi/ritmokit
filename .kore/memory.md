@@ -37,7 +37,7 @@ RitmoKit is **dance-studio ops SaaS** (schedule, lead/follow parity, Accueil tab
 ## Human gates
 
 - ❌ Ship PayPal without Integration Hub credentials (or verified env fallback) + webhook
-- ❌ Point Salsa site at `bati`/`quebec` slugs for the Salsa pilot
+- ❌ Point Salsa site at leftover restaurant slugs — use `salsa-attitude` / `quebec`
 - ❌ Force-push main / skip migrate on production
 - ✅ Accueil, public enroll + checkout, Interac queue, room rentals APIs
 

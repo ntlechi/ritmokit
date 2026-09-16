@@ -63,7 +63,7 @@
 - POS integration, tips pool, food cost, MAPAQ food safety
 - SPLH staffing curves (restaurant labor KPIs)
 - CNESST shift rules where they conflict with **class-based** scheduling (keep HR payroll compliance)
-- Arsimatrix Bati Cantine recruitment branding
+- Arsimatrix restaurant recruitment branding
 - Code Red emergency kitchen replacement (low priority for dance)
 
 ### What to build new (dance-specific)

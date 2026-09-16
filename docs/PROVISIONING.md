@@ -1,10 +1,10 @@
 # Runbook — Provisionnement Production & Staging (Vague 1)
 
-Cible : ouverture **Bati Québec — octobre 2026**.  
+Cible : ouverture **Salsa Attitude (Québec) — saison en cours**.  
 Principe : **Staging miroir → Production**. Jamais de charge ni de `migrate` expérimental directement en prod.
 
 ```
-[ Local Dev ] ──> [ Staging Miroir ] ──> [ Production Bati ]
+[ Local Dev ] ──> [ Staging Miroir ] ──> [ Production studio ]
      │                    │                      │
   .env local        Supabase staging        Supabase Pro + PITR
   migrate dev       pooler 6543             pooler 6543
@@ -37,7 +37,7 @@ Pour **chaque** environnement :
    - `DATABASE_URL` (Transaction pooler, `?pgbouncer=true&connection_limit=20`)
    - `DIRECT_DATABASE_URL` (session / direct, port 5432)
    - `AGENT_WEBHOOK_SECRET` (`openssl rand -hex 32`)
-   - `NEXT_PUBLIC_APP_URL` (`https://staging.mirok.ca` ou `https://app.mirok.ca`)
+   - `NEXT_PUBLIC_APP_URL` (`https://staging.ritmokit.com` ou `https://app.ritmokit.com`)
    - `TZ=America/Toronto`
 
 4. Vérifier le pooler : Dashboard → **Database → Connection string** → **Transaction** (6543) vs **Session** (5432).
@@ -91,7 +91,7 @@ Configurer le webhook agents (si pas via 0002) :
 Ou SQL :
 
 ```sql
-alter database postgres set app.settings.agent_webhook_url = 'https://app.mirok.ca/api/agents/webhook';
+alter database postgres set app.settings.agent_webhook_url = 'https://app.ritmokit.com/api/agents/webhook';
 alter database postgres set app.settings.agent_webhook_secret = '<AGENT_WEBHOOK_SECRET>';
 ```
 
@@ -100,8 +100,8 @@ alter database postgres set app.settings.agent_webhook_secret = '<AGENT_WEBHOOK_
 ## 3. Vercel — projets & environnements
 
 1. Lier le repo GitHub à Vercel.
-2. **Production** : branche `main` → domaine `app.mirok.ca`.
-3. **Preview / Staging** : branche `staging` (ou previews) → `staging.mirok.ca`.
+2. **Production** : branche `main` → domaine `app.ritmokit.com`.
+3. **Preview / Staging** : branche `staging` (ou previews) → `staging.ritmokit.com`.
 4. Injecter les variables du template **par environnement** (Production vs Preview).
 5. Confirmer Build Command = `npm run vercel-build` (déjà dans `vercel.json`).
 6. Région d’exécution : `yul1` (Montréal).
@@ -115,17 +115,17 @@ Smoke post-deploy :
 
 ---
 
-## 4. Provisionner la franchise Bati (données, pas schéma)
+## 4. Provisionner un studio (données, pas schéma)
 
 Prérequis : le compte Owner existe déjà dans Supabase Auth **et** dans `public.users` (trigger 0004).
 
 ```bash
 # Contre DATABASE_URL = staging (répéter ensuite en prod après validation)
 npm run provision:franchise -- \
-  --org "Bati Québec" \
-  --org-slug bati \
-  --location "Bati — Québec Centre" \
-  --location-slug quebec-centre \
+  --org "Salsa Attitude" \
+  --org-slug salsa-attitude \
+  --location "Salsa Attitude — Québec" \
+  --location-slug quebec \
   --owner-id <uuid-auth-user> \
   --city Québec \
   --lat 46.8139 \
@@ -136,8 +136,8 @@ Ce script (`src/lib/production/provision-franchise.ts`) injecte de façon transa
 
 1. `Organization` + `Location` (timezone Toronto, géofence 150 m)
 2. `LocationMember` + rôle `OWNER` sur `User`
-3. Constitution culturelle Bati (5 valeurs)
-4. Canaux `#annonces` `#cuisine` `#comptoir` `#emballage` `#gestion`
+3. Constitution culturelle du studio (5 valeurs)
+4. Canaux `#annonces` `#instructeurs` `#accueil` `#entretien` `#gestion`
 5. Playbooks RSI 2 par défaut (`CRISIS_REPLACEMENT`, `CNESST_GUARD`, `LATE_ARRIVAL`)
 6. Expérience RSI 3 `CULTURE_CARD_ABOVE_BUDDY` en **DRAFT**
 
@@ -153,9 +153,9 @@ Idempotent : relancer met à jour sans dupliquer.
 | J-10 | Charge fin de shift **sur staging uniquement** (Vague 3) |
 | J-7 | Créer projet Supabase Prod + PITR + secrets Vercel Production |
 | J-5 | `migrate deploy` + SQL 0001–0005 sur Prod |
-| J-3 | `provision:franchise` Owner réel Bati |
+| J-3 | `provision:franchise` Owner réel du studio |
 | J-2 | Webhook agents Prod + smoke pointeuse / Pulse / Culture Health |
-| J-0 | DNS `app.mirok.ca` → Vercel Production · freeze migrations non urgentes |
+| J-0 | DNS `app.ritmokit.com` → Vercel Production · freeze migrations non urgentes |
 
 ---
 
