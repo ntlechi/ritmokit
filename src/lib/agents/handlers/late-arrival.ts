@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import type { ShiftModel } from "@/generated/prisma/models";
 import { getAgentPlaybookSettings } from "@/lib/rsi/playbooks";
-import { detectChatIntent } from "../intents";
+import { resolveChatIntent } from "@/lib/jev/chat-intent";
 import type { AgentLogRow } from "../schemas";
 
 /** Défauts — surchargés par LocationAgentConfig LATE_ARRIVAL (RSI 2). */
@@ -35,7 +35,7 @@ type ChatMessagePayload = {
 export async function runLateArrivalAgent(log: AgentLogRow) {
   const payload = log.payload as ChatMessagePayload;
   const body = typeof payload.body === "string" ? payload.body : "";
-  const intent = detectChatIntent(body);
+  const intent = await resolveChatIntent(body);
 
   if (intent.type !== "late_arrival") {
     return { handled: false, reason: "no_intent_detected" };
