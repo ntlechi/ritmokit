@@ -15,6 +15,7 @@ import {
   publicPaymentStatus,
 } from "@/lib/payments/interac-status";
 import { prisma } from "@/lib/prisma";
+import { releaseExpiredRentalHolds } from "@/lib/rentals/occupancy";
 import { getPrimaryMembership } from "@/lib/auth/session";
 import { canAccessManagerSettings } from "@/lib/auth/session-client";
 import type { Role } from "@/generated/prisma/enums";
@@ -633,16 +634,26 @@ export async function getInteracDashboardData(userId: string, role: Role) {
   const membership = await requireManagerLocation(userId, role);
   if (!membership) return null;
 
-  const [pending, stats, settings] = await Promise.all([
+  const [pending, stats, settings, rentalPendingCount] = await Promise.all([
     listPendingInteracEnrollments({ userId, role, limit: 50 }),
     getInteracStats({ userId, role }),
     prisma.locationInteracSettings.findUnique({ where: { locationId: membership.locationId } }),
+    releaseExpiredRentalHolds({ locationId: membership.locationId }).then(() =>
+      prisma.rentalBooking.count({
+        where: {
+          locationId: membership.locationId,
+          status: "CONFIRMED",
+          paymentStatus: "PENDING_INTERAC",
+        },
+      }),
+    ),
   ]);
 
   if (!pending.ok || !stats.ok) return null;
 
   return {
     locationId: membership.locationId,
+    rentalPendingCount,
     pending: pending.items,
     summary: pending.summary,
     stats: stats.stats,

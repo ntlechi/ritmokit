@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { Check, Loader2 } from "lucide-react";
+import { Check, Loader2, Sparkles } from "lucide-react";
 import type { AccueilRosterRow } from "@/lib/data/accueil-roster";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
@@ -19,6 +19,7 @@ export function CheckInRow({
   onReleaseSeat,
   onEvaluated,
   highlighted = false,
+  firstVisitLabel,
 }: {
   row: AccueilRosterRow;
   dict: Dictionary["accueil"];
@@ -28,6 +29,8 @@ export function CheckInRow({
   onReleaseSeat?: (enrollmentId: string) => void;
   onEvaluated?: () => void;
   highlighted?: boolean;
+  /** "1er cours" — shown when `row.firstVisit`. */
+  firstVisitLabel?: string;
 }) {
   const waitlisted = row.waitlisted;
   const attended = row.attended;
@@ -69,6 +72,12 @@ export function CheckInRow({
             {row.studentName}
           </Link>
           <RoleChip role={row.danceRole} label={roleLabel} />
+          {row.firstVisit && firstVisitLabel && (
+            <span className="inline-flex items-center gap-1 rounded-md bg-accent px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent-foreground">
+              <Sparkles className="h-3 w-3" aria-hidden />
+              {firstVisitLabel}
+            </span>
+          )}
           {waitlisted ? (
             <StatusBadge tone="waitlist">{dict.badgeWaitlist}</StatusBadge>
           ) : row.promotedUnpaid ? (

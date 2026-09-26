@@ -24,6 +24,9 @@ export type ClassOccupancyInput = {
   label: string;
   /** Civil YYYY-MM-DD for one-off classes */
   dateIso?: string | null;
+  /** Inclusive civil season bounds for weekly classes; null = unbounded. */
+  validFrom?: string | null;
+  validTo?: string | null;
 };
 
 export type BookingOccupancyInput = {
@@ -111,8 +114,11 @@ export function getClassOccupancyBlocks(
   return classes
     .filter((c) => {
       if (!c.timeStart || !c.timeEnd || !c.roomId) return false;
-      if (c.dayOfWeek != null) return c.dayOfWeek === dow;
-      return c.dateIso === dateIso;
+      if (c.dayOfWeek == null) return c.dateIso === dateIso;
+      if (c.dayOfWeek !== dow) return false;
+      if (c.validFrom && dateIso < c.validFrom) return false;
+      if (c.validTo && dateIso > c.validTo) return false;
+      return true;
     })
     .map((c) => ({
       roomId: c.roomId,
@@ -122,6 +128,8 @@ export function getClassOccupancyBlocks(
       label: c.label,
     }));
 }
+
+const RELEASED_STATUSES = new Set(["cancelled", "expired"]);
 
 export function getBookingBlocks(
   bookings: BookingOccupancyInput[],
@@ -133,8 +141,7 @@ export function getBookingBlocks(
       (b) =>
         b.roomId === roomId &&
         b.date === dateIso &&
-        b.status !== "cancelled" &&
-        b.status !== "CANCELLED",
+        !RELEASED_STATUSES.has(b.status.toLowerCase()),
     )
     .map((b) => ({
       roomId: b.roomId,
@@ -168,13 +175,15 @@ export function isSlotAvailable(input: {
     ...getBookingBlocks(input.bookings, input.roomId, input.dateIso),
   ].filter((b) => b.roomId === input.roomId);
 
+  // Buffer follows every rental (cleanup / changeover) — including the one being
+  // requested — but never follows a class.
+  const requestedEnd = endMin + bufferMinutes;
   for (const block of blocks) {
     const bStart = parseMinutes(block.start);
     const bEndRaw = parseMinutes(block.end);
     if (bStart == null || bEndRaw == null) continue;
-    // Buffer ONLY after bookings — NOT after classes.
     const bEnd = bEndRaw + (block.source === "booking" ? bufferMinutes : 0);
-    if (rangesOverlap(startMin, endMin, bStart, bEnd)) {
+    if (rangesOverlap(startMin, requestedEnd, bStart, bEnd)) {
       return {
         ok: false,
         reason:
@@ -186,6 +195,49 @@ export function isSlotAvailable(input: {
   }
 
   return { ok: true };
+}
+
+export type RentalForClassCheck = {
+  date: string;
+  timeStart: string;
+  timeEnd: string;
+  clientName: string;
+};
+
+/**
+ * The inverse of `isSlotAvailable`: rentals a class would land on. A weekly
+ * class hits every matching weekday between `validFrom` and `validTo`; a
+ * one-off only its own date. The rental's changeover buffer counts, so a class
+ * can't start while the previous renter is still clearing out.
+ */
+export function findRentalConflictsForClass(input: {
+  rentals: RentalForClassCheck[];
+  dayOfWeek: number | null;
+  dateIso?: string | null;
+  timeStart: string;
+  timeEnd: string;
+  validFrom: string;
+  validTo?: string | null;
+  bufferMinutes?: number;
+}): RentalForClassCheck[] {
+  const start = parseMinutes(input.timeStart);
+  const end = parseMinutes(input.timeEnd);
+  if (start == null || end == null) return [];
+  const bufferMinutes = input.bufferMinutes ?? 15;
+
+  return input.rentals.filter((r) => {
+    if (input.dayOfWeek == null) {
+      if (r.date !== input.dateIso) return false;
+    } else {
+      if (dateToDayOfWeek(r.date) !== input.dayOfWeek) return false;
+      if (r.date < input.validFrom) return false;
+      if (input.validTo && r.date > input.validTo) return false;
+    }
+    const rStart = parseMinutes(r.timeStart);
+    const rEnd = parseMinutes(r.timeEnd);
+    if (rStart == null || rEnd == null) return false;
+    return rangesOverlap(start, end, rStart, rEnd + bufferMinutes);
+  });
 }
 
 export function getAvailableStartTimes(input: {
@@ -228,6 +280,31 @@ export function estimateRentalPriceCents(
   durationMinutes: number,
 ): number {
   return Math.round((hourlyRateCents * durationMinutes) / 60);
+}
+
+export type RentalWindowError = "invalid_time_range" | "outside_hours" | "invalid_duration";
+
+/**
+ * Shape rules for a requested window. Public bookings must sit inside opening
+ * hours on the 30-min grid with an offered duration; staff may book any window.
+ */
+export function validateRentalWindow(input: {
+  timeStart: string;
+  timeEnd: string;
+  openHour: number;
+  closeHour: number;
+  durationOptions?: number[] | null;
+  mode: "public" | "staff";
+}): RentalWindowError | null {
+  const start = parseMinutes(input.timeStart);
+  const end = parseMinutes(input.timeEnd);
+  if (start == null || end == null || end <= start || end > 24 * 60) return "invalid_time_range";
+  if (input.mode === "staff") return null;
+  if (start < input.openHour * 60 || end > input.closeHour * 60) return "outside_hours";
+  if (start % 30 !== 0) return "invalid_time_range";
+  const options = input.durationOptions?.filter((m) => m > 0) ?? [];
+  if (options.length > 0 && !options.includes(end - start)) return "invalid_duration";
+  return null;
 }
 
 export function getRoomDayOccupancy(input: {
@@ -378,6 +455,10 @@ export function getDayAvailabilitySummary(input: {
   closeHour?: number;
   bufferMinutes?: number;
   todayIso?: string;
+  /** Starts sooner than this notice can't be booked, so they don't count as free. */
+  minLeadHours?: number;
+  timeZone?: string;
+  now?: Date;
 }): {
   dateIso: string;
   sessionDay: string | null;
@@ -399,7 +480,7 @@ export function getDayAvailabilitySummary(input: {
   });
 
   const past = input.dateIso < today;
-  const slots = past
+  const openSlots = past
     ? []
     : getAvailableStartTimes({
         classes: input.classes,
@@ -411,6 +492,17 @@ export function getDayAvailabilitySummary(input: {
         closeHour: input.closeHour,
         bufferMinutes: input.bufferMinutes,
       });
+  const slots =
+    input.minLeadHours != null && openSlots.length > 0
+      ? filterByMinLead(openSlots, {
+          dateIso: input.dateIso,
+          minLeadHours: input.minLeadHours,
+          timeZone: input.timeZone,
+          now: input.now,
+        })
+      : openSlots;
+  // Free slots that only fail the notice rule mean "too late to book", not "full".
+  const tooLate = openSlots.length > 0 && slots.length === 0;
 
   const byType = { prive: 0, b2b: 0, staff: 0 };
   for (const rental of occupancy.rentals) {
@@ -420,7 +512,7 @@ export function getDayAvailabilitySummary(input: {
   }
 
   let status: DayAvailabilityStatus = "open";
-  if (past) status = "past";
+  if (past || tooLate) status = "past";
   else if (slots.length === 0) status = "full";
   else if (occupancy.all.length > 0) status = "mixed";
 
@@ -436,6 +528,26 @@ export function getDayAvailabilitySummary(input: {
   };
 }
 
+function filterByMinLead(
+  slots: RentalSlot[],
+  input: { dateIso: string; minLeadHours: number; timeZone?: string; now?: Date },
+): RentalSlot[] {
+  const now = input.now ?? new Date();
+  const earliest = new Date(now.getTime() + Math.max(0, input.minLeadHours) * HOUR_MS);
+  // Days past the notice horizon are never affected; skip the per-slot TZ math.
+  if (input.dateIso > todayIsoInTimeZone(input.timeZone, earliest)) return slots;
+  return slots.filter(
+    (s) =>
+      !violatesMinLead({
+        dateIso: input.dateIso,
+        timeStart: s.start,
+        minLeadHours: input.minLeadHours,
+        timeZone: input.timeZone,
+        now,
+      }),
+  );
+}
+
 export function getMonthAvailability(input: {
   classes: ClassOccupancyInput[];
   bookings: BookingOccupancyInput[];
@@ -447,6 +559,9 @@ export function getMonthAvailability(input: {
   closeHour?: number;
   bufferMinutes?: number;
   todayIso?: string;
+  minLeadHours?: number;
+  timeZone?: string;
+  now?: Date;
 }) {
   const first = new Date(input.year, input.month, 1);
   const daysInMonth = new Date(input.year, input.month + 1, 0).getDate();
@@ -469,6 +584,9 @@ export function getMonthAvailability(input: {
       closeHour: input.closeHour,
       bufferMinutes: input.bufferMinutes,
       todayIso: input.todayIso,
+      minLeadHours: input.minLeadHours,
+      timeZone: input.timeZone,
+      now: input.now,
     });
     cells.push({
       kind: "day",
@@ -486,22 +604,17 @@ export function getMonthAvailability(input: {
   };
 }
 
-/** True when public booking start is sooner than minLeadHours from now. */
-export function violatesMinLead(input: {
-  dateIso: string;
-  timeStart: string;
-  minLeadHours: number;
-  timeZone?: string;
-  now?: Date;
-}): boolean {
-  if (input.minLeadHours <= 0) return false;
-  const now = input.now ?? new Date();
-  const timeZone = input.timeZone ?? "America/Toronto";
-  // Build an approximate instant: civil date + HH:mm interpreted in location TZ via offset probe.
-  const [y, mo, d] = input.dateIso.split("-").map(Number);
-  const [hh, mm] = input.timeStart.split(":").map(Number);
+const HOUR_MS = 60 * 60 * 1000;
+
+/** The real instant of a civil date + HH:mm wall clock in `timeZone`. */
+export function civilStartInstant(
+  dateIso: string,
+  timeStart: string,
+  timeZone = "America/Toronto",
+): Date {
+  const [y, mo, d] = dateIso.split("-").map(Number);
+  const [hh, mm] = timeStart.split(":").map(Number);
   const utcGuess = new Date(Date.UTC(y!, mo! - 1, d!, hh!, mm!, 0));
-  // Correct for TZ offset at that civil moment.
   const fmt = new Intl.DateTimeFormat("en-US", {
     timeZone,
     year: "numeric",
@@ -521,8 +634,42 @@ export function violatesMinLead(input: {
     Number(parts.hour),
     Number(parts.minute),
   );
-  const offsetMs = asLocal - utcGuess.getTime();
-  const startInstant = new Date(utcGuess.getTime() - offsetMs);
-  const leadMs = input.minLeadHours * 60 * 60 * 1000;
+  return new Date(utcGuess.getTime() - (asLocal - utcGuess.getTime()));
+}
+
+/** True when public booking start is sooner than minLeadHours from now (a past start always violates). */
+export function violatesMinLead(input: {
+  dateIso: string;
+  timeStart: string;
+  minLeadHours: number;
+  timeZone?: string;
+  now?: Date;
+}): boolean {
+  const now = input.now ?? new Date();
+  const startInstant = civilStartInstant(input.dateIso, input.timeStart, input.timeZone);
+  const leadMs = Math.max(0, input.minLeadHours) * HOUR_MS;
   return startInstant.getTime() - now.getTime() < leadMs;
+}
+
+export const RENTAL_HOLD_HOURS = 24;
+export const RENTAL_HOLD_CUTOFF_HOURS = 2;
+
+/**
+ * When an unpaid online hold stops blocking the room: 24 h after booking or
+ * 2 h before the start, whichever comes first. A booking made inside that
+ * 2 h window keeps its hold until the start — there's no time left to resell it.
+ */
+export function computeRentalHoldExpiry(input: {
+  dateIso: string;
+  timeStart: string;
+  timeZone?: string;
+  now?: Date;
+}): Date {
+  const now = input.now ?? new Date();
+  const start = civilStartInstant(input.dateIso, input.timeStart, input.timeZone).getTime();
+  const expiry = Math.min(
+    now.getTime() + RENTAL_HOLD_HOURS * HOUR_MS,
+    start - RENTAL_HOLD_CUTOFF_HOURS * HOUR_MS,
+  );
+  return new Date(expiry > now.getTime() ? expiry : start);
 }

@@ -14,6 +14,7 @@ import {
   type LockedSession,
   type SeatOutcome,
 } from "@/lib/dance/seat-allocator";
+import { recordIntake } from "@/lib/dance/intake";
 import { tryPromoteWaitlist } from "@/lib/dance/waitlist-promote";
 import { resolveEnrollmentAmountCad, type PricingTier } from "@/lib/dance/pricing";
 import { createEnrollmentCheckout, type PaymentProvider } from "@/lib/public-api/payments";
@@ -451,6 +452,14 @@ export async function createPublicEnrollment(input: PublicEnrollInput): Promise<
       console.error("[public:enrollments] progression", error);
     });
   }
+
+  const bookedSessionIds = [locked.id, ...siblingIds];
+  await Promise.all([
+    recordIntake({ studentId: student.id, locationId, sessionIds: bookedSessionIds, source: "WEBSITE" }),
+    partner && outcome.partnerEnrollmentId
+      ? recordIntake({ studentId: partner.id, locationId, sessionIds: [locked.id], source: "WEBSITE" })
+      : Promise.resolve(),
+  ]);
 
   await enqueueAndRunDanceAgent({
     eventType: "enrollment.created",

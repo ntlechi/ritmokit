@@ -82,6 +82,8 @@ export default async function AccueilPage({
             initial={roster}
             lang={lang}
             dict={dict}
+            viewerId={user.id}
+            defaultMineOnly={user.role === "INSTRUCTOR"}
             prioritizeUnpaid={
               Boolean(agentActions?.some((a) => a.uiKind === "unpaid_promote")) ||
               (roster.classes.some((c) => c.unpaidCount > 0) &&

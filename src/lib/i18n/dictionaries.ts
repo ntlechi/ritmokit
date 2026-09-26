@@ -27,6 +27,12 @@ export interface Dictionary {
     plans: string;
     planning: string;
     franchiseSection: string;
+    teach: string;
+    studentsNew: string;
+    sectionToday: string;
+    sectionCourses: string;
+    sectionStudents: string;
+    sectionStudio: string;
   };
   accueil: {
     title: string;
@@ -605,6 +611,7 @@ export interface Dictionary {
     badge: string;
     intro: string;
     badgeCount: string;
+    rentalsPending: string;
     ownerHint: string;
     openInbox: string;
     empty: string;
@@ -650,36 +657,92 @@ export interface Dictionary {
     upcoming: string;
     upcomingHint: string;
     emptyUpcoming: string;
-    staffBooking: string;
-    staffBookingHint: string;
+    summaryUpcoming: string;
+    summaryOwed: string;
+    summaryRequests: string;
+    websiteLive: string;
+    websiteOff: string;
+    websiteNoRooms: string;
+    awaitingPayment: string;
+    awaitingPaymentHint: string;
+    emptyAwaitingPayment: string;
+    markPaidInterac: string;
+    markPaidCash: string;
+    cancel: string;
+    cancelReason: string;
+    confirmCancel: string;
+    keepBooking: string;
+    newBooking: string;
+    newBookingHint: string;
+    kindClient: string;
+    kindStaff: string;
+    clientName: string;
+    clientEmail: string;
+    clientPhone: string;
+    clientOrg: string;
+    bookingType: string;
+    paymentMethod: string;
+    methodInterac: string;
+    methodCash: string;
+    methodPaypal: string;
+    price: string;
+    priceAuto: string;
+    paidNow: string;
+    book: string;
+    booked: string;
     ratesHours: string;
     ratesHoursHint: string;
     approve: string;
     reject: string;
     statusPending: string;
-    typeStaff: string;
-    waived: string;
     room: string;
     instructor: string;
     date: string;
     start: string;
     end: string;
     notes: string;
-    bookStaff: string;
     moduleEnabled: string;
     openHour: string;
     closeHour: string;
     bufferMinutes: string;
     minLeadHours: string;
     b2bRequiresApproval: string;
+    durationOptions: string;
     roomRates: string;
+    rateRequired: string;
     saveSettings: string;
+    saved: string;
+    /** {name}, {from}, {to}, {n} */
+    draftSeasonWarning: string;
+    draftSeasonAction: string;
+    /** {date} */
+    holdUntil: string;
+    recentlyExpired: string;
+    recentlyExpiredHint: string;
+    types: { prive: string; b2b: string; staff: string };
+    payment: {
+      none: string;
+      pending_approval: string;
+      pending_interac: string;
+      pending_paypal: string;
+      paid: string;
+      waived_staff: string;
+      cancelled: string;
+    };
     errors: {
       unauthorized: string;
       databaseError: string;
       slotUnavailable: string;
       invalidPayload: string;
       notPending: string;
+      invalidTimeRange: string;
+      dateInPast: string;
+      rateRequired: string;
+      notPayable: string;
+      alreadyCancelled: string;
+      invalidHours: string;
+      contactRequired: string;
+      holdExpired: string;
     };
   };
   planning: {
@@ -2475,6 +2538,10 @@ export interface Dictionary {
       room_conflict: string;
       instructor_conflict: string;
       assistant_conflict: string;
+      /** {room}, {client}, {date}, {start}, {end} */
+      rental_conflict: string;
+      /** {n} */
+      rental_conflict_more: string;
     };
   };
   booking: {
@@ -2531,7 +2598,128 @@ export interface Dictionary {
     copied: string;
     openBooking: string;
   };
+  /** Role homes, week grid, new-student inbox and teacher view. */
+  studioOps: StudioOpsCopy;
 }
+
+export type IntakeStatusKey = "NEW" | "CONTACTED" | "ATTENDED" | "ACTIVE" | "LOST";
+
+export type StudioOpsCopy = {
+  classCard: {
+    upcoming: string;
+    live: string;
+    done: string;
+    full: string;
+    almostFull: string;
+    /** Placeholder: {n}. */
+    waitlist: string;
+    /** Placeholder: {n}. */
+    newStudents: string;
+    seats: string;
+    leads: string;
+    follows: string;
+    needsLeads: string;
+    needsFollows: string;
+    balanced: string;
+    social: string;
+  };
+  weekGrid: {
+    title: string;
+    subtitle: string;
+    allInstructors: string;
+    allRooms: string;
+    allStyles: string;
+    empty: string;
+    legendOpen: string;
+    legendAlmost: string;
+    legendFull: string;
+  };
+  intake: {
+    badge: string;
+    title: string;
+    subtitle: string;
+    statuses: Record<IntakeStatusKey, string>;
+    statusHints: Record<IntakeStatusKey, string>;
+    sources: { WEBSITE: string; DOOR: string; STAFF: string };
+    empty: string;
+    emptyColumn: string;
+    firstClass: string;
+    /** Placeholder: {when}. */
+    firstClassOn: string;
+    call: string;
+    email: string;
+    markContacted: string;
+    markLost: string;
+    reopen: string;
+    assignTo: string;
+    unassigned: string;
+    openProfile: string;
+    paid: string;
+    unpaid: string;
+    pendingInterac: string;
+    waitlisted: string;
+    /** Placeholder: {when}. */
+    signedUp: string;
+    loadMore: string;
+    error: string;
+    previewTitle: string;
+    previewEmpty: string;
+    previewCta: string;
+    today: string;
+    yesterday: string;
+    /** Placeholder: {n}. */
+    daysAgo: string;
+    /** Placeholder: {n}. */
+    countOpen: string;
+  };
+  teach: {
+    badge: string;
+    title: string;
+    subtitle: string;
+    emptyTonight: string;
+    tonight: string;
+    nextDays: string;
+    emptyNextDays: string;
+    lessonTitle: string;
+    lessonEmpty: string;
+    /** Placeholder: {n}. */
+    week: string;
+    leadFocus: string;
+    followFocus: string;
+    music: string;
+    roster: string;
+    rosterEmpty: string;
+    readyToAdvance: string;
+    needsReview: string;
+    /** Placeholder: {label}. */
+    attendance: string;
+    notesTitle: string;
+    notesPlaceholder: string;
+    notesStudent: string;
+    notesSave: string;
+    notesSaved: string;
+    notesError: string;
+    openPlans: string;
+    present: string;
+    checkIn: string;
+    waitlisted: string;
+    /** Placeholder: {n}. */
+    newStudentsTonight: string;
+  };
+  accueilFilter: {
+    mine: string;
+    all: string;
+  };
+  cockpit: {
+    todayTitle: string;
+    todaySubtitle: string;
+    weekTitle: string;
+    weekSubtitle: string;
+    analyticsTitle: string;
+    showAnalytics: string;
+    hideAnalytics: string;
+  };
+};
 
 export type HelpTopicCopy = {
   title: string;

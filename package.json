@@ -25,6 +25,7 @@
     "test:studio-calendar": "tsx scripts/test-studio-calendar.mjs",
     "test:interac": "tsx scripts/test-interac-unit.mjs",
     "test:hardening": "tsx scripts/test-backend-hardening.mjs",
+    "test:studio-ops": "tsx scripts/test-studio-ops.mjs",
     "test:jev": "tsx --test src/lib/agents/intents.test.ts",
     "roster-token": "node scripts/roster-token.mjs",
     "test:load:seed": "node scripts/load-seed.mjs",

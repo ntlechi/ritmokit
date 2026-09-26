@@ -6,6 +6,16 @@ import { actionDatabaseError } from "@/lib/actions/result";
 import { canAccessManagerSettings, getSessionUser } from "@/lib/auth/session";
 import { findClassSlotConflict, slotConflictError } from "@/lib/dance/session-slot";
 import { prisma } from "@/lib/prisma";
+import { findClassRentalConflict, type ClassRentalConflict } from "@/lib/rentals/class-conflicts";
+import { lockRoomForBooking } from "@/lib/rentals/occupancy";
+
+type ClassActionFailure = { ok: false; error: string; rentalConflict?: ClassRentalConflict };
+
+class RentalConflictError extends Error {
+  constructor(readonly conflict: ClassRentalConflict) {
+    super("rental_conflict");
+  }
+}
 
 const createSchema = z.object({
   lang: z.string().min(2).max(5),
@@ -67,7 +77,7 @@ export async function createCourseAction(
 
 export async function createClassSessionAction(
   input: z.infer<typeof createSchema>,
-): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+): Promise<{ ok: true; id: string } | ClassActionFailure> {
   const parsed = createSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "invalid_input" };
 
@@ -93,26 +103,43 @@ export async function createClassSessionAction(
   if (conflict) return { ok: false, error: slotConflictError(conflict) };
 
   try {
-    const session = await prisma.classSession.create({
-      data: {
-        seasonId: parsed.data.seasonId ?? null,
-        courseId: parsed.data.courseId,
+    // Same room lock as rental bookings: the website can't sell the slot
+    // between this rental check and the insert.
+    const session = await prisma.$transaction(async (tx) => {
+      await lockRoomForBooking(tx, parsed.data.roomId);
+      const rentalConflict = await findClassRentalConflict({
         roomId: parsed.data.roomId,
-        instructorId: parsed.data.instructorId,
-        assistantId: parsed.data.assistantId ?? null,
+        seasonId: parsed.data.seasonId ?? null,
         dayOfWeek: parsed.data.dayOfWeek ?? null,
         startTime: start,
         endTime: end,
-        maxLeads: parsed.data.maxLeads,
-        maxFollows: parsed.data.maxFollows,
-        priceRegular: parsed.data.priceRegular,
-        priceCouple: parsed.data.priceCouple ?? null,
-        priceStudent: parsed.data.priceStudent ?? null,
-      },
+        locale: parsed.data.lang,
+      });
+      if (rentalConflict) throw new RentalConflictError(rentalConflict);
+      return tx.classSession.create({
+        data: {
+          seasonId: parsed.data.seasonId ?? null,
+          courseId: parsed.data.courseId,
+          roomId: parsed.data.roomId,
+          instructorId: parsed.data.instructorId,
+          assistantId: parsed.data.assistantId ?? null,
+          dayOfWeek: parsed.data.dayOfWeek ?? null,
+          startTime: start,
+          endTime: end,
+          maxLeads: parsed.data.maxLeads,
+          maxFollows: parsed.data.maxFollows,
+          priceRegular: parsed.data.priceRegular,
+          priceCouple: parsed.data.priceCouple ?? null,
+          priceStudent: parsed.data.priceStudent ?? null,
+        },
+      });
     });
     revalidateSessions(parsed.data.lang);
     return { ok: true, id: session.id };
   } catch (error) {
+    if (error instanceof RentalConflictError) {
+      return { ok: false, error: "rental_conflict", rentalConflict: error.conflict };
+    }
     return actionDatabaseError("createClassSession", error) as { ok: false; error: string };
   }
 }
@@ -132,7 +159,7 @@ const updateSchema = z.object({
 
 export async function updateClassSessionAction(
   input: z.infer<typeof updateSchema>,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<{ ok: true } | ClassActionFailure> {
   const parsed = updateSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "invalid_input" };
 
@@ -154,11 +181,20 @@ export async function updateClassSessionAction(
 
   if (Object.keys(data).length === 0) return { ok: false, error: "invalid_input" };
 
+  let movedRoom: {
+    roomId: string;
+    seasonId: string | null;
+    dayOfWeek: number | null;
+    startTime: Date;
+    endTime: Date;
+  } | null = null;
+
   if (patch.roomId != null || patch.instructorId != null || patch.assistantId !== undefined) {
     const current = await prisma.classSession.findUnique({
       where: { id: sessionId },
       select: {
         roomId: true,
+        seasonId: true,
         instructorId: true,
         assistantId: true,
         dayOfWeek: true,
@@ -167,6 +203,9 @@ export async function updateClassSessionAction(
       },
     });
     if (!current) return { ok: false, error: "session_not_found" };
+    if (patch.roomId != null && patch.roomId !== current.roomId) {
+      movedRoom = { ...current, roomId: patch.roomId };
+    }
     const conflict = await findClassSlotConflict({
       roomId: patch.roomId ?? current.roomId,
       instructorId: patch.instructorId ?? current.instructorId,
@@ -180,10 +219,23 @@ export async function updateClassSessionAction(
   }
 
   try {
-    await prisma.classSession.update({ where: { id: sessionId }, data });
+    if (movedRoom) {
+      const target = movedRoom;
+      await prisma.$transaction(async (tx) => {
+        await lockRoomForBooking(tx, target.roomId);
+        const rentalConflict = await findClassRentalConflict({ ...target, locale: lang });
+        if (rentalConflict) throw new RentalConflictError(rentalConflict);
+        await tx.classSession.update({ where: { id: sessionId }, data });
+      });
+    } else {
+      await prisma.classSession.update({ where: { id: sessionId }, data });
+    }
     revalidateSessions(lang);
     return { ok: true };
   } catch (error) {
+    if (error instanceof RentalConflictError) {
+      return { ok: false, error: "rental_conflict", rentalConflict: error.conflict };
+    }
     return actionDatabaseError("updateClassSession", error) as { ok: false; error: string };
   }
 }

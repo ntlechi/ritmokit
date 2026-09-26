@@ -2,6 +2,8 @@ import "server-only";
 
 import { format } from "date-fns";
 import { isSocialEvent } from "@/lib/dance/door-search";
+import { maxImbalanceForCourse } from "@/lib/dance/parity";
+import { loadFirstVisitStudentIds } from "@/lib/data/intake";
 import {
   classIsOnWebsite,
   expandRecurringDates,
@@ -71,7 +73,10 @@ export async function getStudioCalendarForUser(
         room: true,
         instructor: { select: { fullName: true } },
         season: { select: { id: true, status: true, startsOn: true, endsOn: true } },
-        enrollments: { select: { waitlisted: true } },
+        enrollments: {
+          where: { paymentStatus: { not: "CANCELLED_INTERAC" } },
+          select: { waitlisted: true, danceRole: true, studentId: true },
+        },
       },
     }),
     prisma.station.findMany({
@@ -119,6 +124,11 @@ export async function getStudioCalendarForUser(
       .filter((s) => s.status === "ACTIVE" && s.bookingOpen)
       .sort((a, b) => b.startsOn.getTime() - a.startsOn.getTime())[0] ?? null;
 
+  const firstVisitIds = await loadFirstVisitStudentIds(
+    locationId,
+    classRows.flatMap((row) => row.enrollments.filter((e) => !e.waitlisted).map((e) => e.studentId)),
+  ).catch(() => new Set<string>());
+
   const seasonById = new Map(seasons.map((s) => [s.id, s]));
   const attendedByKey = new Map<string, number>();
   for (const row of attendance) {
@@ -138,8 +148,20 @@ export async function getStudioCalendarForUser(
     if (onWebsite) classesOnWebsite += 1;
     else draftClasses += 1;
 
-    const booked = row.enrollments.filter((e) => !e.waitlisted).length;
+    const seated = row.enrollments.filter((e) => !e.waitlisted);
+    const booked = seated.length;
     const capacity = row.maxLeads + row.maxFollows;
+    const classInfo = {
+      sessionId: row.id,
+      level: row.course.level,
+      instructorId: row.instructorId,
+      instructorName: row.instructor.fullName,
+      leads: seated.filter((e) => e.danceRole === "LEAD").length,
+      follows: seated.filter((e) => e.danceRole === "FOLLOW").length,
+      waitlisted: row.enrollments.length - booked,
+      newStudents: seated.filter((e) => firstVisitIds.has(e.studentId)).length,
+      maxImbalance: maxImbalanceForCourse(row.course),
+    };
     const title = row.course.title;
     const isSocial = isSocialEvent(row.course.style, title);
     const timeStart = hhmmFromUtcDate(row.startTime);
@@ -178,6 +200,7 @@ export async function getStudioCalendarForUser(
         style: row.course.style,
         isSocial,
         paymentStatus: null,
+        classInfo,
       });
     }
   }

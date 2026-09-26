@@ -3,8 +3,9 @@ import { notFound } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { OnboardingGate } from "@/components/onboarding/onboarding-gate";
 import { ThemeProvider } from "@/components/theme/theme-provider";
-import { getSessionUser } from "@/lib/auth/session";
+import { canAccessAccueil, getSessionUser } from "@/lib/auth/session";
 import { getEmployeeOnboardingState } from "@/lib/data/hr-onboarding";
+import { getNavBadges } from "@/lib/data/intake";
 import { safeQuery } from "@/lib/data/safe";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { toShellCopy } from "@/lib/i18n/shell-copy";
@@ -57,6 +58,13 @@ export default async function DashboardLayout({
       };
     }, null),
   ]);
+  const { data: badges } = await safeQuery(
+    () =>
+      user && locationScope && canAccessAccueil(user.role)
+        ? getNavBadges(locationScope.activeId)
+        : Promise.resolve(null),
+    null,
+  );
   const shell = toShellCopy(dict);
   const onboardingComplete =
     !isEmployee ||
@@ -68,7 +76,13 @@ export default async function DashboardLayout({
 
   return (
     <ThemeProvider>
-      <AppShell lang={lang} shell={shell} user={user} locationScope={locationScope}>
+      <AppShell
+        lang={lang}
+        shell={shell}
+        user={user}
+        locationScope={locationScope}
+        badges={badges}
+      >
         <OnboardingGate lang={lang} complete={onboardingComplete} isEmployee={isEmployee}>
           {children}
         </OnboardingGate>

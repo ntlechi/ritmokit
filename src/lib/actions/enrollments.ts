@@ -13,6 +13,7 @@ import {
   sessionInLocations,
 } from "@/lib/dance/seat-allocator";
 import { enrollmentScopeWhere, staffScope } from "@/lib/dance/tenant-scope";
+import { advanceIntakeOnAttendance, recordIntake } from "@/lib/dance/intake";
 import { tryPromoteWaitlist } from "@/lib/dance/waitlist-promote";
 import { civilDateInTimeZone, refreshProgressionForEnrollment } from "@/lib/dance/progression";
 import { actionDatabaseError, type SimpleActionResult } from "@/lib/actions/result";
@@ -38,7 +39,13 @@ type EnrollTx =
   | { kind: "not_found" }
   | { kind: "refused"; reason: string }
   | { kind: "existing"; enrollmentId: string; waitlisted: boolean }
-  | { kind: "created"; enrollmentId: string; waitlisted: boolean; capacityAfter: RoleCapacity };
+  | {
+      kind: "created";
+      enrollmentId: string;
+      waitlisted: boolean;
+      capacityAfter: RoleCapacity;
+      locationId: string;
+    };
 
 /** Staff-side enrollment (Sessions page). Same lock as the public path. */
 export async function enrollStudentAction(input: z.infer<typeof enrollSchema>): Promise<EnrollResult> {
@@ -93,12 +100,18 @@ export async function enrollStudentAction(input: z.infer<typeof enrollSchema>): 
         enrollmentId: seat.enrollmentId,
         waitlisted: seat.kind === "waitlisted",
         capacityAfter: await loadLockedCapacity(tx, session),
+        locationId: session.locationId,
       };
     }, SEAT_TX_OPTIONS);
 
     if (outcome.kind === "not_found") return { ok: false, error: "session_not_found" };
     if (outcome.kind === "refused") return { ok: false, error: `parity_${outcome.reason}` };
     if (outcome.kind === "existing") return { ok: false, error: "already_enrolled" };
+
+    const locationId = outcome.locationId;
+    after(() =>
+      recordIntake({ studentId, locationId, sessionIds: [sessionId], source: "STAFF" }),
+    );
 
     if (isParityAlert(outcome.capacityAfter) || outcome.waitlisted) {
       await enqueueAndRunDanceAgent({
@@ -188,10 +201,12 @@ export async function markAttendanceAction(input: {
       }),
     ]);
 
+    const firstCheckIn = input.attended && flip.count > 0;
     after(async () => {
       await refreshProgressionForEnrollment(enrollment.id).catch((error) => {
         console.error("[markAttendance] progression", error);
       });
+      if (firstCheckIn) await advanceIntakeOnAttendance(enrollment.id);
     });
 
     revalidatePath(`/${input.lang}/accueil`, "page");

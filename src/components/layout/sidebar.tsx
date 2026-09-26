@@ -27,6 +27,8 @@ import {
   BookOpen,
   ContactRound,
   CalendarRange,
+  GraduationCap,
+  UserPlus,
 } from "lucide-react";
 import type { Locale } from "@/lib/i18n/config";
 import type { ShellCopy } from "@/lib/i18n/shell-copy";
@@ -50,22 +52,93 @@ const MIN_WIDTH = 200;
 const MAX_WIDTH = 360;
 const DEFAULT_WIDTH = 240;
 
-/** Dance-first order: Cockpit → Accueil → Sessions → Rooms → Calendar → … */
-const navItems = [
-  { key: "cockpit" as const, href: "/dashboard", icon: LayoutDashboard, managerOnly: true },
-  { key: "accueil" as const, href: "/accueil", icon: ClipboardCheck, accueilOnly: true },
-  { key: "students" as const, href: "/students", icon: ContactRound, accueilOnly: true },
-  { key: "interac" as const, href: "/interac", icon: Banknote, managerOnly: true },
-  { key: "sessions" as const, href: "/sessions", icon: Music2, managerOnly: true },
-  { key: "planning" as const, href: "/planning", icon: CalendarRange, managerOnly: true },
-  { key: "plans" as const, href: "/plans", icon: BookOpen, teachingOnly: true },
-  { key: "rooms" as const, href: "/rooms", icon: DoorOpen, managerOnly: true },
-  { key: "rentals" as const, href: "/rentals", icon: KeyRound, managerOnly: true },
-  { key: "calendar" as const, href: "/calendar/week", icon: Calendar },
-  { key: "team" as const, href: "/team", icon: Users },
-  { key: "messages" as const, href: "/messages", icon: MessagesSquare },
-  { key: "settings" as const, href: "/settings", icon: Settings },
-] as const;
+type NavGate = "manager" | "accueil" | "teaching";
+
+type NavItem = {
+  key: NavKey;
+  href: string;
+  icon: typeof Calendar;
+  gate?: NavGate;
+  badge?: keyof NavBadges;
+};
+
+export type NavKey =
+  | "cockpit"
+  | "teach"
+  | "accueil"
+  | "planning"
+  | "sessions"
+  | "plans"
+  | "studentsNew"
+  | "students"
+  | "interac"
+  | "rooms"
+  | "rentals"
+  | "calendar"
+  | "team"
+  | "messages"
+  | "settings";
+
+export type NavBadges = { studentsNew: number; interac: number };
+
+/** Grouped by the question staff ask: what's tonight, which classes, which students, the studio. */
+const navSections: {
+  key: "sectionToday" | "sectionCourses" | "sectionStudents" | "sectionStudio";
+  items: NavItem[];
+}[] = [
+  {
+    key: "sectionToday",
+    items: [
+      { key: "cockpit", href: "/dashboard", icon: LayoutDashboard, gate: "manager" },
+      { key: "teach", href: "/teach", icon: GraduationCap, gate: "teaching" },
+      { key: "accueil", href: "/accueil", icon: ClipboardCheck, gate: "accueil" },
+    ],
+  },
+  {
+    key: "sectionCourses",
+    items: [
+      { key: "planning", href: "/planning", icon: CalendarRange, gate: "manager" },
+      { key: "sessions", href: "/sessions", icon: Music2, gate: "manager" },
+      { key: "plans", href: "/plans", icon: BookOpen, gate: "teaching" },
+    ],
+  },
+  {
+    key: "sectionStudents",
+    items: [
+      { key: "studentsNew", href: "/students/new", icon: UserPlus, gate: "accueil", badge: "studentsNew" },
+      { key: "students", href: "/students", icon: ContactRound, gate: "accueil" },
+      { key: "interac", href: "/interac", icon: Banknote, gate: "manager", badge: "interac" },
+    ],
+  },
+  {
+    key: "sectionStudio",
+    items: [
+      { key: "rooms", href: "/rooms", icon: DoorOpen, gate: "manager" },
+      { key: "rentals", href: "/rentals", icon: KeyRound, gate: "manager" },
+      { key: "calendar", href: "/calendar/week", icon: Calendar },
+      { key: "team", href: "/team", icon: Users },
+      { key: "messages", href: "/messages", icon: MessagesSquare },
+      { key: "settings", href: "/settings", icon: Settings },
+    ],
+  },
+];
+
+/** `/students` must not light up while on `/students/new`. */
+export function isNavActive(pathname: string | null, lang: string, key: NavKey, href: string) {
+  if (!pathname) return false;
+  if (key === "cockpit") {
+    return pathname.startsWith(`/${lang}/dashboard`) || pathname.startsWith(`/${lang}/cockpit`);
+  }
+  const full = `/${lang}${href}`;
+  if (key === "students") {
+    return pathname.startsWith(full) && !pathname.startsWith(`/${lang}/students/new`);
+  }
+  return pathname === full || pathname.startsWith(`${full}/`);
+}
+
+export function formatBadge(n: number): string {
+  return n > 99 ? "99+" : String(n);
+}
 
 function clampWidth(value: number) {
   return Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, Math.round(value)));
@@ -126,27 +199,33 @@ function useSidebarPrefs() {
   return useSyncExternalStore(subscribePrefs, readPrefs, () => SERVER_PREFS);
 }
 
-function navLabel(shell: ShellCopy, key: (typeof navItems)[number]["key"]): string {
-  if (key === "cockpit") return shell.nav.cockpit;
-  return shell.nav[key];
-}
-
 export function Sidebar({
   lang,
   shell,
   role,
   locationScope,
+  badges,
 }: {
   lang: Locale;
   shell: ShellCopy;
   role: Role;
   locationScope?: LocationScope | null;
+  badges?: NavBadges | null;
 }) {
   const pathname = usePathname();
   const isManagement = canAccessManagerSettings(role);
   const isAdmin = canAccessAdminSettings(role);
-  const showAccueil = canAccessAccueil(role);
-  const showTeaching = canAccessTeaching(role);
+  const gates: Record<NavGate, boolean> = {
+    manager: isManagement,
+    accueil: canAccessAccueil(role),
+    teaching: canAccessTeaching(role),
+  };
+  const sections = navSections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => !item.gate || gates[item.gate]),
+    }))
+    .filter((section) => section.items.length > 0);
 
   const prefs = useSidebarPrefs();
   const { collapsed, width } = prefs;
@@ -271,41 +350,61 @@ export function Sidebar({
           </div>
         )}
 
-        {navItems
-          .filter((item) => {
-            if ("accueilOnly" in item && item.accueilOnly) return showAccueil;
-            if ("teachingOnly" in item && item.teachingOnly) return showTeaching;
-            if ("managerOnly" in item && item.managerOnly) return isManagement;
-            return true;
-          })
-          .map(({ key, href, icon: Icon }) => {
-            const fullHref = `/${lang}${href}`;
-            const active =
-              key === "cockpit"
-                ? pathname?.startsWith(`/${lang}/dashboard`) ||
-                  pathname?.startsWith(`/${lang}/cockpit`)
-                : pathname?.startsWith(fullHref);
-            const label = navLabel(shell, key);
+        {sections.map((section, sectionIdx) => (
+          <div
+            key={section.key}
+            className={cn(
+              "space-y-0.5",
+              sectionIdx > 0 && (collapsed ? "mt-1 border-t border-border pt-1" : "mt-3"),
+            )}
+          >
+            {!collapsed && (
+              <p className="px-3 pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-foreground-muted">
+                {shell.nav[section.key]}
+              </p>
+            )}
+            {section.items.map(({ key, href, icon: Icon, badge }) => {
+              const active = isNavActive(pathname, lang, key, href);
+              const label = shell.nav[key];
+              const count = badge ? (badges?.[badge] ?? 0) : 0;
 
-            return (
-              <Link
-                key={key}
-                href={fullHref}
-                data-interactive
-                aria-current={active ? "page" : undefined}
-                title={collapsed ? label : undefined}
-                className={cn(
-                  "relative flex items-center text-sm font-medium",
-                  collapsed ? "h-10 justify-center px-0" : "gap-3 px-3 py-2.5",
-                  active ? dna.navItemActive : dna.navItemIdle,
-                  key === "cockpit" && "font-semibold",
-                )}
-              >
-                <Icon className="h-4 w-4 shrink-0" aria-hidden />
-                {!collapsed && <span className="truncate">{label}</span>}
-              </Link>
-            );
-          })}
+              return (
+                <Link
+                  key={key}
+                  href={`/${lang}${href}`}
+                  data-interactive
+                  aria-current={active ? "page" : undefined}
+                  title={collapsed ? (count > 0 ? `${label} (${count})` : label) : undefined}
+                  className={cn(
+                    "relative flex items-center text-sm font-medium",
+                    collapsed ? "h-10 justify-center px-0" : "gap-3 px-3 py-2",
+                    active ? dna.navItemActive : dna.navItemIdle,
+                    (key === "cockpit" || key === "teach") && "font-semibold",
+                  )}
+                >
+                  <Icon className="h-4 w-4 shrink-0" aria-hidden />
+                  {!collapsed && <span className="min-w-0 flex-1 truncate">{label}</span>}
+                  {count > 0 &&
+                    (collapsed ? (
+                      <span
+                        className="absolute right-2 top-1.5 h-2 w-2 rounded-full bg-danger"
+                        aria-hidden
+                      />
+                    ) : (
+                      <span
+                        className={cn(
+                          "min-w-5 rounded-full px-1.5 py-0.5 text-center text-[10px] font-bold tabular-nums",
+                          active ? "bg-accent-foreground/20 text-accent-foreground" : "bg-danger text-white",
+                        )}
+                      >
+                        {formatBadge(count)}
+                      </span>
+                    ))}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
 
         {isAdmin && (
           <div

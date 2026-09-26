@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, ClipboardCheck, Loader2, Trash2, X } from "lucide-react";
+import { classActionErrorMessage } from "@/components/dance/class-action-error";
 import { closeButtonClass, overlayClass, sheetContentClass } from "@/components/ui/modal-chrome";
 import { dna } from "@/lib/design/dna";
 import {
@@ -141,7 +142,7 @@ function SessionDrawerBody({
         priceStudent: priceStudent.trim() === "" ? null : Number(priceStudent),
       });
       if (!result.ok) {
-        setError(d.errors[result.error as keyof typeof d.errors] ?? d.errors.generic);
+        setError(classActionErrorMessage(d.errors, result));
         return;
       }
       setMessage(d.classUpdated);

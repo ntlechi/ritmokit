@@ -99,6 +99,7 @@ export default async function PlanningPage({
             dict={dict}
             view={view}
             anchorIso={formatIsoLocal(anchor)}
+            todayIso={formatIsoLocal(new Date())}
             label={label}
           />
         )}

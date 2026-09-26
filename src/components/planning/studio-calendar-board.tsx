@@ -6,6 +6,8 @@ import { addMonths, addWeeks, addYears, format } from "date-fns";
 import { fr, enUS, es } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Globe, KeyRound, Music2, X } from "lucide-react";
 import { CopyBookingLink } from "@/components/booking/copy-booking-link";
+import { ClassWeekGrid } from "@/components/dance/class-week-grid";
+import { RoleBalanceBar } from "@/components/dance/role-balance-bar";
 import { StudioCalendarViews } from "@/components/planning/studio-calendar-views";
 import { parseDateParam, type StudioPeriodView } from "@/lib/calendar/grid";
 import {
@@ -34,6 +36,7 @@ export function StudioCalendarBoard({
   dict,
   view,
   anchorIso,
+  todayIso,
   label,
 }: {
   data: StudioCalendarPayload;
@@ -41,6 +44,7 @@ export function StudioCalendarBoard({
   dict: Dictionary;
   view: StudioPeriodView;
   anchorIso: string;
+  todayIso: string;
   label: string;
 }) {
   const t = dict.planning;
@@ -143,16 +147,28 @@ export function StudioCalendarBoard({
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
-        <StudioCalendarViews
-          view={view}
-          anchor={anchor}
-          byDate={byDate}
-          events={filtered}
-          locale={lang}
-          dict={dict}
-          selectedId={selectedId}
-          onSelect={setSelectedId}
-        />
+        {view === "week" ? (
+          <ClassWeekGrid
+            events={filtered}
+            weekStart={data.rangeFrom}
+            todayCivil={todayIso}
+            lang={lang}
+            dict={dict}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+          />
+        ) : (
+          <StudioCalendarViews
+            view={view}
+            anchor={anchor}
+            byDate={byDate}
+            events={filtered}
+            locale={lang}
+            dict={dict}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+          />
+        )}
         <EventDetail event={selected} lang={lang} dict={dict} onClose={() => setSelectedId(null)} />
       </div>
     </div>
@@ -318,6 +334,28 @@ function EventDetail({
         )}
         {event.attended != null && event.kind === "class" && (
           <Row label={t.present} value={String(event.attended)} />
+        )}
+        {event.classInfo && !event.isSocial && (
+          <div className="pt-1">
+            <RoleBalanceBar
+              leads={event.classInfo.leads}
+              follows={event.classInfo.follows}
+              maxImbalance={event.classInfo.maxImbalance}
+              copy={dict.studioOps.classCard}
+            />
+          </div>
+        )}
+        {event.classInfo && event.classInfo.waitlisted > 0 && (
+          <Row
+            label={dict.studioOps.intake.waitlisted}
+            value={String(event.classInfo.waitlisted)}
+          />
+        )}
+        {event.classInfo && event.classInfo.newStudents > 0 && (
+          <Row
+            label={dict.studioOps.intake.firstClass}
+            value={String(event.classInfo.newStudents)}
+          />
         )}
         <Row label={t.status} value={event.status} />
         {event.paymentStatus && <Row label={t.payment} value={event.paymentStatus} />}

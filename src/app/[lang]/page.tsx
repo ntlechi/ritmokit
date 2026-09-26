@@ -11,8 +11,8 @@ export default async function LangIndexPage({
   if (!isLocale(lang)) notFound();
 
   const user = await getSessionUser();
-  if (user && canAccessManagerSettings(user.role)) {
-    redirect(`/${lang}/dashboard`);
-  }
+  if (user && canAccessManagerSettings(user.role)) redirect(`/${lang}/dashboard`);
+  if (user?.role === "INSTRUCTOR") redirect(`/${lang}/teach`);
+  if (user?.role === "FRONT_DESK") redirect(`/${lang}/accueil`);
   redirect(`/${lang}/calendar/week`);
 }

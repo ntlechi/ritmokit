@@ -8,6 +8,11 @@ export type RentalEmailKind =
   | "b2b_approved"
   | "b2b_rejected"
   | "rental_confirmed"
+  | "rental_booked_staff"
+  | "rental_cancelled"
+  | "rental_paid"
+  | "rental_expired"
+  | "rental_expired_staff"
   | "interac_pending_staff";
 
 export async function sendRentalEmail(input: {

@@ -6,6 +6,8 @@ import { loadDrawerSnapshot, type DrawerSnapshot } from "@/lib/data/cash-drawer"
 import { seasonWeekNumber } from "@/lib/data/course-lessons";
 import { ensureStudioOsSchema } from "@/lib/db/ensure-studio-os-schema";
 import { isSocialEvent } from "@/lib/dance/door-search";
+import { maxImbalanceForCourse } from "@/lib/dance/parity";
+import { loadFirstVisitStudentIds } from "@/lib/data/intake";
 import { stationLabel } from "@/lib/stations/display";
 import type { Locale } from "@/lib/i18n/config";
 
@@ -25,6 +27,8 @@ export type AccueilRosterRow = {
   attendanceLabel: string | null;
   showEval: boolean;
   ticketCode: string | null;
+  /** Never checked in here before (or first check-in tonight): "1er cours". */
+  firstVisit: boolean;
 };
 
 export type AccueilClassCard = {
@@ -40,6 +44,9 @@ export type AccueilClassCard = {
   startLabel: string;
   endLabel: string;
   instructorName: string;
+  instructorId: string;
+  assistantId: string | null;
+  maxImbalance: number;
   leads: { filled: number; max: number; present: number };
   follows: { filled: number; max: number; present: number };
   waitlistedCount: number;
@@ -157,7 +164,12 @@ function classStatus(
 
 export async function getAccueilRosterForUser(
   userId: string,
-  options?: { date?: Date; locale?: Locale },
+  options?: {
+    date?: Date;
+    locale?: Locale;
+    /** Teacher view: only classes this user leads or assists. */
+    teacherUserId?: string;
+  },
 ): Promise<AccueilRoster | null> {
   const locale = options?.locale ?? "fr";
   const now = options?.date ?? new Date();
@@ -192,6 +204,16 @@ export async function getAccueilRosterForUser(
             { dayOfWeek: null, startTime: { gte: dayStart, lt: dayEnd } },
           ],
         },
+        ...(options?.teacherUserId
+          ? [
+              {
+                OR: [
+                  { instructorId: options.teacherUserId },
+                  { assistantId: options.teacherUserId },
+                ],
+              },
+            ]
+          : []),
       ],
     },
     select: {
@@ -213,6 +235,8 @@ export async function getAccueilRosterForUser(
           locationId: true,
         },
       },
+      instructorId: true,
+      assistantId: true,
       instructor: { select: { fullName: true } },
       enrollments: {
         where: { paymentStatus: { not: "CANCELLED_INTERAC" } },
@@ -248,7 +272,7 @@ export async function getAccueilRosterForUser(
   );
   const maxPlanWeek = Math.max(1, ...planWeekBySession.values());
 
-  const [progressions, lessons] = await Promise.all([
+  const [progressions, lessons, firstVisitIds] = await Promise.all([
     seasonIds.length && courseIds.length
       ? prisma.studentProgression.findMany({
           where: {
@@ -281,6 +305,11 @@ export async function getAccueilRosterForUser(
           orderBy: { weekNumber: "desc" },
         })
       : Promise.resolve([]),
+    loadFirstVisitStudentIds(
+      membership.locationId,
+      tonight.flatMap((s) => s.enrollments.map((e) => e.student.id)),
+      now,
+    ),
   ]);
   const progressionByKey = new Map(
     progressions.map((p) => [`${p.studentId}:${p.courseId}:${p.seasonId}`, p]),
@@ -356,6 +385,7 @@ export async function getAccueilRosterForUser(
         attendanceLabel: prog ? `${prog.attendedCount}/${prog.expectedWeeks}` : null,
         showEval: !e.waitlisted && !isSocialEvent(session.course.style, session.course.title),
         ticketCode: e.ticketCode,
+        firstVisit: firstVisitIds.has(e.student.id),
       };
     });
 
@@ -385,6 +415,9 @@ export async function getAccueilRosterForUser(
       startLabel: formatHm(startHm.h, startHm.m),
       endLabel: formatHm(endHm.h, endHm.m),
       instructorName: session.instructor.fullName,
+      instructorId: session.instructorId,
+      assistantId: session.assistantId,
+      maxImbalance: maxImbalanceForCourse(session.course),
       leads: {
         filled: leadsFilled,
         max: session.maxLeads,

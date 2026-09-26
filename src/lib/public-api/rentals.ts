@@ -3,20 +3,30 @@ import "server-only";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { resolvePublicLocation } from "@/lib/public-api/tenant";
-import { DEFAULT_RENTAL_SETTINGS, type RentalSettingsView } from "@/lib/rentals/defaults";
+import type { RentalSettingsView } from "@/lib/rentals/defaults";
+import {
+  loadBookingOccupancy,
+  loadClassOccupancy,
+  loadRentalSettings,
+  lockRoomForBooking,
+  releaseExpiredRentalHolds,
+  rentalStaffRecipient,
+  UNPAID_HOLD_STATUSES,
+} from "@/lib/rentals/occupancy";
 import {
   buildRoomDayTimeline,
+  computeRentalHoldExpiry,
   estimateRentalPriceCents,
   getAvailableStartTimes,
   getDayAvailabilitySummary,
   getMonthAvailability,
   isSlotAvailable,
+  parseMinutes,
   todayIsoInTimeZone,
+  validateRentalWindow,
   violatesMinLead,
-  type BookingOccupancyInput,
-  type ClassOccupancyInput,
 } from "@/lib/rentals/schedule";
-import { civilDateFromDbDate, hhmmFromUtcDate } from "@/lib/rentals/wall-time";
+import { civilDateFromDbDate } from "@/lib/rentals/wall-time";
 import { civilDateToUtcDate } from "@/lib/time/location-timezone";
 import { stationLabel } from "@/lib/stations/display";
 import { sendRentalEmail } from "@/lib/notifications/rental-email";
@@ -51,104 +61,6 @@ export const publicRentalBookingSchema = z.object({
 
 export type PublicRentalBookingInput = z.infer<typeof publicRentalBookingSchema>;
 
-function mapSettings(row: {
-  openHour: number;
-  closeHour: number;
-  bufferMinutes: number;
-  minLeadHours: number;
-  b2bRequiresApproval: boolean;
-  durationOptions: number[];
-  moduleEnabled: boolean;
-} | null): RentalSettingsView {
-  if (!row) return { ...DEFAULT_RENTAL_SETTINGS, durationOptions: [...DEFAULT_RENTAL_SETTINGS.durationOptions] };
-  return {
-    openHour: row.openHour,
-    closeHour: row.closeHour,
-    bufferMinutes: row.bufferMinutes,
-    minLeadHours: row.minLeadHours,
-    b2bRequiresApproval: row.b2bRequiresApproval,
-    durationOptions: row.durationOptions.length
-      ? row.durationOptions
-      : [...DEFAULT_RENTAL_SETTINGS.durationOptions],
-    moduleEnabled: row.moduleEnabled,
-  };
-}
-
-async function loadRentalSettings(locationId: string): Promise<RentalSettingsView> {
-  const row = await prisma.locationRentalSettings.findUnique({ where: { locationId } });
-  return mapSettings(row);
-}
-
-async function loadPublishedClasses(locationId: string): Promise<ClassOccupancyInput[]> {
-  const activeSeason = await prisma.sessionSeason.findFirst({
-    where: { locationId, status: "ACTIVE" },
-    orderBy: { startsOn: "desc" },
-    select: { id: true },
-  });
-
-  const seasonFilter = activeSeason
-    ? {
-        OR: [
-          { seasonId: activeSeason.id },
-          { seasonId: null, room: { locationId } },
-        ],
-      }
-    : { room: { locationId } };
-
-  const rows = await prisma.classSession.findMany({
-    where: seasonFilter,
-    select: {
-      roomId: true,
-      dayOfWeek: true,
-      startTime: true,
-      endTime: true,
-      course: { select: { title: true } },
-    },
-  });
-
-  return rows.map((r) => ({
-    roomId: r.roomId,
-    dayOfWeek: r.dayOfWeek,
-    timeStart: hhmmFromUtcDate(r.startTime),
-    timeEnd: hhmmFromUtcDate(r.endTime),
-    label: r.course.title,
-  }));
-}
-
-async function loadBookingOccupancy(
-  roomId: string,
-  fromDate: string,
-  toDate: string,
-): Promise<BookingOccupancyInput[]> {
-  const rows = await prisma.rentalBooking.findMany({
-    where: {
-      roomId,
-      date: {
-        gte: civilDateToUtcDate(fromDate),
-        lte: civilDateToUtcDate(toDate),
-      },
-      status: { not: "CANCELLED" },
-    },
-    select: {
-      roomId: true,
-      date: true,
-      timeStart: true,
-      timeEnd: true,
-      type: true,
-      status: true,
-    },
-  });
-
-  return rows.map((r) => ({
-    roomId: r.roomId,
-    date: civilDateFromDbDate(r.date),
-    timeStart: r.timeStart,
-    timeEnd: r.timeEnd,
-    type: r.type.toLowerCase() as "prive" | "b2b" | "staff",
-    status: r.status.toLowerCase(),
-  }));
-}
-
 export async function getPublicRentalRooms(input: {
   locationId?: string | null;
   locationSlug?: string | null;
@@ -176,6 +88,7 @@ export async function getPublicRentalRooms(input: {
         kind: "ROOM",
         isActive: true,
         rentable: true,
+        hourlyRateCents: { gt: 0 },
       },
       orderBy: [{ sortOrder: "asc" }, { nameFr: "asc" }],
       include: { floor: true },
@@ -244,7 +157,8 @@ export async function getPublicRentalRooms(input: {
 
 async function resolveRentableRoom(roomId: string) {
   const room = await prisma.station.findFirst({
-    where: { id: roomId, kind: "ROOM", isActive: true, rentable: true },
+    // Unpriced rooms stay off the website: a $0 booking is never what the studio meant.
+    where: { id: roomId, kind: "ROOM", isActive: true, rentable: true, hourlyRateCents: { gt: 0 } },
     include: {
       location: { select: { id: true, timezone: true, isActive: true } },
     },
@@ -281,9 +195,10 @@ export async function getPublicRoomAvailability(input: {
   }
 
   const durationMinutes = input.durationMinutes ?? 60;
+  await releaseExpiredRentalHolds({ roomId: room.id });
   const [classes, bookings] = await Promise.all([
-    loadPublishedClasses(room.locationId),
-    loadBookingOccupancy(room.id, input.date, input.date),
+    loadClassOccupancy(room.locationId),
+    loadBookingOccupancy(prisma, room.id, input.date, input.date),
   ]);
 
   const hourlyRateCents = room.hourlyRateCents ?? 0;
@@ -296,7 +211,17 @@ export async function getPublicRoomAvailability(input: {
     openHour: settings.openHour,
     closeHour: settings.closeHour,
     bufferMinutes: settings.bufferMinutes,
-  }).map((s) => ({
+  })
+    .filter(
+      (s) =>
+        !violatesMinLead({
+          dateIso: input.date,
+          timeStart: s.start,
+          minLeadHours: settings.minLeadHours,
+          timeZone: room.location.timezone,
+        }),
+    )
+    .map((s) => ({
     ...s,
     priceCents: estimateRentalPriceCents(hourlyRateCents, durationMinutes),
   }));
@@ -321,6 +246,8 @@ export async function getPublicRoomAvailability(input: {
     closeHour: settings.closeHour,
     bufferMinutes: settings.bufferMinutes,
     todayIso: todayIsoInTimeZone(room.location.timezone),
+    minLeadHours: settings.minLeadHours,
+    timeZone: room.location.timezone,
   });
 
   return {
@@ -359,9 +286,10 @@ export async function getPublicRoomMonthSummary(input: {
   const lastDay = new Date(input.year, input.month, 0).getDate();
   const toDate = `${input.year}-${String(input.month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 
+  await releaseExpiredRentalHolds({ roomId: room.id });
   const [classes, bookings] = await Promise.all([
-    loadPublishedClasses(room.locationId),
-    loadBookingOccupancy(room.id, fromDate, toDate),
+    loadClassOccupancy(room.locationId),
+    loadBookingOccupancy(prisma, room.id, fromDate, toDate),
   ]);
 
   const summary = getMonthAvailability({
@@ -375,9 +303,19 @@ export async function getPublicRoomMonthSummary(input: {
     closeHour: settings.closeHour,
     bufferMinutes: settings.bufferMinutes,
     todayIso: todayIsoInTimeZone(room.location.timezone),
+    minLeadHours: settings.minLeadHours,
+    timeZone: room.location.timezone,
   });
 
   return { ok: true, summary };
+}
+
+function formatHoldDeadline(at: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat("fr-CA", {
+    timeZone,
+    dateStyle: "long",
+    timeStyle: "short",
+  }).format(at);
 }
 
 function resolveCreateStatuses(input: {
@@ -441,6 +379,7 @@ export async function createPublicRentalBooking(
       status: string;
       paymentStatus: string;
       priceCents: number;
+      expiresAt: string | null;
       interacInstructions?: string;
     }
   | { ok: false; error: string; status: number }
@@ -467,9 +406,17 @@ export async function createPublicRentalBooking(
     return { ok: false, error: "rental_module_disabled", status: 404 };
   }
 
-  const startMin = Number(input.timeStart.split(":")[0]) * 60 + Number(input.timeStart.split(":")[1]);
-  const endMin = Number(input.timeEnd.split(":")[0]) * 60 + Number(input.timeEnd.split(":")[1]);
-  if (endMin <= startMin) return { ok: false, error: "invalid_time_range", status: 400 };
+  const windowError = validateRentalWindow({
+    timeStart: input.timeStart,
+    timeEnd: input.timeEnd,
+    openHour: settings.openHour,
+    closeHour: settings.closeHour,
+    durationOptions: settings.durationOptions,
+    mode: "public",
+  });
+  if (windowError) return { ok: false, error: windowError, status: 400 };
+  const startMin = parseMinutes(input.timeStart)!;
+  const endMin = parseMinutes(input.timeEnd)!;
 
   if (
     violatesMinLead({
@@ -490,35 +437,23 @@ export async function createPublicRentalBooking(
     paymentProvider: input.paymentProvider,
   });
 
+  const expiresAt =
+    statuses.status === "CONFIRMED" && UNPAID_HOLD_STATUSES.includes(statuses.paymentStatus)
+      ? computeRentalHoldExpiry({
+          dateIso: input.date,
+          timeStart: input.timeStart,
+          timeZone: room.location.timezone,
+        })
+      : null;
+
   try {
+    await releaseExpiredRentalHolds({ roomId: room.id });
     const booking = await prisma.$transaction(async (tx) => {
+      await lockRoomForBooking(tx, room.id);
+      // Classes are read under the lock too: class creation takes the same lock.
       const [classes, bookings] = await Promise.all([
-        loadPublishedClasses(room.locationId),
-        (async () => {
-          const rows = await tx.rentalBooking.findMany({
-            where: {
-              roomId: room.id,
-              date: civilDateToUtcDate(input.date),
-              status: { not: "CANCELLED" },
-            },
-            select: {
-              roomId: true,
-              date: true,
-              timeStart: true,
-              timeEnd: true,
-              type: true,
-              status: true,
-            },
-          });
-          return rows.map((r) => ({
-            roomId: r.roomId,
-            date: civilDateFromDbDate(r.date),
-            timeStart: r.timeStart,
-            timeEnd: r.timeEnd,
-            type: r.type.toLowerCase() as "prive" | "b2b" | "staff",
-            status: r.status.toLowerCase(),
-          }));
-        })(),
+        loadClassOccupancy(room.locationId),
+        loadBookingOccupancy(tx, room.id, input.date, input.date),
       ]);
 
       const slot = isSlotAvailable({
@@ -556,29 +491,39 @@ export async function createPublicRentalBooking(
           clientOrg: input.client.org ?? null,
           notes: input.notes ?? null,
           confirmedAt: statuses.status === "CONFIRMED" ? new Date() : null,
+          expiresAt,
         },
       });
       return created;
     });
 
-    if (booking.type === "B2B" && booking.status === "PENDING") {
-      void sendRentalEmail({
-        to: process.env.RENTAL_NOTIFY_EMAIL?.trim() || "",
-        kind: "b2b_pending_staff",
-        subject: `Demande B2B — ${booking.clientName}`,
+    const awaitingApproval = booking.type === "B2B" && booking.status === "PENDING";
+    void rentalStaffRecipient(room.locationId).then((to) =>
+      sendRentalEmail({
+        to,
+        kind: awaitingApproval ? "b2b_pending_staff" : "rental_booked_staff",
+        subject: awaitingApproval
+          ? `Demande B2B à approuver — ${booking.clientName}`
+          : `Nouvelle location — ${stationLabel(room, "fr")} ${input.date} ${booking.timeStart}`,
         text: [
-          `Nouvelle demande de location B2B.`,
+          awaitingApproval
+            ? `Nouvelle demande de location B2B à approuver dans RitmoKit › Locations.`
+            : `Nouvelle location réservée depuis le site.`,
           `Client: ${booking.clientName} <${booking.clientEmail}>`,
+          booking.clientPhone ? `Téléphone: ${booking.clientPhone}` : null,
           booking.clientOrg ? `Organisation: ${booking.clientOrg}` : null,
           `Date: ${input.date} ${booking.timeStart}–${booking.timeEnd}`,
           `Salle: ${stationLabel(room, "fr")}`,
           `Montant: ${(priceCents / 100).toFixed(2)} ${booking.currency}`,
+          booking.paymentProvider ? `Paiement: ${booking.paymentProvider}` : null,
         ]
           .filter(Boolean)
           .join("\n"),
         meta: { bookingId: booking.id },
-      });
-    } else if (booking.status === "CONFIRMED") {
+      }),
+    ).catch((error) => console.error("[rentals] staff alert failed", error));
+
+    if (booking.status === "CONFIRMED") {
       void sendRentalEmail({
         to: booking.clientEmail,
         kind: "rental_confirmed",
@@ -590,6 +535,9 @@ export async function createPublicRentalBooking(
           `Montant: ${(priceCents / 100).toFixed(2)} ${booking.currency}`,
           booking.paymentStatus === "PENDING_INTERAC"
             ? "Paiement: Interac e-Transfer en attente de confirmation."
+            : null,
+          booking.expiresAt
+            ? `Important: paiement à recevoir avant le ${formatHoldDeadline(booking.expiresAt, room.location.timezone)}, sinon le créneau sera libéré.`
             : null,
         ]
           .filter(Boolean)
@@ -604,10 +552,12 @@ export async function createPublicRentalBooking(
       status: booking.status.toLowerCase(),
       paymentStatus: booking.paymentStatus.toLowerCase(),
       priceCents: booking.priceCents,
+      expiresAt: booking.expiresAt?.toISOString() ?? null,
       ...(booking.paymentStatus === "PENDING_INTERAC"
         ? {
-            interacInstructions:
-              "Envoyez le virement Interac au montant indiqué. La réservation sera confirmée à la réception.",
+            interacInstructions: booking.expiresAt
+              ? `Envoyez le virement Interac au montant indiqué avant le ${formatHoldDeadline(booking.expiresAt, room.location.timezone)}. Sans paiement, le créneau sera libéré.`
+              : "Envoyez le virement Interac au montant indiqué. La réservation sera confirmée à la réception.",
           }
         : {}),
     };
@@ -639,10 +589,14 @@ export async function getPublicRentalBooking(id: string): Promise<
         type: string;
         roomId: string;
         roomName: string;
+        expiresAt: string | null;
       };
     }
   | { ok: false; error: string; status: number }
 > {
+  const found = await prisma.rentalBooking.findUnique({ where: { id }, select: { roomId: true } });
+  if (!found) return { ok: false, error: "booking_not_found", status: 404 };
+  await releaseExpiredRentalHolds({ roomId: found.roomId });
   const row = await prisma.rentalBooking.findUnique({
     where: { id },
     include: { room: true },
@@ -663,6 +617,7 @@ export async function getPublicRentalBooking(id: string): Promise<
       type: row.type.toLowerCase(),
       roomId: row.roomId,
       roomName: stationLabel(row.room, "fr"),
+      expiresAt: row.expiresAt?.toISOString() ?? null,
     },
   };
 }

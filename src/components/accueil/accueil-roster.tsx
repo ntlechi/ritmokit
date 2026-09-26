@@ -71,7 +71,7 @@ function pickDefaultSession(classes: AccueilClassCard[]): string | null {
   return classes[0]?.sessionId ?? null;
 }
 
-function applyOptimistic(
+export function applyOptimistic(
   classes: AccueilClassCard[],
   enrollmentId: string,
   attended: boolean,
@@ -128,15 +128,31 @@ export function AccueilRosterView({
   lang,
   dict,
   prioritizeUnpaid = false,
+  viewerId,
+  defaultMineOnly = false,
 }: {
   initial: AccueilRoster;
   lang: Locale;
   dict: Dictionary;
   prioritizeUnpaid?: boolean;
+  /** Enables the "Mes cours" toggle when the viewer teaches tonight. */
+  viewerId?: string;
+  defaultMineOnly?: boolean;
 }) {
   const router = useRouter();
   const a = dict.accueil;
-  const [classes, setClasses] = useState(initial.classes);
+  const [allClasses, setClasses] = useState(initial.classes);
+  const teachesTonight = Boolean(
+    viewerId && allClasses.some((c) => c.instructorId === viewerId || c.assistantId === viewerId),
+  );
+  const [mineOnly, setMineOnly] = useState(defaultMineOnly);
+  const classes = useMemo(
+    () =>
+      mineOnly && teachesTonight
+        ? allClasses.filter((c) => c.instructorId === viewerId || c.assistantId === viewerId)
+        : allClasses,
+    [allClasses, mineOnly, teachesTonight, viewerId],
+  );
   const [selectedId, setSelectedId] = useState<string | null>(() =>
     pickDefaultSession(initial.classes),
   );
@@ -366,6 +382,25 @@ export function AccueilRosterView({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {teachesTonight && (
+            <div className={dna.pillTrack} role="group">
+              {([true, false] as const).map((mine) => (
+                <button
+                  key={String(mine)}
+                  type="button"
+                  data-interactive
+                  aria-pressed={mineOnly === mine}
+                  onClick={() => setMineOnly(mine)}
+                  className={cn(
+                    "min-h-10 px-3.5 text-sm font-semibold",
+                    mineOnly === mine ? dna.pillActive : dna.pillIdle,
+                  )}
+                >
+                  {mine ? dict.studioOps.accueilFilter.mine : dict.studioOps.accueilFilter.all}
+                </button>
+              ))}
+            </div>
+          )}
           <button
             type="button"
             data-interactive
@@ -600,6 +635,7 @@ export function AccueilRosterView({
                             onToggle={onToggle}
                             onReleaseSeat={onReleaseSeat}
                             onEvaluated={() => router.refresh()}
+                            firstVisitLabel={dict.studioOps.intake.firstClass}
                           />
                         ))}
                       </ul>
@@ -621,6 +657,7 @@ export function AccueilRosterView({
                             busy={false}
                             highlighted={highlightId === row.enrollmentId}
                             onToggle={onToggle}
+                            firstVisitLabel={dict.studioOps.intake.firstClass}
                           />
                       ))}
                     </ul>

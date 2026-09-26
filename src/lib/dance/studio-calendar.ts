@@ -90,7 +90,40 @@ export type StudioCalendarEvent = {
   style: string | null;
   isSocial: boolean;
   paymentStatus: string | null;
+  /** Class-only detail for the week grid; absent on rentals. */
+  classInfo?: StudioClassInfo | null;
 };
+
+export type StudioClassInfo = {
+  sessionId: string;
+  level: string;
+  instructorId: string;
+  instructorName: string;
+  leads: number;
+  follows: number;
+  waitlisted: number;
+  /** Seated students still on their first visit at this location. */
+  newStudents: number;
+  maxImbalance: number;
+};
+
+/** Week-grid filters on top of kind/room; rentals pass the teacher/style filters. */
+export function filterClassGrid(
+  events: StudioCalendarEvent[],
+  filters: { instructorId: string | null; style: string | null },
+): StudioCalendarEvent[] {
+  return events.filter((event) => {
+    if (event.kind !== "class") return !filters.instructorId && !filters.style;
+    if (filters.instructorId && event.classInfo?.instructorId !== filters.instructorId) return false;
+    if (filters.style && (event.style ?? "").toLowerCase() !== filters.style.toLowerCase()) return false;
+    return true;
+  });
+}
+
+/** Distinct start hours ("18", "19") for the grid rows, ascending. */
+export function gridHourRows(events: StudioCalendarEvent[]): string[] {
+  return [...new Set(events.map((e) => e.timeStart.slice(0, 2)))].sort();
+}
 
 export type StudioCalendarRoom = {
   id: string;

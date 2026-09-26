@@ -28,6 +28,19 @@ async function indexExists(name: string): Promise<boolean> {
   return Boolean(rows[0]?.exists);
 }
 
+async function columnExists(table: string, column: string): Promise<boolean> {
+  const rows = await prisma.$queryRaw<TableRow[]>`
+    SELECT EXISTS (
+      SELECT 1
+      FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = ${table}
+        AND column_name = ${column}
+    ) AS exists
+  `;
+  return Boolean(rows[0]?.exists);
+}
+
 async function exec(sql: string): Promise<void> {
   try {
     await prisma.$executeRawUnsafe(sql);
@@ -259,6 +272,66 @@ export async function ensureStudioOsSchema(): Promise<{ applied: string[] }> {
       );
       applied.push("hardening_indexes");
       await recordMigration("20260902230000_hardening_indexes");
+    }
+
+    if (!(await tableExists("student_intakes"))) {
+      await exec(`
+        DO $$ BEGIN
+          CREATE TYPE "IntakeStatus" AS ENUM ('NEW', 'CONTACTED', 'ATTENDED', 'ACTIVE', 'LOST');
+        EXCEPTION
+          WHEN duplicate_object THEN NULL;
+        END $$`);
+      await exec(`
+        DO $$ BEGIN
+          CREATE TYPE "IntakeSource" AS ENUM ('WEBSITE', 'DOOR', 'STAFF');
+        EXCEPTION
+          WHEN duplicate_object THEN NULL;
+        END $$`);
+      await exec(`
+        CREATE TABLE IF NOT EXISTS "student_intakes" (
+          "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+          "student_id" UUID NOT NULL,
+          "location_id" UUID NOT NULL,
+          "status" "IntakeStatus" NOT NULL DEFAULT 'NEW',
+          "source" "IntakeSource" NOT NULL,
+          "first_session_id" UUID,
+          "assigned_to_id" UUID,
+          "contacted_at" TIMESTAMP(3),
+          "first_attended_at" TIMESTAMP(3),
+          "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updated_at" TIMESTAMP(3) NOT NULL,
+          CONSTRAINT "student_intakes_pkey" PRIMARY KEY ("id")
+        )`);
+      await exec(
+        `CREATE UNIQUE INDEX IF NOT EXISTS "student_intakes_student_id_location_id_key" ON "student_intakes"("student_id", "location_id")`,
+      );
+      await exec(
+        `CREATE INDEX IF NOT EXISTS "student_intakes_location_id_status_created_at_idx" ON "student_intakes"("location_id", "status", "created_at")`,
+      );
+      await exec(
+        `ALTER TABLE "student_intakes" ADD CONSTRAINT "student_intakes_student_id_fkey" FOREIGN KEY ("student_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE`,
+      );
+      await exec(
+        `ALTER TABLE "student_intakes" ADD CONSTRAINT "student_intakes_location_id_fkey" FOREIGN KEY ("location_id") REFERENCES "locations"("id") ON DELETE CASCADE ON UPDATE CASCADE`,
+      );
+      await exec(
+        `ALTER TABLE "student_intakes" ADD CONSTRAINT "student_intakes_first_session_id_fkey" FOREIGN KEY ("first_session_id") REFERENCES "class_sessions"("id") ON DELETE SET NULL ON UPDATE CASCADE`,
+      );
+      await exec(
+        `ALTER TABLE "student_intakes" ADD CONSTRAINT "student_intakes_assigned_to_id_fkey" FOREIGN KEY ("assigned_to_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE`,
+      );
+      applied.push("student_intakes");
+      await recordMigration("20260926120000_student_intake");
+    }
+
+    if (!(await columnExists("rental_bookings", "expires_at"))) {
+      await exec(`ALTER TYPE "RentalBookingStatus" ADD VALUE IF NOT EXISTS 'EXPIRED'`);
+      await exec(`ALTER TABLE "rental_bookings" ADD COLUMN IF NOT EXISTS "expires_at" TIMESTAMP(3)`);
+      await exec(
+        `CREATE INDEX IF NOT EXISTS "rental_bookings_status_expires_at_idx" ON "rental_bookings"("status", "expires_at")`,
+      );
+      applied.push("rental_hold_expiry");
+      await recordMigration("20260926180000_rental_hold_expiry");
     }
 
     ready = true;

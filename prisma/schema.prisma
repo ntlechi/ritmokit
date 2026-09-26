@@ -45,6 +45,21 @@ enum ProgressionStatus {
   NEEDS_REVIEW
 }
 
+/// New-student onboarding stage at one location (Nouveaux élèves inbox).
+enum IntakeStatus {
+  NEW
+  CONTACTED
+  ATTENDED
+  ACTIVE
+  LOST
+}
+
+enum IntakeSource {
+  WEBSITE
+  DOOR
+  STAFF
+}
+
 /// A `Station` row is either a physical dance room (bookable by ClassSession)
 /// or a staff department used to group the roster. Rooms and departments are
 /// different axes: an instructor belongs to a department, teaches in a room.
@@ -112,6 +127,8 @@ enum RentalBookingStatus {
   PENDING
   CONFIRMED
   CANCELLED
+  /// Online hold released because payment never arrived before `expiresAt`.
+  EXPIRED
 }
 
 /// Orthogonal to booking status — Interac/PayPal reconciliation for rentals.
@@ -435,6 +452,7 @@ model Location {
   rentalBookings         RentalBooking[]
   studentNotes           StudentNote[]
   studentProgressions    StudentProgression[]
+  studentIntakes         StudentIntake[]
   cashDrawerCloses       CashDrawerClose[]
   interacSettings        LocationInteracSettings?
   publicAnnouncements    StudioAnnouncement[]
@@ -639,6 +657,8 @@ model RentalBooking {
   cancelledById String?   @map("cancelled_by_id") @db.Uuid
   cancelledBy   User?     @relation("RentalBookingCancelledBy", fields: [cancelledById], references: [id], onDelete: SetNull)
   cancellationReason String? @map("cancellation_reason") @db.Text
+  /// Unpaid online holds stop blocking the room after this instant; null = never expires.
+  expiresAt DateTime? @map("expires_at")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -647,6 +667,7 @@ model RentalBooking {
   @@index([roomId, date, status])
   @@index([locationId, paymentStatus, createdAt])
   @@index([locationId, type, status, createdAt])
+  @@index([status, expiresAt])
   @@map("rental_bookings")
 }
 
@@ -762,6 +783,8 @@ model User {
   studentProgressionsEvaluated  StudentProgression[]           @relation("StudentProgressionEvaluator")
   studentNotesAbout             StudentNote[]                  @relation("StudentNoteSubject")
   studentNotesWritten           StudentNote[]                  @relation("StudentNoteAuthor")
+  studentIntakes                StudentIntake[]                @relation("StudentIntakeSubject")
+  studentIntakesAssigned        StudentIntake[]                @relation("StudentIntakeAssignee")
   cashDrawerCloses              CashDrawerClose[]              @relation("CashDrawerClosedBy")
   instructorPayrollLogs         InstructorPayrollLog[]
   rentalBookingsConfirmed       RentalBooking[]                @relation("RentalBookingConfirmedBy")
@@ -2296,6 +2319,32 @@ model StudentNote {
   @@map("student_notes")
 }
 
+/// First contact of a student with one location — drives the Nouveaux élèves
+/// inbox and the "1er cours" flag. No PII of its own (Loi 25 anonymization
+/// leaves it intact).
+model StudentIntake {
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId      String        @map("student_id") @db.Uuid
+  student        User          @relation("StudentIntakeSubject", fields: [studentId], references: [id], onDelete: Cascade)
+  locationId     String        @map("location_id") @db.Uuid
+  location       Location      @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  status         IntakeStatus  @default(NEW)
+  source         IntakeSource
+  firstSessionId String?       @map("first_session_id") @db.Uuid
+  firstSession   ClassSession? @relation(fields: [firstSessionId], references: [id], onDelete: SetNull)
+  assignedToId   String?       @map("assigned_to_id") @db.Uuid
+  assignedTo     User?         @relation("StudentIntakeAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  contactedAt     DateTime?    @map("contacted_at")
+  firstAttendedAt DateTime?    @map("first_attended_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([studentId, locationId])
+  @@index([locationId, status, createdAt])
+  @@map("student_intakes")
+}
+
 /// End-of-night door drawer close — cash only (Interac never sits in the drawer).
 /// One row per location per business night; feeds the Monday Financial Pulse.
 model CashDrawerClose {
@@ -2337,7 +2386,7 @@ model StudentProgression {
   locationId String   @map("location_id") @db.Uuid
   location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
 
-  danceStyle   String
+  danceStyle   String            @map("dance_style")
   currentLevel CourseLevel       @map("current_level")
   danceRole    DanceRole?        @map("dance_role")
   status       ProgressionStatus @default(IN_PROGRESS)
@@ -2406,6 +2455,7 @@ model ClassSession {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   enrollments Enrollment[]
+  intakes     StudentIntake[]
 
   @@index([seasonId, dayOfWeek, startTime])
   @@index([roomId, startTime, endTime])

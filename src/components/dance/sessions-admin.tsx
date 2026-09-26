@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { CalendarRange, Loader2, Plus, Trash2 } from "lucide-react";
+import { classActionErrorMessage } from "@/components/dance/class-action-error";
 import { SessionEditDrawer } from "@/components/dance/session-edit-drawer";
 import { SessionsInstructorGrid } from "@/components/dance/sessions-instructor-grid";
 import { SessionsRoomGrid } from "@/components/dance/sessions-room-grid";
@@ -267,7 +268,7 @@ export function SessionsAdmin({
               setMessage(d.classCreated);
             })
           }
-          onError={(code) => setError(d.errors[code as keyof typeof d.errors] ?? d.errors.generic)}
+          onError={setError}
         />
       </section>
 
@@ -377,7 +378,7 @@ function ClassCreateForm({
   dict: Dictionary;
   pending: boolean;
   onCreated: (id: string) => void;
-  onError: (code: string) => void;
+  onError: (message: string) => void;
 }) {
   const d = dict.dance;
   const [courseId, setCourseId] = useState(data.courses[0]?.id ?? "");
@@ -398,11 +399,14 @@ function ClassCreateForm({
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
+  // ClassSession stores the studio's wall clock in UTC fields, so 19:00 must
+  // be sent as 19:00Z whatever the browser's timezone.
   function toIsoFromLocalTime(time: string): string {
     const [hh, mm] = time.split(":").map(Number);
-    const dte = new Date();
-    dte.setHours(hh || 0, mm || 0, 0, 0);
-    return dte.toISOString();
+    const today = new Date();
+    return new Date(
+      Date.UTC(today.getFullYear(), today.getMonth(), today.getDate(), hh || 0, mm || 0),
+    ).toISOString();
   }
 
   return (
@@ -449,7 +453,7 @@ function ClassCreateForm({
                   level: newCourseLevel,
                 });
                 if (!result.ok) {
-                  onError(result.error);
+                  onError(classActionErrorMessage(d.errors, result));
                   return;
                 }
                 setCourseId(result.id);
@@ -577,7 +581,7 @@ function ClassCreateForm({
               priceRegular: Number(price) || 0,
             });
             if (!result.ok) {
-              onError(result.error);
+              onError(classActionErrorMessage(d.errors, result));
               return;
             }
             onCreated(result.id);

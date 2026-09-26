@@ -21,6 +21,7 @@ import {
   type Tx,
 } from "@/lib/dance/seat-allocator";
 import { staffScope } from "@/lib/dance/tenant-scope";
+import { advanceIntakeOnAttendance, recordIntake } from "@/lib/dance/intake";
 import { tryPromoteWaitlist } from "@/lib/dance/waitlist-promote";
 import { resolveEnrollmentAmountCad } from "@/lib/dance/pricing";
 import { ticketCodeForEnrollment } from "@/lib/payments/interac-status";
@@ -85,7 +86,13 @@ function doorPayment(kind: "cash" | "interac", now: Date): SeatPayment {
 type WalkInTxResult =
   | { kind: "not_found" }
   | { kind: "refused"; error: string }
-  | { kind: "ok"; enrollmentId: string; partnerEnrollmentId: string | null; sessionId: string };
+  | {
+      kind: "ok";
+      enrollmentId: string;
+      partnerEnrollmentId: string | null;
+      sessionId: string;
+      locationId: string;
+    };
 
 /**
  * A dancer already on file for this class walked up to the desk: convert the
@@ -329,17 +336,39 @@ export async function walkInAtDoorAction(input: z.infer<typeof walkInSchema>): P
         skipDuplicates: true,
       });
 
-      return { kind: "ok", enrollmentId, partnerEnrollmentId, sessionId: session.id };
+      return {
+        kind: "ok",
+        enrollmentId,
+        partnerEnrollmentId,
+        sessionId: session.id,
+        locationId: session.locationId,
+      };
     }, SEAT_TX_OPTIONS);
 
     if (result.kind === "not_found") return { ok: false, error: "not_found" };
     if (result.kind === "refused") return { ok: false, error: result.error };
 
+    const ids = result.partnerEnrollmentId
+      ? [result.enrollmentId, result.partnerEnrollmentId]
+      : [result.enrollmentId];
+
+    // Awaited (not in after()) so the desk's refresh already shows the "1er cours" badge.
+    // Both writers swallow their own errors, so they cannot fail the entry.
+    const students = partnerStudentId ? [studentId, partnerStudentId] : [studentId];
+    await Promise.all(
+      students.map((id) =>
+        recordIntake({
+          studentId: id,
+          locationId: result.locationId,
+          sessionIds: [result.sessionId],
+          source: "DOOR",
+        }),
+      ),
+    );
+    await Promise.all(ids.map((id) => advanceIntakeOnAttendance(id)));
+
     // Off the critical path: evolution stats + opposite-role waitlist unlock.
     after(async () => {
-      const ids = result.partnerEnrollmentId
-        ? [result.enrollmentId, result.partnerEnrollmentId]
-        : [result.enrollmentId];
       await Promise.allSettled(ids.map((id) => refreshProgressionForEnrollment(id)));
       await tryPromoteWaitlist(result.sessionId).catch((error) => {
         console.error("[door] promote failed", error);
@@ -348,6 +377,7 @@ export async function walkInAtDoorAction(input: z.infer<typeof walkInSchema>): P
 
     revalidatePath(`/${lang}/accueil`, "page");
     revalidatePath(`/${lang}/students`, "page");
+    revalidatePath(`/${lang}/students/new`, "page");
     revalidatePath(`/${lang}/dashboard`, "page");
     revalidatePath(`/${lang}/interac`, "page");
     return { ok: true, enrollmentId: result.enrollmentId };

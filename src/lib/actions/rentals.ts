@@ -7,6 +7,7 @@ import { actionDatabaseError } from "@/lib/actions/result";
 import {
   approveRentalBooking,
   createStaffRentalBooking,
+  markRentalPaid,
   patchRentalSettings,
   rejectRentalBooking,
   rentalSettingsPatchSchema,
@@ -51,6 +52,28 @@ export async function rejectRentalBookingAction(bookingId: string, reason?: stri
     return { ok: true as const };
   } catch (error) {
     return actionDatabaseError("rentals.reject", error);
+  }
+}
+
+export async function markRentalPaidAction(
+  bookingId: string,
+  provider: "interac" | "cash" | "paypal",
+) {
+  const user = await getSessionUser();
+  if (!user || !canAccessManagerSettings(user.role)) {
+    return { ok: false as const, error: "unauthorized" };
+  }
+  if (!["interac", "cash", "paypal"].includes(provider)) {
+    return { ok: false as const, error: "invalid_payload" };
+  }
+  try {
+    const result = await markRentalPaid({ userId: user.id, role: user.role, bookingId, provider });
+    if (!result.ok) return { ok: false as const, error: result.error };
+    revalidatePath("/[lang]/rentals", "page");
+    revalidatePath("/[lang]/interac", "page");
+    return { ok: true as const };
+  } catch (error) {
+    return actionDatabaseError("rentals.markPaid", error);
   }
 }
 

@@ -8,52 +8,81 @@ import {
   MessagesSquare,
   LayoutDashboard,
   Users,
-  Music2,
   ClipboardCheck,
   ContactRound,
+  CalendarRange,
+  GraduationCap,
+  UserPlus,
+  BookOpen,
 } from "lucide-react";
 import type { Locale } from "@/lib/i18n/config";
 import type { ShellCopy } from "@/lib/i18n/shell-copy";
 import type { Role } from "@/generated/prisma/enums";
-import { canAccessAccueil, canAccessManagerSettings } from "@/lib/auth/session-client";
+import {
+  canAccessAccueil,
+  canAccessManagerSettings,
+  canAccessTeaching,
+} from "@/lib/auth/session-client";
+import { formatBadge, isNavActive, type NavBadges, type NavKey } from "@/components/layout/sidebar";
 import { cn } from "@/lib/utils";
+
+type MobileItem = {
+  key: NavKey;
+  href: string;
+  icon: typeof Calendar;
+  badge?: keyof NavBadges;
+};
+
+/** Five thumbs-reach tabs per role — the full menu lives in the sidebar. */
+function itemsForRole(role: Role): MobileItem[] {
+  if (canAccessManagerSettings(role)) {
+    return [
+      { key: "cockpit", href: "/dashboard", icon: LayoutDashboard },
+      { key: "accueil", href: "/accueil", icon: ClipboardCheck },
+      { key: "studentsNew", href: "/students/new", icon: UserPlus, badge: "studentsNew" },
+      { key: "planning", href: "/planning", icon: CalendarRange },
+      { key: "settings", href: "/settings", icon: Settings },
+    ];
+  }
+  if (canAccessTeaching(role)) {
+    return [
+      { key: "teach", href: "/teach", icon: GraduationCap },
+      { key: "accueil", href: "/accueil", icon: ClipboardCheck },
+      { key: "plans", href: "/plans", icon: BookOpen },
+      { key: "calendar", href: "/calendar/week", icon: Calendar },
+      { key: "messages", href: "/messages", icon: MessagesSquare },
+    ];
+  }
+  if (canAccessAccueil(role)) {
+    return [
+      { key: "accueil", href: "/accueil", icon: ClipboardCheck },
+      { key: "studentsNew", href: "/students/new", icon: UserPlus, badge: "studentsNew" },
+      { key: "students", href: "/students", icon: ContactRound },
+      { key: "calendar", href: "/calendar/week", icon: Calendar },
+      { key: "messages", href: "/messages", icon: MessagesSquare },
+    ];
+  }
+  return [
+    { key: "calendar", href: "/calendar/week", icon: Calendar },
+    { key: "messages", href: "/messages", icon: MessagesSquare },
+    { key: "team", href: "/team", icon: Users },
+    { key: "settings", href: "/settings", icon: Settings },
+  ];
+}
 
 export function MobileNav({
   lang,
   shell,
   role,
+  badges,
 }: {
   lang: Locale;
   shell: ShellCopy;
   role: Role;
+  badges?: NavBadges | null;
 }) {
   const pathname = usePathname();
-  const isManagement = canAccessManagerSettings(role);
-  const showAccueil = canAccessAccueil(role);
-
-  const items = isManagement
-    ? ([
-        { key: "cockpit", href: "/dashboard", icon: LayoutDashboard, label: shell.nav.cockpit },
-        { key: "accueil", href: "/accueil", icon: ClipboardCheck, label: shell.nav.accueil },
-        { key: "students", href: "/students", icon: ContactRound, label: shell.nav.students },
-        { key: "sessions", href: "/sessions", icon: Music2, label: shell.nav.sessions },
-        { key: "settings", href: "/settings", icon: Settings, label: shell.nav.settings },
-      ] as const)
-    : showAccueil
-      ? ([
-          { key: "accueil", href: "/accueil", icon: ClipboardCheck, label: shell.nav.accueil },
-          { key: "students", href: "/students", icon: ContactRound, label: shell.nav.students },
-          { key: "calendar", href: "/calendar/week", icon: Calendar, label: shell.nav.calendar },
-          { key: "messages", href: "/messages", icon: MessagesSquare, label: shell.nav.messages },
-          { key: "team", href: "/team", icon: Users, label: shell.nav.team },
-          { key: "settings", href: "/settings", icon: Settings, label: shell.nav.settings },
-        ] as const)
-      : ([
-          { key: "calendar", href: "/calendar/week", icon: Calendar, label: shell.nav.calendar },
-          { key: "messages", href: "/messages", icon: MessagesSquare, label: shell.nav.messages },
-          { key: "team", href: "/team", icon: Users, label: shell.nav.team },
-          { key: "settings", href: "/settings", icon: Settings, label: shell.nav.settings },
-        ] as const);
+  const items = itemsForRole(role);
 
   return (
     <nav
@@ -61,30 +90,35 @@ export function MobileNav({
       aria-label={shell.common.menu}
     >
       <div className="mx-auto flex max-w-lg items-stretch justify-around px-1 py-1.5 sm:px-2">
-        {items.map(({ key, href, icon: Icon, label }) => {
-          const fullHref = `/${lang}${href}`;
-          const active =
-            key === "cockpit"
-              ? pathname?.startsWith(`/${lang}/dashboard`) ||
-                pathname?.startsWith(`/${lang}/cockpit`)
-              : pathname?.startsWith(fullHref);
+        {items.map(({ key, href, icon: Icon, badge }) => {
+          const active = isNavActive(pathname, lang, key, href);
+          const count = badge ? (badges?.[badge] ?? 0) : 0;
+          const label = shell.nav[key];
 
           return (
             <Link
               key={key}
-              href={fullHref}
+              href={`/${lang}${href}`}
               data-interactive
               aria-current={active ? "page" : undefined}
+              aria-label={count > 0 ? `${label} (${count})` : undefined}
               className={cn(
                 "relative flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 text-[10px] font-medium sm:px-2",
                 active ? "text-accent" : "text-foreground-muted",
-                key === "cockpit" && "font-semibold",
+                (key === "cockpit" || key === "teach") && "font-semibold",
               )}
             >
               {active && (
                 <span className="absolute -top-1.5 h-[3px] w-8 rounded-full bg-accent" aria-hidden />
               )}
-              <Icon className="h-5 w-5" aria-hidden />
+              <span className="relative">
+                <Icon className="h-5 w-5" aria-hidden />
+                {count > 0 && (
+                  <span className="absolute -right-2.5 -top-1.5 min-w-4 rounded-full bg-danger px-1 text-center text-[9px] font-bold leading-4 text-white tabular-nums">
+                    {formatBadge(count)}
+                  </span>
+                )}
+              </span>
               <span className="truncate">{label}</span>
             </Link>
           );

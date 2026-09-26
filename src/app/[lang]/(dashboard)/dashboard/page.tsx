@@ -25,7 +25,7 @@ export default async function ManagerDashboardPage({
 
   const [dict, user] = await Promise.all([getDictionary(lang), getSessionUser()]);
   if (!user || !canAccessManagerSettings(user.role)) {
-    redirect(`/${lang}/calendar/week`);
+    redirect(`/${lang}`);
   }
 
   return (
@@ -49,7 +49,7 @@ async function StudioCockpitBody({
   dict: Dictionary;
 }) {
   const [{ data, dbError }, { data: setupStatus }] = await Promise.all([
-    safeQuery(() => getStudioCockpitData(userId, role), null),
+    safeQuery(() => getStudioCockpitData(userId, role, lang), null),
     safeQuery(() => getStudioSetupStatus(userId, role), null),
   ]);
 

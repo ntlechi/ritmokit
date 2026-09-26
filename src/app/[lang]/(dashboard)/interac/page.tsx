@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Banknote } from "lucide-react";
 import { InteracQueuePanel } from "@/components/interac/interac-queue-panel";
@@ -50,6 +51,16 @@ export default async function InteracPage({
       {dbError && (
         <div className="px-4 pt-4 sm:px-6">
           <DbErrorBanner label={dict.interac.errors.databaseError} />
+        </div>
+      )}
+      {data && data.rentalPendingCount > 0 && (
+        <div className="px-4 pt-4 sm:px-6">
+          <Link
+            href={`/${lang}/rentals`}
+            className="block rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm font-medium text-warning hover:bg-warning/15"
+          >
+            {dict.interac.rentalsPending.replace("{n}", String(data.rentalPendingCount))}
+          </Link>
         </div>
       )}
       {data && <InteracQueuePanel lang={lang} dict={dict} initial={data} />}
