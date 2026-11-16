@@ -25,6 +25,7 @@
     "test:studio-calendar": "tsx scripts/test-studio-calendar.mjs",
     "test:interac": "tsx scripts/test-interac-unit.mjs",
     "test:hardening": "tsx scripts/test-backend-hardening.mjs",
+    "test:security-definer": "bash scripts/run-security-definer-grant-test.sh",
     "test:studio-ops": "tsx scripts/test-studio-ops.mjs",
     "test:jev": "tsx --test src/lib/agents/intents.test.ts",
     "roster-token": "node scripts/roster-token.mjs",
